@@ -10,4 +10,4 @@ const router = express_1.default.Router();
 exports.router = router;
 router.route('/').post(webhook_Controller_1.webhookServer);
 // Just a test route
-router.route('/sendMsg/:email').post(webhook_Controller_1.testSendMsg);
+router.route('/sendMsg/:email').post(webhook_Controller_1.sendTextMsg);

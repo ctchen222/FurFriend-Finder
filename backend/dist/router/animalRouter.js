@@ -9,4 +9,4 @@ const animalController_1 = require("../Controller/animalController");
 const router = express_1.default.Router();
 exports.router = router;
 router.route('/').get(animalController_1.updateTableAnimal);
-router.route('/:city');
+router.route('/:city').get(animalController_1.getAnimalsByCity);

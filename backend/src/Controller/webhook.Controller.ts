@@ -18,7 +18,8 @@ export const webhookServer = catchAsync(async (req: Request, res: Response) => {
   const profile = req.body.events.at(0).message.text as string;
   const [name, email, city] = profile.split(' ');
   if (!userExisted) {
-    const user = await prisma.users.create({
+    // if user not exist, create one
+    await prisma.users.create({
       data: {
         name: name,
         email: email,
@@ -27,10 +28,18 @@ export const webhookServer = catchAsync(async (req: Request, res: Response) => {
         userId: userId,
       },
     });
-    console.log('User Add to Database Successfully!');
+    const replyMsg = { type: 'text', text: '成功將您的個人資料加進資料庫！' };
+    client.replyMessage({
+      replyToken: req.body.events.at(0).replyToken,
+      messages: [replyMsg as line.TextMessage],
+    });
   } else {
-    console.log('User Already in Database! 2486!');
+    console.log(
+      '您提供的資訊有錯誤，請按照說明填寫您的個人資訊，才能收到我們的通知呦！',
+    );
   }
+
+  // 3. if received wanted msg, send back the adoption data
 
   //   console.log(users);
   // const echo = { type: 'text', text: 'hello' };
@@ -40,7 +49,7 @@ export const webhookServer = catchAsync(async (req: Request, res: Response) => {
   // });
 });
 
-export const testSendMsg = (req: Request, res: Response) => {
+export const sendTextMsg = (req: Request, res: Response) => {
   const email = req.params.email;
   const userId = 'U94c0f0e231f60a29add12c7e5fcf1835'; // 替換為你要發送訊息的用戶ID
   const message: line.TextMessage = { type: 'text', text: 'hello' };

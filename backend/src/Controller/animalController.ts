@@ -4,11 +4,12 @@ import { Request, Response } from 'express';
 import { prisma } from '../db';
 import { catchAsync } from '../utils/catchAsync';
 import { updateDatabase } from '../utils/updateDatabase.utils';
+import { findAnimalsByCity } from '../db/animal.db';
 
+// update animal table manually
 export const updateTableAnimal = catchAsync(
   async (req: Request, res: Response) => {
     const insertCount = await updateDatabase(req, res);
-    console.log(insertCount);
 
     res.status(200).json({
       status: 'Success',
@@ -20,10 +21,19 @@ export const updateTableAnimal = catchAsync(
   },
 );
 
-export const getAllAnimalsByCity = catchAsync(
+export const getAnimalsByCity = catchAsync(
   async (req: Request, res: Response) => {
-    const response = await axios.get(
-      `https://data.moa.gov.tw/Service/OpenData/TransService.aspx?UnitId=QcbUEzN6E6DL`,
-    );
+    const city = req.params.city;
+    const animals = await findAnimalsByCity(city);
+
+    if (!animals) {
+      res.status(404).send('Make sure typing city correctly');
+    }
+
+    res.status(200).json({
+      status: 'Success',
+      count: animals.length,
+      animals,
+    });
   },
 );

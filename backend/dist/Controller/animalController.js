@@ -1,15 +1,12 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getAllAnimalsByCity = exports.updateTableAnimal = void 0;
-const axios_1 = __importDefault(require("axios"));
+exports.getAnimalsByCity = exports.updateTableAnimal = void 0;
 const catchAsync_1 = require("../utils/catchAsync");
 const updateDatabase_utils_1 = require("../utils/updateDatabase.utils");
+const animal_db_1 = require("../db/animal.db");
+// update animal table manually
 exports.updateTableAnimal = (0, catchAsync_1.catchAsync)(async (req, res) => {
     const insertCount = await (0, updateDatabase_utils_1.updateDatabase)(req, res);
-    console.log(insertCount);
     res.status(200).json({
         status: 'Success',
         message: insertCount === 0
@@ -17,6 +14,15 @@ exports.updateTableAnimal = (0, catchAsync_1.catchAsync)(async (req, res) => {
             : `${insertCount} data were inserted to table Animal`,
     });
 });
-exports.getAllAnimalsByCity = (0, catchAsync_1.catchAsync)(async (req, res) => {
-    const response = await axios_1.default.get(`https://data.moa.gov.tw/Service/OpenData/TransService.aspx?UnitId=QcbUEzN6E6DL`);
+exports.getAnimalsByCity = (0, catchAsync_1.catchAsync)(async (req, res) => {
+    const city = req.params.city;
+    const animals = await (0, animal_db_1.findAnimalsByCity)(city);
+    if (!animals) {
+        res.status(404).send('Make sure typing city correctly');
+    }
+    res.status(200).json({
+        status: 'Success',
+        count: animals.length,
+        animals,
+    });
 });

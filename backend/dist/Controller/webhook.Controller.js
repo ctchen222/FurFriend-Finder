@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.testSendMsg = exports.webhookServer = void 0;
+exports.sendTextMsg = exports.webhookServer = void 0;
 const db_1 = require("../db");
 const catchAsync_1 = require("../utils/catchAsync");
 const lineClient_1 = require("../lineClient");
@@ -18,7 +18,8 @@ exports.webhookServer = (0, catchAsync_1.catchAsync)(async (req, res) => {
     const profile = req.body.events.at(0).message.text;
     const [name, email, city] = profile.split(' ');
     if (!userExisted) {
-        const user = await db_1.prisma.users.create({
+        // if user not exist, create one
+        await db_1.prisma.users.create({
             data: {
                 name: name,
                 email: email,
@@ -27,11 +28,16 @@ exports.webhookServer = (0, catchAsync_1.catchAsync)(async (req, res) => {
                 userId: userId,
             },
         });
-        console.log('User Add to Database Successfully!');
+        const replyMsg = { type: 'text', text: '成功將您的個人資料加進資料庫！' };
+        lineClient_1.client.replyMessage({
+            replyToken: req.body.events.at(0).replyToken,
+            messages: [replyMsg],
+        });
     }
     else {
-        console.log('User Already in Database! 2486!');
+        console.log('您提供的資訊有錯誤，請按照說明填寫您的個人資訊，才能收到我們的通知呦！');
     }
+    // 3. if received wanted msg, send back the adoption data
     //   console.log(users);
     // const echo = { type: 'text', text: 'hello' };
     // client.replyMessage({
@@ -39,7 +45,7 @@ exports.webhookServer = (0, catchAsync_1.catchAsync)(async (req, res) => {
     //   messages: [echo as line.TextMessage],
     // });
 });
-const testSendMsg = (req, res) => {
+const sendTextMsg = (req, res) => {
     const email = req.params.email;
     const userId = 'U94c0f0e231f60a29add12c7e5fcf1835'; // 替換為你要發送訊息的用戶ID
     const message = { type: 'text', text: 'hello' };
@@ -54,4 +60,4 @@ const testSendMsg = (req, res) => {
         res.status(500).send('Error sending message');
     });
 };
-exports.testSendMsg = testSendMsg;
+exports.sendTextMsg = sendTextMsg;

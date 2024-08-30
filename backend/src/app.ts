@@ -1,10 +1,7 @@
 import express from 'express';
-import { client, line } from './lineClient';
 import { router as webhookRouter } from './router/webhookRouter';
 import { router as userRouter } from './router/userRouter';
 import { router as animalRouter } from './router/animalRouter';
-import axios from 'axios';
-import cron from 'node-cron';
 import { cronSchedule } from './utils/cronSchedule.utils';
 
 const app = express();
