@@ -9,3 +9,4 @@ const userController_1 = require("../Controller/userController");
 const router = express_1.default.Router();
 exports.router = router;
 router.get('/', userController_1.getUsers);
+router.route('/').patch(userController_1.updateUser).delete(userController_1.deleteUser);
