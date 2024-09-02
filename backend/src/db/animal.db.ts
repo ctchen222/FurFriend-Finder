@@ -8,10 +8,27 @@ export const findAnimalsByCity = async (city: string) => {
       sheltername: {
         startsWith: city,
       },
+      opendate: {
+        not: null,
+      },
     },
-    orderBy: {
-      opendate: 'desc',
+    // orderBy: {
+    //   opendate: 'desc',
+    // },
+    take: 50,
+    select: {
+      kind: true,
+      age: true,
+      variety: true,
+      sheltername: true,
+      opendate: true,
+      photo: true,
+      animal_sheltername_address: {
+        select: {
+          address: true,
+          tel: true,
+        },
+      },
     },
-    take: 10,
   });
 };

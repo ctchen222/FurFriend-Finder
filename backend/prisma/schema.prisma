@@ -12,24 +12,32 @@ model users {
   name     String   @db.VarChar(10)
   email    String   @unique @db.VarChar(50)
   city     String   @db.VarChar(10)
-  active   Boolean? @default(false)
+  active   Boolean? @default(true)
   sentfrom String   @unique @db.VarChar(50)
   userId   String   @unique @db.VarChar(50)
 }
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model animal {
-  animal_id   Int       @id
-  kind        String    @db.VarChar(10)
-  variety     String?   @db.VarChar(20)
-  sex         String?   @db.VarChar(1)
-  age         String?   @db.VarChar(10)
-  bodytype    String?   @db.VarChar(10)
-  colour      String?   @db.VarChar(6)
-  status      String?   @db.VarChar(10)
-  remark      String?
-  opendate    DateTime? @db.Date
-  photo       String?
-  sheltername String    @db.VarChar(20)
-  createtime  DateTime? @db.Date
+  animal_id                  Int                        @id
+  kind                       String                     @db.VarChar(10)
+  variety                    String?                    @db.VarChar(20)
+  sex                        String?                    @db.VarChar(1)
+  age                        String?                    @db.VarChar(10)
+  bodytype                   String?                    @db.VarChar(10)
+  colour                     String?                    @db.VarChar(6)
+  status                     String?                    @db.VarChar(10)
+  remark                     String?
+  opendate                   DateTime?                  @db.Date
+  createtime                 DateTime?                  @db.Date
+  photo                      String?
+  sheltername                String                     @db.VarChar(20)
+  animal_sheltername_address animal_sheltername_address @relation(fields: [sheltername], references: [sheltername], onDelete: NoAction, onUpdate: NoAction, map: "fk_sheltername")
+}
+
+model animal_sheltername_address {
+  sheltername String   @id @db.VarChar(20)
+  address     String   @db.VarChar(255)
+  tel         String   @db.VarChar(20)
+  animal      animal[]
 }

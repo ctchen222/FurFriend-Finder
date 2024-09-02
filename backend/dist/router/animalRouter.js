@@ -8,5 +8,4 @@ const express_1 = __importDefault(require("express"));
 const animalController_1 = require("../Controller/animalController");
 const router = express_1.default.Router();
 exports.router = router;
-router.route('/').get(animalController_1.updateTableAnimal);
-router.route('/:city').get(animalController_1.getAnimalsByCity);
+router.route('/').post(animalController_1.updateTableAnimal).get(animalController_1.getAnimals);

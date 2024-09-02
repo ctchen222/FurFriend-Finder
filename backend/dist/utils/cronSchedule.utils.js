@@ -7,8 +7,8 @@ exports.cronSchedule = void 0;
 const node_cron_1 = __importDefault(require("node-cron"));
 const axios_1 = __importDefault(require("axios"));
 const db_1 = require("../db");
-exports.cronSchedule = node_cron_1.default.schedule('0 0 * * *', async () => {
-    // execute on every midnight
+exports.cronSchedule = node_cron_1.default.schedule('0 4 * * *', async () => {
+    // execute on every 4:00 am
     try {
         const response = await axios_1.default.get('https://data.moa.gov.tw/Service/OpenData/TransService.aspx?UnitId=QcbUEzN6E6DL');
         const data = response.data;
@@ -40,5 +40,5 @@ exports.cronSchedule = node_cron_1.default.schedule('0 0 * * *', async () => {
     }
 }, {
     scheduled: true, // 是否立即執行
-    timezone: 'Asia/Taipei', // 時區
+    timezone: 'Asia/Taipei', // 時���
 });

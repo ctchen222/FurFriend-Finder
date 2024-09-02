@@ -4,9 +4,9 @@ import axios from 'axios';
 import { prisma } from '../db';
 
 export const cronSchedule = cron.schedule(
-  '0 0 * * *',
+  '0 4 * * *',
   async () => {
-    // execute on every midnight
+    // execute on every 4:00 am
     try {
       const response = await axios.get(
         'https://data.moa.gov.tw/Service/OpenData/TransService.aspx?UnitId=QcbUEzN6E6DL',
@@ -43,6 +43,6 @@ export const cronSchedule = cron.schedule(
   },
   {
     scheduled: true, // 是否立即執行
-    timezone: 'Asia/Taipei', // 時區
+    timezone: 'Asia/Taipei', // 時���
   },
 );

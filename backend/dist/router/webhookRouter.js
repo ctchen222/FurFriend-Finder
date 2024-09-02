@@ -9,5 +9,5 @@ const webhook_Controller_1 = require("../Controller/webhook.Controller");
 const router = express_1.default.Router();
 exports.router = router;
 router.route('/').post(webhook_Controller_1.webhookServer);
-// Just a test route
-router.route('/sendMsg/:email').post(webhook_Controller_1.sendTextMsg);
+// This Route should be protected
+router.route('/sendMsg/:userId').post(webhook_Controller_1.sendTextMsgManually);

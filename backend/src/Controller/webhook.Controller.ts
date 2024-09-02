@@ -2,57 +2,99 @@ import { Request, Response } from 'express';
 import { prisma } from '../db';
 import { catchAsync } from '../utils/catchAsync';
 import { client, line } from '../lineClient';
+import { findAnimalsByCity } from '../db/animal.db';
+import { AnimalFeature } from '../utils/animalFeatures.utils';
+import prettifyAnimalData from '../utils/prettifyAnimalData.utils';
+import taiwanCities from '../utils/taiwanCities.utils';
+import cityInTaiwan from '../utils/taiwanCities.utils';
 
 export const webhookServer = catchAsync(async (req: Request, res: Response) => {
   // 1. check sentFrom is in db or not
   const destination = req.body.destination;
-  const user = await prisma.users.findFirst({
-    where: {
-      sentfrom: destination,
-    },
-  });
-  const userExisted = user !== null;
-
-  // 2. if not, write user to db
   const userId = req.body.events.at(0).source.userId;
-  const profile = req.body.events.at(0).message.text as string;
-  const [name, email, city] = profile.split(' ');
-  if (!userExisted) {
-    // if user not exist, create one
-    await prisma.users.create({
-      data: {
-        name: name,
-        email: email,
-        city: city,
-        sentfrom: destination,
-        userId: userId,
-      },
-    });
-    const replyMsg = { type: 'text', text: '成功將您的個人資料加進資料庫！' };
-    client.replyMessage({
-      replyToken: req.body.events.at(0).replyToken,
-      messages: [replyMsg as line.TextMessage],
-    });
-  } else {
-    console.log(
-      '您提供的資訊有錯誤，請按照說明填寫您的個人資訊，才能收到我們的通知呦！',
-    );
+  const userExisted = await checkUserExistance(destination);
+  const msgFromUser = req.body.events.at(0).message.text as string;
+
+  // if user need help
+  if (msgFromUser === '我需要協助') {
+    console.log(`User ${userId} need help!`);
+    sendTextMsgAuto(req, '收到！請等候專人回覆！');
   }
 
-  // 3. if received wanted msg, send back the adoption data
+  const count = msgFromUser.split(' ').length; // count how many parts user enter
 
-  //   console.log(users);
-  // const echo = { type: 'text', text: 'hello' };
-  // client.replyMessage({
-  //   replyToken: req.body.events.at(0).replyToken,
-  //   messages: [echo as line.TextMessage],
-  // });
+  // count: 3 -> User attempt sign up or try to get animals message
+  if (count === 3) {
+    const [name, email, city] = msgFromUser.split(' ');
+
+    if (!userExisted && cityInTaiwan(city)) {
+      // if user not exist, create one
+      await prisma.users.create({
+        data: {
+          name: name,
+          email: email,
+          city: city,
+          sentfrom: destination,
+          userId: userId,
+        },
+      });
+      const replyMsg = {
+        type: 'text',
+        text: '成功將您的個人資料加進資料庫！\n請輸入您所在的縣市以取得領養資訊！。',
+      };
+      client.replyMessage({
+        replyToken: req.body.events.at(0).replyToken,
+        messages: [replyMsg as line.TextMessage],
+      });
+    } else {
+      // user exist, send animal data back to user
+      const data = await findAnimalsByCity(city); // data send back
+      const text = prettifyAnimalData(data);
+
+      // const replyMsg = {
+      //   type: 'text',
+      //   text: text,
+      // };
+      // console.log(`使用者 {${userId}} 個人資訊輸入錯誤`);
+      // client.replyMessage({
+      //   replyToken: req.body.events.at(0).replyToken,
+      //   messages: [replyMsg as line.TextMessage],
+      // });
+    }
+  }
+
+  // count: 1 -> User Try to get animals data by entering city name
+  if (count === 1) {
+    if (!userExisted) {
+      // if user not exist
+      console.log(
+        `User ${userId} tries to use the service, but not sign up yet.`,
+      );
+      sendTextMsgAuto(req, '請先輸入您的個人資料，才能使用我們的服務呦！');
+    } else {
+      // if user exist
+      const city = msgFromUser;
+
+      if (cityInTaiwan(city)) {
+        console.log(cityInTaiwan(city));
+        const data = await findAnimalsByCity(city);
+        const text = prettifyAnimalData(data);
+        sendTextMsgAuto(req, text);
+      } else {
+        sendTextMsgAuto(
+          req,
+          '您輸入的縣市並不屬於台灣，請確定是否輸入正確。\n若有問題，請輸入：我需要協助，將會有專人替您解答問題。',
+        );
+      }
+    }
+  }
 });
 
-export const sendTextMsg = (req: Request, res: Response) => {
-  const email = req.params.email;
-  const userId = 'U94c0f0e231f60a29add12c7e5fcf1835'; // 替換為你要發送訊息的用戶ID
-  const message: line.TextMessage = { type: 'text', text: 'hello' };
+// Send Data to Specific User manually
+export const sendTextMsgManually = (req: Request, res: Response) => {
+  const userId = req.query.userId as string;
+  const textMsg = '';
+  const message: line.TextMessage = { type: 'text', text: textMsg };
 
   client
     .pushMessage({ to: userId, messages: [message] })
@@ -64,4 +106,25 @@ export const sendTextMsg = (req: Request, res: Response) => {
       console.error('Error sending message:', err);
       res.status(500).send('Error sending message');
     });
+};
+
+const checkUserExistance = async (destination: string) => {
+  const user = await prisma.users.findFirst({
+    where: {
+      sentfrom: destination,
+    },
+  });
+  const userExisted = user !== null;
+  return userExisted;
+};
+
+const sendTextMsgAuto = (req: Request, text: string) => {
+  const replyMsg = {
+    type: 'text',
+    text: text,
+  };
+  client.replyMessage({
+    replyToken: req.body.events.at(0).replyToken,
+    messages: [replyMsg as line.TextMessage],
+  });
 };

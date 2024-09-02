@@ -1,13 +1,10 @@
 import express from 'express';
-import {
-  getAnimalsByCity,
-  updateTableAnimal,
-} from '../Controller/animalController';
+import { getAnimals, updateTableAnimal } from '../Controller/animalController';
 
 const router = express.Router();
 
-router.route('/').get(updateTableAnimal);
+router.route('/').post(updateTableAnimal).get(getAnimals);
 
-router.route('/:city').get(getAnimalsByCity);
+// router.route('/:city').get(getAnimals);
 
 export { router };

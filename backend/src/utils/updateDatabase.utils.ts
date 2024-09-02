@@ -26,10 +26,24 @@ export const updateDatabase = async (req: Request, res: Response) => {
     sheltername: item.shelter_name,
   }));
 
-  const { count: updateCount } = await prisma.animal.createMany({
-    data: animals,
-    skipDuplicates: true, // 如果有重複的資料，可以選擇跳過
+  // Upsert data into table animal_sheltername_address
+  data.map(async (item: any) => {
+    await prisma.animal_sheltername_address.upsert({
+      where: { sheltername: item.shelter_name },
+      update: { address: item.shelter_address, tel: item.shelter_tel }, // update data searched
+      create: {
+        // create data if not existed
+        sheltername: item.shelter_name,
+        address: item.shelter_address,
+        tel: item.shelter_tel,
+      },
+    });
   });
 
-  return updateCount;
+  const { count: dataUpdatedNumber } = await prisma.animal.createMany({
+    data: animals,
+    skipDuplicates: true, // skip repeated data
+  });
+
+  return dataUpdatedNumber;
 };
