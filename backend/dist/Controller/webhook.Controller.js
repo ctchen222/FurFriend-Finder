@@ -84,19 +84,19 @@ exports.webhookServer = (0, catchAsync_1.catchAsync)(async (req, res) => {
 });
 // Send Data to Specific User manually
 const sendTextMsgManually = (req, res) => {
-    const userId = req.query.userId;
-    const textMsg = '';
-    const message = { type: 'text', text: textMsg };
-    lineClient_1.client
-        .pushMessage({ to: userId, messages: [message] })
-        .then(() => {
-        console.log('Message sent successfully');
-        res.status(200).send('Message sent successfully');
-    })
-        .catch((err) => {
-        console.error('Error sending message:', err);
-        res.status(500).send('Error sending message');
-    });
+    // const userId = req.query.userId as string;
+    // const textMsg = ''; // Enter the msg you want to send back to user
+    // const message: line.TextMessage = { type: 'text', text: textMsg };
+    // client
+    //   .pushMessage({ to: userId, messages: [message] })
+    //   .then(() => {
+    //     console.log('Message sent successfully');
+    //     res.status(200).send('Message sent successfully');
+    //   })
+    //   .catch((err) => {
+    //     console.error('Error sending message:', err);
+    //     res.status(500).send('Error sending message');
+    //   });
 };
 exports.sendTextMsgManually = sendTextMsgManually;
 const checkUserExistance = async (destination) => {

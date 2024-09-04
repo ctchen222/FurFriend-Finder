@@ -33,7 +33,7 @@ exports.cronSchedule = node_cron_1.default.schedule('0 4 * * *', async () => {
             data: animals,
             skipDuplicates: true, // 如果有重複的資料，可以選擇跳過
         });
-        console.log(`${updateCount} data were updated in table Animal`);
+        console.log(`[Daily Update]: ${updateCount} data were updated in table Animal`);
     }
     catch (error) {
         console.error('Something went wrong upon updating');

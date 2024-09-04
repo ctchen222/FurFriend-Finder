@@ -1,24 +1,20 @@
 version: "3"
 
 services:
-  #MongoD
-  mongo_db:
-    container_name: database_container
-    image: mongo:latest
+  postgres:
+    container_name: PostgreSQL
+    image: postgres:latest
     restart: always
-    volumes:
-      - mongo_db:/data/db
-
-  app:
-    build: .
     ports:
-      - 3000:3000
-    environment:
-      APP_NAME: LearnDocker
-      PORT: 3000
-      DB_URI: mongodb://mongo_db:27017/dockerlearn
-    depends_on:
-      - mongo_db
+      - 5432:5432
+    volumes:
+      - ./tmp/data/db:/var/lib/postgresql/data
+
+  node:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    container_name: Node-server
 
 volumes:
   mongo_db: {}
