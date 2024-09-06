@@ -41,3 +41,20 @@ model animal_sheltername_address {
   tel         String   @db.VarChar(20)
   animal      animal[]
 }
+
+model animal_lost {
+  chipid      String   @id @db.VarChar(20)
+  petname     String?
+  petcategory String?   
+  gender      String?   
+  variety     String?   
+  coat        String?  
+  exterior    String?  
+  feature     String?
+  losttime    String?   
+  lostplace   String?
+  feedername  String?  
+  phonenum    String?   
+  email       String?  
+  photo       String?
+}

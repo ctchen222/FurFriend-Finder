@@ -3,21 +3,29 @@ import axios from 'axios';
 import { Request, Response } from 'express';
 import { prisma } from '../db';
 import { catchAsync } from '../utils/catchAsync';
-import { updateDatabase } from '../utils/updateDatabase.utils';
+import {
+  updateAnimalLostTable,
+  updateAnimalTable,
+} from '../utils/updateDatabase.utils';
 import { findAnimalsByCity } from '../db/animal.db';
 import { AnimalFeature } from '../utils/animalFeatures.utils';
 
 // update animal table manually
 export const updateTableAnimal = catchAsync(
   async (req: Request, res: Response) => {
-    const insertCount = await updateDatabase(req, res);
+    const animalTableinsertCount = await updateAnimalTable();
+    const animalLostTableCount = await updateAnimalLostTable();
 
     res.status(200).json({
       status: 'Success',
-      message:
-        insertCount === 0
+      animal_table:
+        animalTableinsertCount === 0
           ? `No New Row Inserted`
-          : `${insertCount} data were inserted to table Animal`,
+          : `${animalTableinsertCount} data were inserted to table Animal`,
+      animal_lost_table:
+        animalLostTableCount === 0
+          ? 'No New Row Inserted'
+          : `${animalLostTableCount} data were inserted to table Animal_lost`,
     });
   },
 );
@@ -37,3 +45,20 @@ export const getAnimals = catchAsync(async (req: Request, res: Response) => {
     animals: animals,
   });
 });
+
+export const getLostAnimals = catchAsync(
+  async (req: Request, res: Response) => {
+    const lostAnimals = await prisma.animal_lost.findMany({});
+    console.log(lostAnimals);
+
+    if (!lostAnimals) {
+      res.status(404).send('Lost animals not found!');
+    }
+
+    res.status(200).json({
+      status: 'Success',
+      count: lostAnimals.length,
+      lostAnimals,
+    });
+  },
+);
