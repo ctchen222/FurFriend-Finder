@@ -3,7 +3,7 @@ import { deleteUser, getUsers, updateUser } from '../Controller/userController';
 
 const router = express.Router();
 
-router.get('/', getUsers);
-router.route('/').patch(updateUser).delete(deleteUser);
+// These should be protected
+router.route('/').patch(updateUser).delete(deleteUser).get(getUsers);
 
 export { router };

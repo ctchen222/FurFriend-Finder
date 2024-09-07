@@ -34,7 +34,6 @@ exports.getAnimals = (0, catchAsync_1.catchAsync)(async (req, res) => {
 });
 exports.getLostAnimals = (0, catchAsync_1.catchAsync)(async (req, res) => {
     const lostAnimals = await db_1.prisma.animal_lost.findMany({});
-    console.log(lostAnimals);
     if (!lostAnimals) {
         res.status(404).send('Lost animals not found!');
     }

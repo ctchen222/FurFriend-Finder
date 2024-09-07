@@ -1,4 +1,4 @@
-import axios from 'axios';
+import { z } from 'zod';
 
 import { Request, Response } from 'express';
 import { prisma } from '../db';
@@ -7,7 +7,6 @@ import {
   updateAnimalLostTable,
   updateAnimalTable,
 } from '../utils/updateDatabase.utils';
-import { findAnimalsByCity } from '../db/animal.db';
 import { AnimalFeature } from '../utils/animalFeatures.utils';
 
 // update animal table manually
@@ -49,7 +48,6 @@ export const getAnimals = catchAsync(async (req: Request, res: Response) => {
 export const getLostAnimals = catchAsync(
   async (req: Request, res: Response) => {
     const lostAnimals = await prisma.animal_lost.findMany({});
-    console.log(lostAnimals);
 
     if (!lostAnimals) {
       res.status(404).send('Lost animals not found!');

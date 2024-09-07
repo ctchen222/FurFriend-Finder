@@ -75,7 +75,6 @@ export const updateAnimalTable = async () => {
     photo: item.album_file,
     sheltername: item.shelter_name,
   }));
-  console.log(animals);
 
   // Upsert data into table animal_sheltername_address
   data.map(async (item: any) => {

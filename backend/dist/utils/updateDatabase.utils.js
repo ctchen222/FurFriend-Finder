@@ -26,7 +26,6 @@ const updateAnimalTable = async () => {
         photo: item.album_file,
         sheltername: item.shelter_name,
     }));
-    console.log(animals);
     // Upsert data into table animal_sheltername_address
     data.map(async (item) => {
         await db_1.prisma.animal_sheltername_address.upsert({

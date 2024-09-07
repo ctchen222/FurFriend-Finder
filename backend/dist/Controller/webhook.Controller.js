@@ -7,11 +7,11 @@ exports.sendTextMsgManually = exports.webhookServer = void 0;
 const db_1 = require("../db");
 const catchAsync_1 = require("../utils/catchAsync");
 const lineClient_1 = require("../lineClient");
-const animal_db_1 = require("../db/animal.db");
+const animal_db_1 = require("../factory/animal.db");
 const prettifyAnimalData_utils_1 = __importDefault(require("../utils/prettifyAnimalData.utils"));
 const taiwanCities_utils_1 = __importDefault(require("../utils/taiwanCities.utils"));
 exports.webhookServer = (0, catchAsync_1.catchAsync)(async (req, res) => {
-    // 1. check sentFrom is in db or not
+    // 1. check sentFrom is in db or not(user exist or not)
     const destination = req.body.destination;
     const userId = req.body.events.at(0).source.userId;
     const userExisted = await checkUserExistance(destination);
@@ -25,7 +25,7 @@ exports.webhookServer = (0, catchAsync_1.catchAsync)(async (req, res) => {
     // count: 3 -> User attempt sign up or try to get animals message
     if (count === 3) {
         const [name, email, city] = msgFromUser.split(' ');
-        if (!userExisted && (0, taiwanCities_utils_1.default)(city)) {
+        if (!userExisted) {
             // if user not exist, create one
             await db_1.prisma.users.create({
                 data: {
@@ -36,28 +36,16 @@ exports.webhookServer = (0, catchAsync_1.catchAsync)(async (req, res) => {
                     userId: userId,
                 },
             });
-            const replyMsg = {
-                type: 'text',
-                text: '成功將您的個人資料加進資料庫！\n請輸入您所在的縣市以取得領養資訊！。',
-            };
-            lineClient_1.client.replyMessage({
-                replyToken: req.body.events.at(0).replyToken,
-                messages: [replyMsg],
-            });
+            const text = '成功將您的個人資料加進資料庫！\n請輸入您所在的縣市以取得領養資訊！。';
+            sendTextMsgAuto(req, text);
+            console.log(`User ${name} has been created`);
         }
         else {
             // user exist, send animal data back to user
             const data = await (0, animal_db_1.findAnimalsByCity)(city); // data send back
             const text = (0, prettifyAnimalData_utils_1.default)(data);
-            // const replyMsg = {
-            //   type: 'text',
-            //   text: text,
-            // };
-            // console.log(`使用者 {${userId}} 個人資訊輸入錯誤`);
-            // client.replyMessage({
-            //   replyToken: req.body.events.at(0).replyToken,
-            //   messages: [replyMsg as line.TextMessage],
-            // });
+            sendTextMsgAuto(req, text);
+            console.log(`資料已傳送給用戶${name}`);
         }
     }
     // count: 1 -> User Try to get animals data by entering city name
@@ -65,13 +53,12 @@ exports.webhookServer = (0, catchAsync_1.catchAsync)(async (req, res) => {
         if (!userExisted) {
             // if user not exist
             console.log(`User ${userId} tries to use the service, but not sign up yet.`);
-            sendTextMsgAuto(req, '請先輸入您的個人資料，才能使用我們的服務呦！');
+            sendTextMsgAuto(req, '請先按照說明輸入您的個人資料，才能使用我們的服務呦！');
         }
         else {
             // if user exist
             const city = msgFromUser;
             if ((0, taiwanCities_utils_1.default)(city)) {
-                console.log((0, taiwanCities_utils_1.default)(city));
                 const data = await (0, animal_db_1.findAnimalsByCity)(city);
                 const text = (0, prettifyAnimalData_utils_1.default)(data);
                 sendTextMsgAuto(req, text);

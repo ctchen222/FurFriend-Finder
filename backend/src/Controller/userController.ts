@@ -1,26 +1,30 @@
 import { Request, Response } from 'express';
 import { prisma } from '../db';
 import { catchAsync } from '../utils/catchAsync';
+import { getAllUsers } from '../factory/user.db';
+import { getDateToday } from '../utils/getDateToday.utils';
+import prettifyAnimalData from '../utils/prettifyAnimalData.utils';
 
 // TODO -> limited to admin only
 export const getUsers = catchAsync(async (req: Request, res: Response) => {
-  const users = await prisma.users.findMany({});
+  const users = await getAllUsers();
+  console.log(users);
 
   res.status(200).json(users);
 });
 
 export const updateUser = catchAsync(async (req: Request, res: Response) => {
-  const email = req.params.email;
+  const userId = req.params.userId;
 
   const user = await prisma.users.findUnique({
     where: {
-      email: email,
+      email: userId,
     },
   });
   if (!user) res.status(404).send('User Not Found');
 
   await prisma.users.update({
-    where: { email },
+    where: { userId },
     data: req.body,
   });
 

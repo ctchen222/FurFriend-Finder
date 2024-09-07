@@ -28,7 +28,7 @@ model animal {
   colour                     String?                    @db.VarChar(6)
   status                     String?                    @db.VarChar(10)
   remark                     String?
-  opendate                   DateTime?                  @db.Date
+  opendate                   String?                 
   createtime                 DateTime?                  @db.Date
   photo                      String?
   sheltername                String                     @db.VarChar(20)

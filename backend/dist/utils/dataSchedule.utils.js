@@ -18,5 +18,5 @@ exports.cronSchedule = node_cron_1.default.schedule('0 4 * * *', async () => {
     }
 }, {
     scheduled: true, // 是否立即執行
-    timezone: 'Asia/Taipei', // 時���
+    timezone: 'Asia/Taipei', // 時區
 });

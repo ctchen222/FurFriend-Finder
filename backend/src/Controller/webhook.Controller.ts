@@ -1,13 +1,14 @@
 import { Request, Response } from 'express';
+import { z } from 'zod';
 import { prisma } from '../db';
 import { catchAsync } from '../utils/catchAsync';
 import { client, line } from '../lineClient';
-import { findAnimalsByCity } from '../db/animal.db';
+import { findAnimalsByCity } from '../factory/animal.db';
 import prettifyAnimalData from '../utils/prettifyAnimalData.utils';
 import cityInTaiwan from '../utils/taiwanCities.utils';
 
 export const webhookServer = catchAsync(async (req: Request, res: Response) => {
-  // 1. check sentFrom is in db or not
+  // 1. check sentFrom is in db or not(user exist or not)
   const destination = req.body.destination;
   const userId = req.body.events.at(0).source.userId;
   const userExisted = await checkUserExistance(destination);
@@ -25,7 +26,7 @@ export const webhookServer = catchAsync(async (req: Request, res: Response) => {
   if (count === 3) {
     const [name, email, city] = msgFromUser.split(' ');
 
-    if (!userExisted && cityInTaiwan(city)) {
+    if (!userExisted) {
       // if user not exist, create one
       await prisma.users.create({
         data: {
@@ -36,28 +37,17 @@ export const webhookServer = catchAsync(async (req: Request, res: Response) => {
           userId: userId,
         },
       });
-      const replyMsg = {
-        type: 'text',
-        text: '成功將您的個人資料加進資料庫！\n請輸入您所在的縣市以取得領養資訊！。',
-      };
-      client.replyMessage({
-        replyToken: req.body.events.at(0).replyToken,
-        messages: [replyMsg as line.TextMessage],
-      });
+
+      const text =
+        '成功將您的個人資料加進資料庫！\n請輸入您所在的縣市以取得領養資訊！。';
+      sendTextMsgAuto(req, text);
+      console.log(`User ${name} has been created`);
     } else {
       // user exist, send animal data back to user
       const data = await findAnimalsByCity(city); // data send back
       const text = prettifyAnimalData(data);
-
-      // const replyMsg = {
-      //   type: 'text',
-      //   text: text,
-      // };
-      // console.log(`使用者 {${userId}} 個人資訊輸入錯誤`);
-      // client.replyMessage({
-      //   replyToken: req.body.events.at(0).replyToken,
-      //   messages: [replyMsg as line.TextMessage],
-      // });
+      sendTextMsgAuto(req, text);
+      console.log(`資料已傳送給用戶${name}`);
     }
   }
 
@@ -68,13 +58,15 @@ export const webhookServer = catchAsync(async (req: Request, res: Response) => {
       console.log(
         `User ${userId} tries to use the service, but not sign up yet.`,
       );
-      sendTextMsgAuto(req, '請先輸入您的個人資料，才能使用我們的服務呦！');
+      sendTextMsgAuto(
+        req,
+        '請先按照說明輸入您的個人資料，才能使用我們的服務呦！',
+      );
     } else {
       // if user exist
       const city = msgFromUser;
 
       if (cityInTaiwan(city)) {
-        console.log(cityInTaiwan(city));
         const data = await findAnimalsByCity(city);
         const text = prettifyAnimalData(data);
         sendTextMsgAuto(req, text);
