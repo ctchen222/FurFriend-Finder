@@ -13,6 +13,7 @@ const prettifyAnimalData_utils_1 = __importDefault(require("./prettifyAnimalData
 // 每日中午會推送該地區的流浪動物
 exports.cronSchedule = node_cron_1.default.schedule('0 12 * * *', async () => {
     try {
+        console.log('[Daily Sending]: Send adopting data to users');
         const users = await (0, user_db_1.getAllUsers)();
         const today = (0, getDateToday_utils_1.getDateToday)();
         users.forEach(async (user) => {
@@ -26,7 +27,7 @@ exports.cronSchedule = node_cron_1.default.schedule('0 12 * * *', async () => {
                     },
                 },
             });
-            const text = (0, prettifyAnimalData_utils_1.default)(animals) || '今日您所在的地區沒有新增動物';
+            const text = (0, prettifyAnimalData_utils_1.default)(animals);
             (0, sendTextMsgByUserId_utils_1.sendTextMsgByUserId)(user.userId, text);
         });
     }

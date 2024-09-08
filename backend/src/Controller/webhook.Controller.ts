@@ -39,7 +39,7 @@ export const webhookServer = catchAsync(async (req: Request, res: Response) => {
       });
 
       const text =
-        '成功將您的個人資料加進資料庫！\n請輸入您所在的縣市以取得領養資訊！。';
+        '成功將您的個人資料加進資料庫！\n請輸入您所在的縣市以取得領養資訊！';
       sendTextMsgAuto(req, text);
       console.log(`User ${name} has been created`);
     } else {

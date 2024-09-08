@@ -10,6 +10,7 @@ export const cronSchedule = cron.schedule(
   '0 12 * * *',
   async () => {
     try {
+      console.log('[Daily Sending]: Send adopting data to users');
       const users = await getAllUsers();
       const today = getDateToday();
       users.forEach(async (user) => {
@@ -23,8 +24,7 @@ export const cronSchedule = cron.schedule(
             },
           },
         });
-        const text =
-          prettifyAnimalData(animals) || '今日您所在的地區沒有新增動物';
+        const text = prettifyAnimalData(animals);
         sendTextMsgByUserId(user.userId, text);
       });
     } catch (error) {
