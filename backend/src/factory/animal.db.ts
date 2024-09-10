@@ -32,3 +32,28 @@ export const findAnimalsByCity = async (city: string) => {
     },
   });
 };
+
+export const findAnimalsByVariery = async (variety: string) => {
+  return await prisma.animal.findMany({
+    where: {
+      variety: { startsWith: variety },
+      opendate: {
+        not: null,
+      },
+    },
+    select: {
+      kind: true,
+      age: true,
+      variety: true,
+      sheltername: true,
+      opendate: true,
+      photo: true,
+      animal_sheltername_address: {
+        select: {
+          address: true,
+          tel: true,
+        },
+      },
+    },
+  });
+};

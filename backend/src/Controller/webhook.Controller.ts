@@ -3,12 +3,22 @@ import { z } from 'zod';
 import { prisma } from '../db';
 import { catchAsync } from '../utils/catchAsync';
 import { client, line } from '../lineClient';
-import { findAnimalsByCity } from '../factory/animal.db';
+import { findAnimalsByCity, findAnimalsByVariery } from '../factory/animal.db';
 import prettifyAnimalData from '../utils/prettifyAnimalData.utils';
-import cityInTaiwan from '../utils/taiwanCities.utils';
+import { cityInTaiwan, taiwanCities } from '../utils/taiwanCities.utils';
+
+const UserInputSchema = z
+  .object({
+    name: z.string().min(1).max(10),
+    email: z.string().email({ message: 'Invalid meesage' }),
+    city: z.enum(taiwanCities as [string]),
+    kind: z.string(),
+  })
+  .partial();
+type UserInput = z.infer<typeof UserInputSchema>;
 
 export const webhookServer = catchAsync(async (req: Request, res: Response) => {
-  // 1. check sentFrom is in db or not(user exist or not)
+  // check sentFrom is in db or not(user exist or not)
   const destination = req.body.destination;
   const userId = req.body.events.at(0).source.userId;
   const userExisted = await checkUserExistance(destination);
@@ -22,6 +32,7 @@ export const webhookServer = catchAsync(async (req: Request, res: Response) => {
 
   const count = msgFromUser.split(' ').length; // count how many parts user enter
 
+  // ---------------------------------------------------------------------------------------
   // count: 3 -> User attempt sign up or try to get animals message
   if (count === 3) {
     const [name, email, city] = msgFromUser.split(' ');
@@ -51,6 +62,7 @@ export const webhookServer = catchAsync(async (req: Request, res: Response) => {
     }
   }
 
+  // --------------------------------------------------------------------------------------
   // count: 1 -> User Try to get animals data by entering city name
   if (count === 1) {
     if (!userExisted) {
@@ -64,17 +76,23 @@ export const webhookServer = catchAsync(async (req: Request, res: Response) => {
       );
     } else {
       // if user exist
-      const city = msgFromUser;
-
-      if (cityInTaiwan(city)) {
+      if (cityInTaiwan(msgFromUser)) {
+        // 使用者輸入台灣的縣市
+        const city = msgFromUser;
         const data = await findAnimalsByCity(city);
         const text = prettifyAnimalData(data);
         sendTextMsgAuto(req, text);
       } else {
-        sendTextMsgAuto(
-          req,
-          '您輸入的縣市並不屬於台灣，請確定是否輸入正確。\n若有問題，請輸入：我需要協助，將會有專人替您解答問題。',
-        );
+        // 使用者輸入品種
+        const data = await findAnimalsByVariery(msgFromUser);
+        if (!data) {
+          sendTextMsgAuto(
+            req,
+            '您輸入的品種目前並未存在於資料庫！\n若有問題，請輸入：我需要協助，將會有專人替您解答問題。',
+          );
+        }
+        const text = prettifyAnimalData(data);
+        sendTextMsgAuto(req, text);
       }
     }
   }

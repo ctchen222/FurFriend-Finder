@@ -28,4 +28,4 @@ const cityInTaiwan = (city: string) => {
   return taiwanCities.includes(city);
 };
 
-export default cityInTaiwan;
+export { cityInTaiwan, taiwanCities };

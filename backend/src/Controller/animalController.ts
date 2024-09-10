@@ -8,12 +8,26 @@ import {
   updateAnimalTable,
 } from '../utils/updateDatabase.utils';
 import { AnimalFeature } from '../utils/animalFeatures.utils';
+import { taiwanCities } from '../utils/taiwanCities.utils';
+
+const UserInputSchema = z
+  .object({
+    name: z.string().min(1).max(10),
+    email: z.string().email(),
+    city: z.enum(taiwanCities as [string]),
+  })
+  .partial();
 
 // update animal table manually
 export const updateTableAnimal = catchAsync(
   async (req: Request, res: Response) => {
-    const animalTableinsertCount = await updateAnimalTable();
-    const animalLostTableCount = await updateAnimalLostTable();
+    const [animalTableinsertCount, animalLostTableCount] = await Promise.all([
+      updateAnimalTable(),
+      updateAnimalLostTable(),
+    ]);
+
+    // const animalTableinsertCount = await updateAnimalTable();
+    // const animalLostTableCount = await updateAnimalLostTable();
 
     res.status(200).json({
       status: 'Success',

@@ -1,14 +1,27 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getLostAnimals = exports.getAnimals = exports.updateTableAnimal = void 0;
+const zod_1 = require("zod");
 const db_1 = require("../db");
 const catchAsync_1 = require("../utils/catchAsync");
 const updateDatabase_utils_1 = require("../utils/updateDatabase.utils");
 const animalFeatures_utils_1 = require("../utils/animalFeatures.utils");
+const taiwanCities_utils_1 = require("../utils/taiwanCities.utils");
+const UserInputSchema = zod_1.z
+    .object({
+    name: zod_1.z.string().min(1).max(10),
+    email: zod_1.z.string().email(),
+    city: zod_1.z.enum(taiwanCities_utils_1.taiwanCities),
+})
+    .partial();
 // update animal table manually
 exports.updateTableAnimal = (0, catchAsync_1.catchAsync)(async (req, res) => {
-    const animalTableinsertCount = await (0, updateDatabase_utils_1.updateAnimalTable)();
-    const animalLostTableCount = await (0, updateDatabase_utils_1.updateAnimalLostTable)();
+    const [animalTableinsertCount, animalLostTableCount] = await Promise.all([
+        (0, updateDatabase_utils_1.updateAnimalTable)(),
+        (0, updateDatabase_utils_1.updateAnimalLostTable)(),
+    ]);
+    // const animalTableinsertCount = await updateAnimalTable();
+    // const animalLostTableCount = await updateAnimalLostTable();
     res.status(200).json({
         status: 'Success',
         animal_table: animalTableinsertCount === 0

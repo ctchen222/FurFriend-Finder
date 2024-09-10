@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.findAnimalsByCity = void 0;
+exports.findAnimalsByVariery = exports.findAnimalsByCity = void 0;
 const db_1 = require("../db");
 const findAnimalsByCity = async (city) => {
     city = city.replace('台', '臺');
@@ -34,3 +34,28 @@ const findAnimalsByCity = async (city) => {
     });
 };
 exports.findAnimalsByCity = findAnimalsByCity;
+const findAnimalsByVariery = async (variety) => {
+    return await db_1.prisma.animal.findMany({
+        where: {
+            variety: { startsWith: variety },
+            opendate: {
+                not: null,
+            },
+        },
+        select: {
+            kind: true,
+            age: true,
+            variety: true,
+            sheltername: true,
+            opendate: true,
+            photo: true,
+            animal_sheltername_address: {
+                select: {
+                    address: true,
+                    tel: true,
+                },
+            },
+        },
+    });
+};
+exports.findAnimalsByVariery = findAnimalsByVariery;

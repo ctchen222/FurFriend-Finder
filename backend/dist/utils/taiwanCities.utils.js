@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.taiwanCities = exports.cityInTaiwan = void 0;
 const taiwanCities = [
     '臺北',
     '新北',
@@ -24,8 +25,9 @@ const taiwanCities = [
     '金門',
     '連江',
 ];
+exports.taiwanCities = taiwanCities;
 const cityInTaiwan = (city) => {
     city = city.replace('台', '臺');
     return taiwanCities.includes(city);
 };
-exports.default = cityInTaiwan;
+exports.cityInTaiwan = cityInTaiwan;
