@@ -1,3 +1,11 @@
 todo.md
 .rest
 .env
+rep
+
+node_modules
+# Keep environment variables out of version control
+
+.env
+frontend
+command.txt
