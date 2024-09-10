@@ -80,6 +80,12 @@ export const webhookServer = catchAsync(async (req: Request, res: Response) => {
         // 使用者輸入台灣的縣市
         const city = msgFromUser;
         const data = await findAnimalsByCity(city);
+        if (!data) {
+          sendTextMsgAuto(
+            req,
+            '您輸入的縣市並不屬於台灣！\n若有問題，請輸入：我需要協助，將會有專人替您解答問題。',
+          );
+        }
         const text = prettifyAnimalData(data);
         sendTextMsgAuto(req, text);
       } else {
