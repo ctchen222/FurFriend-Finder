@@ -5,14 +5,9 @@ FurFriend Finder 是一款結合line 打造的台灣流浪動物領養系統，�
 或者透過以下連結：\
 https://lin.ee/Tb2PjJR
 
-## 功能影片
-<!-- <video width="640" height="480" controls>
-  <source src="images/user-enter-city.mov">
-  您的瀏覽器不支援影片播放。
-</video> -->
-[![user-enter-variety](https://img.youtube.com/vi/ntqMX1U_UMQ/maxresdefault.jpg)](https://youtube.com/shorts/ntqMX1U_UMQ?feature=share)
+## 功能
+1. [輸入台灣縣市獲得資訊](https://youtube.com/shorts/ITImPcKueNw?si=pV_VR78ndRMsTY5D)
+2. [輸入品種獲得資訊](https://youtube.com/shorts/ntqMX1U_UMQ?si=Fr6o1NkclNn7LhNj)
 
-
-
-
-## 技
+<!-- ## 資料來源 -->
+<!-- 1. []() -->
