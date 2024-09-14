@@ -6,7 +6,8 @@
   "scripts": {
     "build": "rimraf dist && npx tsc",
     "prerestart": "npm run build",
-    "start": "npx tsc -w & nodemon dist/app.js"
+    "start": "npx tsc -w & nodemon dist/app.js",
+    "start:prod": "npx tsc -w & pm2 start dist/app.js"
   },
   "keywords": [],
   "author": "",
