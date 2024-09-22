@@ -28,8 +28,8 @@ model animal {
   colour                     String?                    @db.VarChar(6)
   status                     String?                    @db.VarChar(10)
   remark                     String?
-  opendate                   DateTime?                  @db.Date
-  createtime                 DateTime?                  @db.Date
+  opendate                   String?                  @db.VarChar(10)
+  createtime                 String?                  @db.VarChar(10)
   photo                      String?
   sheltername                String                     @db.VarChar(20)
   animal_sheltername_address animal_sheltername_address @relation(fields: [sheltername], references: [sheltername], onDelete: NoAction, onUpdate: NoAction, map: "fk_sheltername")

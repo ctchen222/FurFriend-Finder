@@ -10,7 +10,7 @@ const getDateToday = () => {
         timeZone: 'Asia/Taipei',
     });
     const [{ value: year }, , { value: month }, , { value: day }] = taiwanFormatter.formatToParts(today);
-    const formattedDate = `${year}-${month}-${day}`;
+    const formattedDate = `${year}/${month}/${day}`;
     // 將日期組合成 'year-month-day' 格式
     return formattedDate;
 };

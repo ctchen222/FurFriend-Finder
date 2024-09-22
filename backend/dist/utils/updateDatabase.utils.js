@@ -19,10 +19,8 @@ const updateAnimalTable = async () => {
         colour: item.animal_colour,
         status: item.animal_status,
         remark: item.animal_remark,
-        opendate: item.animal_opendate ? new Date(item.animal_opendate) : null,
-        createtime: item.animal_createtime
-            ? new Date(item.animal_createtime)
-            : null,
+        opendate: item.animal_opendate ? item.animal_opendate : null,
+        createtime: item.animal_createtime ? item.animal_createtime : null,
         photo: item.album_file,
         sheltername: item.shelter_name,
     }));

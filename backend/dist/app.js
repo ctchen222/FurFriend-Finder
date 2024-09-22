@@ -17,11 +17,11 @@ app.use('/', webhookRouter_1.router);
 app.use('/api/users', userRouter_1.router);
 app.use('/api/animals', animalRouter_1.router);
 app.use('*', (req, res, next) => {
-    res.end('This route is not provided');
+    res.status(404).end('This route is not provided');
 });
 dataSchedule_utils_1.cronSchedule.start();
 sendDataSchedule_utils_1.cronSchedule.start();
 const port = process.env.PORT || 2486;
 app.listen(port, () => {
-    console.log(`listening on ${port}`);
+    console.log(`Listening on ${port}`);
 });

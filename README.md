@@ -9,5 +9,7 @@ https://lin.ee/Tb2PjJR
 1. [輸入台灣縣市獲得資訊](https://youtube.com/shorts/ITImPcKueNw?si=pV_VR78ndRMsTY5D)
 2. [輸入品種獲得資訊](https://youtube.com/shorts/ntqMX1U_UMQ?si=Fr6o1NkclNn7LhNj)
 
-## 資料來源 -->
-<!-- 1. []()
+## 資料來源
+1. [動物認領養](https://data.moa.gov.tw/open_detail.aspx?id=QcbUEzN6E6DL)
+2. [台灣走失動物](https://data.moa.gov.tw/Service/OpenData/TransService.aspx?UnitId=IFJomqVzyB0i)
+

@@ -1,45 +1,45 @@
 {
-  "name": "furfriend-finder",
-  "version": "1.0.0",
-  "description": "A pet adoption notification system",
-  "main": "app.js",
-  "scripts": {
-    "build": "rimraf dist && npx tsc",
-    "prerestart": "npm run build",
-    "start": "npx tsc -w & nodemon dist/app.js",
-    "start:prod": "npx tsc -w & pm2 start dist/app.js"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "dependencies": {
-    "@line/bot-sdk": "^9.2.2",
-    "@prisma/client": "^5.18.0",
-    "@types/express": "^4.17.21",
-    "@types/node-cron": "^3.0.11",
-    "axios": "^1.7.5",
-    "dotenv": "^16.4.5",
-    "express": "^4.19.2",
-    "line-notify": "^1.0.0",
-    "messaging-api-line": "^1.1.0",
-    "node-cron": "^3.0.3",
-    "rimraf": "^6.0.1",
-    "sequelize": "^6.37.3",
-    "zod": "^3.23.8"
-  },
-  "devDependencies": {
-    "@eslint/js": "^9.9.1",
-    "@types/node": "^22.4.1",
-    "@typescript-eslint/eslint-plugin": "^8.2.0",
-    "@typescript-eslint/parser": "^8.2.0",
-    "eslint": "^9.9.1",
-    "eslint-config-prettier": "^9.1.0",
-    "globals": "^15.9.0",
-    "nodemon": "^3.1.4",
-    "prettier": "^3.3.3",
-    "prisma": "^5.18.0",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.5.4",
-    "typescript-eslint": "^8.2.0"
-  }
+    "name": "furfriend-finder",
+    "version": "1.0.0",
+    "description": "A pet adoption notification system",
+    "main": "app.js",
+    "scripts": {
+        "build": "rimraf dist && npx tsc",
+        "prerestart": "npm run build",
+        "start": "npx tsc -w & nodemon dist/app.js",
+        "start:prod": "npm run build & npx tsc -w & pm2 start dist/app.js"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "dependencies": {
+        "@line/bot-sdk": "^9.2.2",
+        "@prisma/client": "^5.18.0",
+        "@types/express": "^4.17.21",
+        "@types/node-cron": "^3.0.11",
+        "axios": "^1.7.5",
+        "dotenv": "^16.4.5",
+        "express": "^4.19.2",
+        "line-notify": "^1.0.0",
+        "messaging-api-line": "^1.1.0",
+        "node-cron": "^3.0.3",
+        "rimraf": "^6.0.1",
+        "sequelize": "^6.37.3",
+        "zod": "^3.23.8"
+    },
+    "devDependencies": {
+        "@eslint/js": "^9.9.1",
+        "@types/node": "^22.5.5",
+        "@typescript-eslint/eslint-plugin": "^8.2.0",
+        "@typescript-eslint/parser": "^8.2.0",
+        "eslint": "^9.9.1",
+        "eslint-config-prettier": "^9.1.0",
+        "globals": "^15.9.0",
+        "nodemon": "^3.1.4",
+        "prettier": "^3.3.3",
+        "prisma": "^5.18.0",
+        "ts-node": "^10.9.2",
+        "typescript": "^5.5.4",
+        "typescript-eslint": "^8.2.0"
+    }
 }

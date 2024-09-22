@@ -1,16 +1,16 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const prettifyAnimalData = (data) => {
+const prettiftyDailyAnimalData = (dailyAnimalData) => {
     let textMsg = '';
-    const numOfData = data.length;
+    const numOfData = dailyAnimalData.length;
     if (numOfData === 0) {
         textMsg +=
-            '1、今日您所在的地區沒有新增動物\n2、您輸入的品種並未存在資料庫\n3、您輸入的地點不是台灣縣市';
+            '[每日訊息] \n今日沒有新的動物更新 \n輸入縣市、品種來獲得更多資訊！';
     }
-    data.forEach((animal, idx) => {
+    dailyAnimalData.forEach((animal, idx) => {
         animal.variety = animal.variety.replace(/\s/g, '');
         textMsg += `${idx + 1}, ${animal.variety} | ${animal.sheltername} | ${animal.photo}\n `;
     });
     return textMsg;
 };
-exports.default = prettifyAnimalData;
+exports.default = prettiftyDailyAnimalData;

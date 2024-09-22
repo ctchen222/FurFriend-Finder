@@ -15,7 +15,7 @@ app.use('/', webhookRouter);
 app.use('/api/users', userRouter);
 app.use('/api/animals', animalRouter);
 app.use('*', (req, res, next) => {
-  res.end('This route is not provided');
+    res.status(404).end('This route is not provided');
 });
 
 fetchDataSchedule.start();
@@ -23,5 +23,5 @@ sendDataSchedule.start();
 
 const port = process.env.PORT || 2486;
 app.listen(port, () => {
-  console.log(`listening on ${port}`);
+    console.log(`Listening on ${port}`);
 });

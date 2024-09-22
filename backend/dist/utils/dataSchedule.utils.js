@@ -11,7 +11,7 @@ exports.cronSchedule = node_cron_1.default.schedule('0 4 * * *', async () => {
     try {
         const animalTableUpdateCount = await (0, updateDatabase_utils_1.updateAnimalTable)();
         const animalLostUpdateCount = await (0, updateDatabase_utils_1.updateAnimalLostTable)();
-        console.log(`[Daily Update]: ${animalTableUpdateCount} data were updated in table Animal\n\t ${animalLostUpdateCount} data were updated in table Animal_lost`);
+        console.log(`[Daily Update]: \n${animalTableUpdateCount} data were updated in table Animal \n${animalLostUpdateCount} data were updated in table Animal_lost`);
     }
     catch (error) {
         console.error('Something went wrong upon updating');
