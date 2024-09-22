@@ -9,3 +9,4 @@ node_modules
 .env
 frontend
 command.txt
+dbSetup.sql
