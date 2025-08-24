@@ -10,3 +10,8 @@ node_modules
 frontend
 command.txt
 dbSetup.sql
+docker*
+nginx*
+
+backend/dist/
+backend/tmp/
