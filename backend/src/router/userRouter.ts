@@ -1,9 +1,13 @@
 import express from 'express';
-import { deleteUser, getUsers, updateUser } from '../Controller/userController';
+import { catchAsync } from '../utils/catchAsync';
+import UserController from '../Controller/userController';
+
+const userController = new UserController();
 
 const router = express.Router();
 
-// These should be protected
-router.route('/').patch(updateUser).delete(deleteUser).get(getUsers);
+router.route('/')
+// .post(catchAsync(userController.createUser))
+// .get(catchAsync(userController.getUsers))
 
 export { router };
