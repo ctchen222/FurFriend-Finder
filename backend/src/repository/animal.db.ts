@@ -153,7 +153,6 @@ class AnimalRepository extends BaseRepository {
 
 		for (let i = 0; i < animalLosts.length; i += batchSize) {
 			const batch = animalLosts.slice(i, i + batchSize);
-			console.log('batch size:', batch.length);
 
 			// Separate animals with known vs unknown owners
 			// const knownOwnerAnimals = batch.filter(animal =>
@@ -198,7 +197,7 @@ class AnimalRepository extends BaseRepository {
 			// Insert lost animals
 			const animalValues: any[] = [];
 			const animalPlaceholders = batch.map((animal, idx) => {
-				const baseIdx = idx * 11;
+				const baseIdx = idx * 12;
 
 				let ownerId: number;
 				// if ((animal.owner_phone && animal.owner_phone.trim() !== "") ||
@@ -220,19 +219,17 @@ class AnimalRepository extends BaseRepository {
 					animal.colour ?? null,
 					animal.outlook ?? null,
 					animal.feature ?? null,
-					//TODO: fix date format issue
-					// animal.lost_time ? formatDate(animal.lost_time) : '9999-12-31',
-					// '9999-12-31',
+					animal.lost_time ? formatDate(animal.lost_time) : '9999-12-31',
 					animal.lost_place ?? null,
 					animal.picture ?? null,
 					ownerId
 				);
-				return `($${baseIdx + 1}, $${baseIdx + 2}, $${baseIdx + 3}, $${baseIdx + 4}, $${baseIdx + 5}, $${baseIdx + 6}, $${baseIdx + 7}, $${baseIdx + 8}, $${baseIdx + 9}, $${baseIdx + 10}, $${baseIdx + 11})`;
+				return `($${baseIdx + 1}, $${baseIdx + 2}, $${baseIdx + 3}, $${baseIdx + 4}, $${baseIdx + 5}, $${baseIdx + 6}, $${baseIdx + 7}, $${baseIdx + 8}, $${baseIdx + 9}, $${baseIdx + 10}, $${baseIdx + 11}, $${baseIdx + 12})`;
 			}).join(", ");
 
 			const insertAnimalQuery = `
 				INSERT INTO animal_losts(
-				chip_id, name, kind, variety, sex, colour, outlook, feature, lost_place, picture, owner_id)
+				chip_id, name, kind, variety, sex, colour, outlook, feature, lost_time, lost_place, picture, owner_id)
 				VALUES ${animalPlaceholders}
 				ON CONFLICT(chip_id) DO NOTHING;
 			`;
@@ -243,7 +240,7 @@ class AnimalRepository extends BaseRepository {
 		return insertedRowCount;
 	}
 
-	async findMatchingAnimals(kind?: string, sex?: string) {
+	async findMatchingAnimals(kind?: string, sex?: string, variety?: string) {
 		const query = `
 			SELECT * FROM animals
 			WHERE kind = $1 AND sex = $2;
