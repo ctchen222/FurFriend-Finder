@@ -1,7 +1,19 @@
 import express from 'express';
+import morgan from 'morgan';
+import logger from '../config/logger';
 import CustomError from '../utils/customError';
 import SuccessResponse from '../utils/successResponse';
 import routes from '../router/route';
+
+// Morgan setup to use Winston for HTTP logging
+const stream: morgan.StreamOptions = {
+	write: (message) => logger.http(message.trim()),
+};
+
+const morganMiddleware = morgan(
+	':method :url :status :res[content-length] - :response-time ms',
+	{ stream }
+);
 
 const Handler = {
 	errorHandler: (
@@ -10,6 +22,8 @@ const Handler = {
 		res: express.Response,
 		next: express.NextFunction
 	): void => {
+		logger.error(err); // Log the error
+
 		if (err.stack) {
 			// const regex = /\d+\:\d+/i
 			// const regex = /(?:\s+at )?(?:(.*?)\s+\()?(.*?):(\d+):(\d+)\)?$/
@@ -65,6 +79,7 @@ const Handler = {
 }
 
 export default function appHandler(app: express.Express) {
+	app.use(morganMiddleware);
 	routes(app)
 
 	app.use(Handler.completeHandler)
