@@ -10,7 +10,7 @@ import * as apiMessage from '../utils/message'
 import CustomError from '../utils/customError';
 import DatabaseUtils from '../utils/database.utils';
 import AnimalHelper from './helper/animalHelper';
-import { Animal } from '../utils/zod/animals';
+import { Animal, AnimalOwner } from '../utils/zod/animals';
 
 class AnimalController {
 	animalRepository: AnimalRepository;
@@ -78,7 +78,7 @@ class AnimalController {
 		// const [animalTableinsertCount, animalLostTableCount] =
 		// 	await Promise.all([updateAnimalTable(), updateAnimalLostTable()]);
 
-		// const animalTableinsertCount = await updateAnimalTable();
+		const animalTableinsertCount = await updateAnimalTable();
 		const animalLostTableCount = await updateAnimalLostTable();
 
 		res.locals.result = new SuccessResponse('api', {

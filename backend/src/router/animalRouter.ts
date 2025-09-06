@@ -8,13 +8,16 @@ const animalLostCtrler = new AnimalLostController();
 const router = express.Router();
 
 router.route('/')
-	.get(catchAsync(animalCtrler.fetchList));
+	.get(catchAsync(animalCtrler.fetchList))
 
 router.route('/:id')
 	.get(catchAsync(animalCtrler.fetchById));
 
 router.route('/city/:city')
 	.get(catchAsync(animalCtrler.fetchByCity));
+
+router.route('/losts')
+	.post(catchAsync(animalLostCtrler.create));
 
 // For animal losts
 router.route('/losts/match/:id')

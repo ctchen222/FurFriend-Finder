@@ -1,22 +1,59 @@
 import express from 'express';
+
 import * as apiMessage from '../utils/message'
 import AnimalLostRepository from "../repository/animalLost.db";
-import AnimalRepository from '../repository/animal.db';
 import CustomError from '../utils/customError';
 import SuccessResponse from '../utils/successResponse';
 import { normalizeMatchCriteria } from '../utils/animal.utils';
 import { getMetadata } from '../repository/utils/dataTransform';
-import { AnimalLost } from '../utils/zod/animals';
+import { AnimalLost, AnimalLostSchema, AnimalOwner, AnimalOwnerSchema } from '../utils/zod/animals';
 import GeoService from '../Service/geo';
+import OwnerRepository from '../repository/owner.db';
+import logger from '../config/logger';
 
 class AnimalLostController {
 	private animalLostRepository: AnimalLostRepository
+	private ownerRepository: OwnerRepository
 	private geoService: GeoService;
 
 	constructor() {
 		this.animalLostRepository = new AnimalLostRepository();
+		this.ownerRepository = new OwnerRepository();
 		this.geoService = new GeoService();
 	}
+
+	create = async (
+		req: express.Request,
+		res: express.Response,
+		next: express.NextFunction
+	) => {
+		const animalLostResult = AnimalLostSchema.safeParse(req.body.animalLost);
+		const animalOwnerResult = AnimalOwnerSchema.safeParse(req.body.animalOwner);
+		console.log(animalLostResult.success, animalOwnerResult.success)
+
+		if (!animalLostResult.success || !animalOwnerResult.success) {
+			throw new CustomError(apiMessage.VALIDATION_ERROR);
+		}
+
+		const animalLost = animalLostResult.data as AnimalLost;
+		const animalOwner = animalOwnerResult.data as AnimalOwner;
+
+		// Step 1: Find or create the owner and get their ID
+		const owner = await this.ownerRepository.findOrCreate(animalOwner);
+
+		// Step 2: Add the owner_id to the lost animal data
+		const animalToCreate = {
+			...animalLost,
+			owner_id: owner.id,
+		};
+
+		// Step 3: Create the lost animal record
+		const createdAnimalLost = await this.animalLostRepository.create<AnimalLost>(animalToCreate);
+
+		res.locals.result = new SuccessResponse('api', { createdAnimalLost, owner });
+		return next();
+	}
+
 
 	public matchLostAnimal = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
 		const id = req.params.id as string;
@@ -58,11 +95,12 @@ class AnimalLostController {
 		// Sort by distance in ascending order
 		const sortedMatches = animalsWithDistance.sort((a, b) => a.distance - b.distance);
 
-		const top5Matches = sortedMatches.slice(0, 10);
+		const top10Matches = sortedMatches.slice(0, 10);
 
 		const metadata = getMetadata(matchedAnimals);
 
-		res.locals.result = new SuccessResponse('api', { metadata, lostAnimal, top5Matches });
+		logger.info(`Found ${matchedAnimals.length} potential matches for lost animal ID ${id}. Returning top ${top10Matches.length} closest matches.`);
+		res.locals.result = new SuccessResponse('api', { metadata, lostAnimal, top10Matches });
 		return next();
 	}
 }

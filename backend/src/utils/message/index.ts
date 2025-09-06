@@ -33,3 +33,9 @@ export const LOST_PLACE_NOT_FOUND: Api.Error = {
 	httpCode: 400,
 	msg: "Lost place address not found"
 }
+
+export const VALIDATION_ERROR: Api.Error = {
+	code: 400,
+	httpCode: 400,
+	msg: "Invalid input data"
+}

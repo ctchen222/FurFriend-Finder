@@ -63,6 +63,21 @@ class BaseRepository {
 
 		return result.rows[0] || null;
 	}
+
+	async create<T>(data: { [key: string]: any }, options?: string[]): Promise<T> {
+		const keys = Object.keys(data);
+		const values = Object.values(data);
+		const placeholders = keys.map((_, index) => `$${index + 1}`);
+
+		const query = `
+			INSERT INTO ${this.tableName} (${keys.join(", ")})
+			VALUES (${placeholders.join(", ")})
+			RETURNING ${options ? options.join(", ") : "*"};
+		`;
+
+		const result = await pool.query(query, values);
+		return result.rows[0];
+	}
 }
 
 export default BaseRepository;
