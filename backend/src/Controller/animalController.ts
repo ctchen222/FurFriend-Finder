@@ -1,76 +1,92 @@
-import { z } from 'zod';
+import express from 'express'
 
-import { Request, Response } from 'express';
-import { prisma } from '../db';
-import { catchAsync } from '../utils/catchAsync';
 import {
-  updateAnimalLostTable,
-  updateAnimalTable,
+	updateAnimalLostTable,
+	updateAnimalTable,
 } from '../utils/updateDatabase.utils';
-import { AnimalFeature } from '../utils/animalFeatures.utils';
-import { taiwanCities } from '../utils/taiwanCities.utils';
+import AnimalRepository from '../repository/animal.db';
+import SuccessResponse from '../utils/successResponse';
+import * as apiMessage from '../utils/message'
+import CustomError from '../utils/customError';
+import DatabaseUtils from '../utils/database.utils';
+import AnimalHelper from './helper/animalHelper';
+import { Animal, AnimalOwner } from '../utils/zod/animals';
 
-const UserInputSchema = z
-  .object({
-    name: z.string().min(1).max(10),
-    email: z.string().email(),
-    city: z.enum(taiwanCities as [string]),
-  })
-  .partial();
+class AnimalController {
+	animalRepository: AnimalRepository;
+	constructor() {
+		this.animalRepository = new AnimalRepository();
+	}
 
-// update animal table manually
-export const updateTableAnimal = catchAsync(
-  async (req: Request, res: Response) => {
-    const [animalTableinsertCount, animalLostTableCount] = await Promise.all([
-      updateAnimalTable(),
-      updateAnimalLostTable(),
-    ]);
+	// TODO: Lack of prevCursor
+	fetchList = async (
+		req: express.Request,
+		res: express.Response,
+		next: express.NextFunction
+	) => {
+		const { parsedPageSize, id } = AnimalHelper.getQueryString(req)
 
-    // const animalTableinsertCount = await updateAnimalTable();
-    // const animalLostTableCount = await updateAnimalLostTable();
+		const animals = await this.animalRepository.findAll<Animal>(parsedPageSize, id)
+		const { prevCursor, nextCursor } = DatabaseUtils.cursorPairGenerate(animals)
 
-    res.status(200).json({
-      status: 'Success',
-      animal_table:
-        animalTableinsertCount === 0
-          ? `No New Row Inserted`
-          : `${animalTableinsertCount} data were inserted to table Animal`,
-      animal_lost_table:
-        animalLostTableCount === 0
-          ? 'No New Row Inserted'
-          : `${animalLostTableCount} data were inserted to table Animal_lost`,
-    });
-  },
-);
+		res.locals.result = new SuccessResponse('api',
+			{
+				animals,
+				cursors: {
+					prevCursor,
+					nextCursor
+				}
+			}
+		)
+		next()
+	}
 
-// get animal info
-export const getAnimals = catchAsync(async (req: Request, res: Response) => {
-  const features = new AnimalFeature(prisma, req.query).city();
-  const animals = await features.query;
+	fetchById = async (
+		req: express.Request,
+		res: express.Response,
+		next: express.NextFunction
+	) => {
+		const id = req.params.id as string
 
-  if (!animals) {
-    res.status(404).send('Animal not found!');
-  }
+		const animal = await this.animalRepository.findAnimalShelterById(id);
+		if (!animal) {
+			throw new CustomError(apiMessage.ANIMAL_NOT_EXISTS);
+		}
 
-  res.status(200).json({
-    status: 'Success',
-    count: animals.length,
-    animals: animals,
-  });
-});
+		res.locals.result = new SuccessResponse('api', { animal });
+		next()
+	}
 
-export const getLostAnimals = catchAsync(
-  async (req: Request, res: Response) => {
-    const lostAnimals = await prisma.animal_lost.findMany({});
+	fetchByCity = async (
+		req: express.Request,
+		res: express.Response,
+		next: express.NextFunction
+	) => {
+		const city = req.params.city as string
 
-    if (!lostAnimals) {
-      res.status(404).send('Lost animals not found!');
-    }
+		const animals = await this.animalRepository.findAnimalsByCity(city)
+		res.locals.result = new SuccessResponse('api', { animals });
+		next()
+	}
 
-    res.status(200).json({
-      status: 'Success',
-      count: lostAnimals.length,
-      lostAnimals,
-    });
-  },
-);
+	updateTableAnimal = async (
+		req: express.Request,
+		res: express.Response,
+		next: express.NextFunction
+	) => {
+		// TODO: wrap in transaction
+		// const [animalTableinsertCount, animalLostTableCount] =
+		// 	await Promise.all([updateAnimalTable(), updateAnimalLostTable()]);
+
+		const animalTableinsertCount = await updateAnimalTable();
+		const animalLostTableCount = await updateAnimalLostTable();
+
+		res.locals.result = new SuccessResponse('api', {
+			// animalTables: animalTableinsertCount,
+			animalLostTables: animalLostTableCount
+		})
+		next()
+	}
+}
+
+export default AnimalController;
