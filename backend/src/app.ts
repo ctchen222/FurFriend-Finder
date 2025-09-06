@@ -6,7 +6,6 @@ import bodyParser from 'body-parser';
 import logger from './config/logger';
 import { cronSchedule as fetchDataSchedule } from './utils/dataSchedule.utils';
 import appHandler from './middleware/handler';
-// import { cronSchedule as sendDataSchedule } from './utils/sendDataSchedule.utils';
 
 const app = express();
 
@@ -25,7 +24,6 @@ app.use(express.static(path.join(__dirname, './public/')));
 appHandler(app)
 
 fetchDataSchedule.start();
-// sendDataSchedule.start();
 
 const port = process.env.PORT || 2486;
 app.listen(port, () => {
