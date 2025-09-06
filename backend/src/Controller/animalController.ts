@@ -1,7 +1,6 @@
 import express from 'express'
 
 import {
-	Animal,
 	updateAnimalLostTable,
 	updateAnimalTable,
 } from '../utils/updateDatabase.utils';
@@ -11,6 +10,7 @@ import * as apiMessage from '../utils/message'
 import CustomError from '../utils/customError';
 import DatabaseUtils from '../utils/database.utils';
 import AnimalHelper from './helper/animalHelper';
+import { Animal } from '../utils/zod/animals';
 
 class AnimalController {
 	animalRepository: AnimalRepository;

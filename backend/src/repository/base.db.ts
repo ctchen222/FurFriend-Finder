@@ -39,6 +39,30 @@ class BaseRepository {
 
 		return result.rows[0];
 	}
+
+	async findOne<T>(
+		conditions: { [key: string]: any },
+		options?: string[],
+		joinOptions?: { table: string; on: string }[]
+	): Promise<T | null> {
+		const conditionStr = Object.keys(conditions).map((key, index) => `${key} = $${index + 1}`);
+		const joinStr = joinOptions && joinOptions.length > 0
+			? joinOptions.map(join => `JOIN ${join.table} ON ${join.on}`).join(" ")
+			: "";
+
+		const query = `
+			SELECT ${options ? options.join(", ") : "*"} 
+			FROM ${this.tableName} 
+			WHERE ${conditionStr.join(" AND ")}
+			${joinStr}
+			LIMIT 1
+		`;
+
+		const values = Object.values(conditions);
+		const result = await pool.query(query, values);
+
+		return result.rows[0] || null;
+	}
 }
 
 export default BaseRepository;

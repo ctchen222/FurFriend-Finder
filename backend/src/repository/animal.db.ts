@@ -1,6 +1,6 @@
 import { pool } from "../db";
 import { formatDate } from "../utils/animal.utils";
-import { Animal, AnimalLost } from "../utils/updateDatabase.utils";
+import { Animal, AnimalLost } from "../utils/zod/animals";
 import { flexibleDateSchema } from "../utils/zod/date";
 import BaseRepository from "./base.db";
 

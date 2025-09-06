@@ -22,13 +22,13 @@ const Handler = {
 		res: express.Response,
 		next: express.NextFunction
 	): void => {
-		logger.error(err); // Log the error
+		// logger.error(err); // Log the error
 
 		if (err.stack) {
 			// const regex = /\d+\:\d+/i
 			// const regex = /(?:\s+at )?(?:(.*?)\s+\()?(.*?):(\d+):(\d+)\)?$/
-			const stackMessage = err.stack.split('\n')[1]
-			const errorPosition = stackMessage.split('\\')[stackMessage.split('\\').length - 1]
+			// const stackMessage = err.stack.split('\n')[1]
+			// const errorPosition = stackMessage.split('\\')[stackMessage.split('\\').length - 1]
 		}
 
 
@@ -41,6 +41,7 @@ const Handler = {
 			.status(err.httpCode)
 			.send({ success: false, error: { code: err.code, msg: err.message } })
 	},
+
 	notFoundHandler: (
 		req: express.Request,
 		res: express.Response,

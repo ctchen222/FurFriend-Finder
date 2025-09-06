@@ -3,6 +3,7 @@ import express from 'express';
 import path from 'path';
 import cors from 'cors';
 import bodyParser from 'body-parser';
+import logger from './config/logger';
 import { cronSchedule as fetchDataSchedule } from './utils/dataSchedule.utils';
 import appHandler from './middleware/handler';
 // import { cronSchedule as sendDataSchedule } from './utils/sendDataSchedule.utils';
@@ -28,5 +29,5 @@ fetchDataSchedule.start();
 
 const port = process.env.PORT || 2486;
 app.listen(port, () => {
-	console.log(`Listening on ${port}`);
+	logger.info(`Listening on port ${port}`);
 });
