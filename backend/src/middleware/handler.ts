@@ -3,7 +3,7 @@ import morgan from 'morgan';
 import logger from '../config/logger';
 import CustomError from '../utils/customError';
 import SuccessResponse from '../utils/successResponse';
-import routes from '../router/route';
+import routes from '../router';
 
 // Morgan setup to use Winston for HTTP logging
 const stream: morgan.StreamOptions = {
