@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>歡迎加入 FurFriend Finder</title>
+    <style>
+        body {
+            font-family: 'Arial', 'Microsoft JhengHei', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 10px 10px 0 0;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+        }
+        .content {
+            background: #f9f9f9;
+            padding: 30px;
+            border-radius: 0 0 10px 10px;
+        }
+        .welcome-message {
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            margin: 20px 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .paw-emoji {
+            font-size: 24px;
+            margin: 0 5px;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            color: #666;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🐾 FurFriend Finder 🐾</h1>
+        <p>毛孩找家平台</p>
+    </div>
+    
+    <div class="content">
+        <div class="welcome-message">
+            <h2>歡迎 {{userName}}！</h2>
+            <p>感謝您加入 FurFriend Finder 毛孩找家平台。</p>
+            <p>我們致力於幫助每一隻毛孩找到溫暖的家，也幫助每個家庭找到最適合的毛孩夥伴。</p>
+            
+            <h3>接下來您可以：</h3>
+            <ul>
+                <li>🔍 瀏覽可愛的待領養毛孩</li>
+                <li>📱 設定您的偏好通知</li>
+                <li>❤️ 收藏您心儀的毛孩</li>
+                <li>📞 直接聯絡收容所</li>
+            </ul>
+            
+            <p>我們會在有適合的毛孩資訊時第一時間通知您。</p>
+            <p><strong>祝您早日找到心愛的毛孩夥伴！</strong></p>
+        </div>
+        
+        <div class="footer">
+            <p>此信件由 FurFriend Finder 系統自動發送</p>
+            <p>如有任何問題，請聯絡我們的客服團隊</p>
+        </div>
+    </div>
+</body>
+</html>
