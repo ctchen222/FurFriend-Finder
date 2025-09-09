@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FurFriend Finder 最新配對通知</title>
+    <style>
+        body {
+            font-family: 'Arial', 'Microsoft JhengHei', sans-serif;
+            background: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 30px auto;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+            padding: 24px;
+        }
+        .header {
+            text-align: center;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #eee;
+        }
+        .header h1 {
+            font-size: 22px;
+            margin: 0;
+            color: #764ba2;
+        }
+        .intro {
+            font-size: 17px;
+            margin: 18px 0 8px 0;
+            font-weight: bold;
+        }
+        .content > p {
+            margin: 8px 0 18px 0;
+        }
+        .animal-card {
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            margin-bottom: 18px;
+            padding: 14px;
+            background: #fafaff;
+        }
+        /* 移除 animal-card h2 樣式 */
+        .animal-details {
+            display: flex;
+            gap: 100px;
+            margin-bottom: 10px;
+        }
+        .animal-photo {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            flex: 1;
+        }
+        .animal-photo img {
+            width: 120px;
+            height: 120px;
+            object-fit: cover;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+        }
+        .animal-info p {
+            margin: 4px 0;
+            font-size: 15px;
+        }
+        .animal-info strong {
+            color: #555;
+            min-width: 70px;
+            display: inline-block;
+        }
+        .contact-info-item {
+            background: #f2f6ff;
+            border-radius: 5px;
+            padding: 10px;
+            font-size: 15px;
+        }
+        .contact-info-item h3 {
+            margin: 0 0 6px 0;
+            font-size: 15px;
+            color: #764ba2;
+        }
+        .contact-info-item p {
+            margin: 3px 0;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 24px;
+            padding-top: 12px;
+            border-top: 1px solid #eee;
+            color: #666;
+            font-size: 13px;
+            padding-top: 12px;
+            border-top: 1px solid #eee;
+            color: #666;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🐾 FurFriend Finder 最新配對通知 🐾</h1>
+        </div>
+        <div class="content">
+            <p class="intro">你好 {{userName}}！</p>
+            <p>我們為您找到了幾隻可能符合您協尋條件的毛孩，請查看以下詳細資訊：</p>
+            {{#top10Animals}}
+            <div class="animal-card">
+                <div class="animal-details">
+                    <div class="animal-info">
+                        <p><strong>物種:</strong> {{kind}}</p>
+                        <p><strong>品種:</strong> {{variety}}</p>
+                        <p><strong>性別:</strong> {{sex}}</p>
+                        <p><strong>毛色:</strong> {{colour}}</p>
+                        <p><strong>尋獲地點:</strong> {{found_place}}</p>
+                    </div>
+                    <div class="animal-photo">
+                        <img src="{{picture}}" alt="動物照片" >
+                    </div>
+                </div>
+                <div class="contact-info-item">
+                    <h3>收容所資訊</h3>
+                    <p><strong>名稱:</strong> {{name}}</p>
+                    <p><strong>地址:</strong> {{address}}</p>
+                    <p><strong>電話:</strong> <a href="tel:{{tel}}">{{tel}}</a></p>
+                </div>
+            </div>
+            {{/top10Animals}}
+        </div>
+        <div class="footer">
+            <p>此信件由 FurFriend Finder 系統自動發送</p>
+            <p>祝您早日找回心愛的毛孩！</p>
+        </div>
+    </div>
+</body>
+</html>
