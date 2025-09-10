@@ -63,7 +63,7 @@ export const AnimalShelterSchema = z.object({
 });
 export type AnimalShelter = z.infer<typeof AnimalShelterSchema>;
 
-export const AnimalLostSchema = z.object({
+export const AnimalLostDataSchema = z.object({
 	chipid: z.string().optional(),
 	name: z.string().optional(),
 	kind: z.string().optional(),
@@ -78,6 +78,38 @@ export const AnimalLostSchema = z.object({
 	owner_name: z.string().nullish().optional(),
 	owner_phone: z.string().nullish().optional(),
 	owner_email: z.string().nullish().optional(),
+})
+export type AnimalLostData = z.infer<typeof AnimalLostDataSchema>;
+
+export const AnimalLostRequestSchema = z.object({
+	chip_id: z.string().optional(),
+	name: z.string().optional(),
+	kind: z.string().optional(),
+	variety: z.string().optional(),
+	sex: z.string().optional(),
+	colour: z.string().optional(),
+	outlook: z.string().optional(),
+	feature: z.string().optional(),
+	lost_time: z.string().optional(), // The value from an <input type="date"> is a string
+	lost_place: z.string().optional(),
+	picture: z.string().optional(),
+	description: z.string().optional(), // Added description field
+});
+export type AnimalLostRequest = z.infer<typeof AnimalLostRequestSchema>;
+
+export const AnimalLostSchema = z.object({
+	chipid: z.string().optional(),
+	name: z.string().optional(),
+	kind: z.string().optional(),
+	variety: z.string().optional(),
+	sex: z.string().optional(),
+	colour: z.string().optional(),
+	outlook: z.string().optional(),
+	feature: z.string().optional(),
+	lost_time: z.string().optional(),
+	lost_place: z.string().optional(),
+	picture: z.string().optional(),
+	owner_id: z.number(),
 })
 export type AnimalLost = z.infer<typeof AnimalLostSchema>;
 

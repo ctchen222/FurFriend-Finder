@@ -1,6 +1,6 @@
 import { AnimalColourSchema, AnimalLost } from "./zod/animals";
 
-function normalizeMatchCriteria(lostAnimal: AnimalLost) {
+function normalizeMatchCriteria(lostAnimal: any) {
 	const normalizedName = () => {
 		let name = lostAnimal.name || '';
 		return name.trim();
