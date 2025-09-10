@@ -1,8 +1,8 @@
 import { Client, GeocodeRequest } from "@googlemaps/google-maps-services-js";
 import { getDistance } from "geolib";
-import CustomError from "../utils/customError";
-import * as apiMessage from '../utils/message'
-import { locationSchema } from "../utils/zod/geo";
+import CustomError from "../libs/customError";
+import * as apiMessage from '../libs/message'
+import { locationSchema } from "../libs/zod/geo";
 
 class GeoService {
 	client: Client;
