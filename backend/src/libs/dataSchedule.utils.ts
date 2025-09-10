@@ -1,9 +1,5 @@
 import cron from 'node-cron';
-
-import {
-	updateAnimalLostTable,
-	updateAnimalTable,
-} from './updateDatabase.utils';
+import { updateAnimalLostTable, updateAnimalTable } from './updateDatabase.utils';
 
 export const cronSchedule = cron.schedule(
 	'0 0 * * *',

@@ -1,8 +1,7 @@
 import axios from 'axios';
-import { z } from 'zod';
 
 import AnimalRepository from '../repository/animal.db';
-import { Animal, AnimalLost, AnimalLostResponseSchema, animalResponseScheme } from './zod/animals';
+import { Animal, AnimalLostData, AnimalLostResponseSchema, animalResponseScheme } from './zod/animals';
 
 const animalRepository = new AnimalRepository();
 
@@ -59,7 +58,7 @@ export const updateAnimalLostTable = async () => {
 		throw new Error("Invalid data format received from the API");
 	}
 
-	const lostAnimals: AnimalLost[] = parseResult.data.map((item) => (
+	const lostAnimals: AnimalLostData[] = parseResult.data.map((item) => (
 		{
 			chipid: item.晶片號碼,
 			name: item.寵物名,

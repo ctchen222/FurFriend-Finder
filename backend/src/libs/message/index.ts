@@ -39,3 +39,33 @@ export const VALIDATION_ERROR: Api.Error = {
 	httpCode: 400,
 	msg: "Invalid input data"
 }
+
+export const ID_MUST_PROVIDED: Api.Error = {
+	code: 401,
+	httpCode: 400,
+	msg: "ID must be provided"
+}
+
+export const CONTENT_NOT_FOUND: Api.Error = {
+	code: 402,
+	httpCode: 404,
+	msg: "Content not found"
+}
+
+export const MISSING_REQUIRED_FIELDS: Api.Error = {
+	code: 403,
+	httpCode: 400,
+	msg: "Missing required fields"
+}
+
+export const LOGIN_FAILURE: Api.Error = {
+	code: 501,
+	httpCode: 401,
+	msg: "Login failed, invalid email or password"
+}
+
+export const LOGOUT_FAILURE: Api.Error = {
+	code: 502,
+	httpCode: 500,
+	msg: "Logout failed"
+}
