@@ -2,7 +2,6 @@ import path from 'path'
 import fs from 'fs-extra'
 import nodemailer from 'nodemailer'
 import Mustache from 'mustache'
-import { AnimalLost } from '../libs/zod/animals'
 
 const appRoot = path.resolve(__dirname, "../../")
 
@@ -19,13 +18,13 @@ class MailService {
 		})
 	}
 
-	sendTestMail = async (mail: string) => {
-		const mustacheTemp = await fs.readFile(`${appRoot}/views/mailtemplates/test.mt.html`, 'utf8')
+	sendWelcomeMail = async (mail: string) => {
+		const mustacheTemp = await fs.readFile(`${appRoot}/views/mailtemplates/welcome.mt.html`, 'utf8')
 		const htmlContent = Mustache.render(mustacheTemp.toString(), {})
 		const response = await this.mailer.sendMail({
 			from: 'abfa762466@gmail.com',
 			to: mail,
-			subject: 'FurFriend Test Mail',
+			subject: 'FurFriend Welcome!',
 			html: htmlContent
 		})
 
