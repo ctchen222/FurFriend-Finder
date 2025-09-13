@@ -1,7 +1,7 @@
 import { pool } from "../db";
-import { formatDate } from "../utils/animal.utils";
-import { Animal, AnimalLost } from "../utils/zod/animals";
-import { flexibleDateSchema } from "../utils/zod/date";
+import { formatDate } from "../libs/animal.utils";
+import { Animal, AnimalLostData } from "../libs/zod/animals";
+import { flexibleDateSchema } from "../libs/zod/date";
 import BaseRepository from "./base.db";
 
 class AnimalRepository extends BaseRepository {
