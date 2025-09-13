@@ -1,25 +1,25 @@
-CREATE TABLE users (
-	id SERIAL PRIMARY KEY,
-	name VARCHAR(20) NOT NULL,
-	email TEXT,
-	phone VARCHAR(15) NOT NULL,
-
-	is_registered_via_line BOOLEAN NOT NULL,
-	is_registered_via_google BOOLEAN NOT NULL,
-	is_active BOOLEAN NOT NULL
-);
-
+-- CREATE TABLE users (
+-- 	id SERIAL PRIMARY KEY,
+-- 	name VARCHAR(20) NOT NULL,
+-- 	email TEXT,
+-- 	password TEXT NOT NULL,
+-- 	phone VARCHAR(15) NOT NULL,
+--
+-- 	is_registered_via_line BOOLEAN NOT NULL,
+-- 	is_registered_via_google BOOLEAN NOT NULL,
+-- 	is_active BOOLEAN NOT NULL
+-- );
 -- Line User
-CREATE TABLE user_line (
-	id INTEGER NOT NULL PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
-	sent_from text,
-	user_id text
-);
-
--- Google User
-CREATE TABLE user_google (
-	id INTEGER NOT NULL PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE
-);
+-- CREATE TABLE user_line (
+-- 	id INTEGER NOT NULL PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+-- 	sent_from text,
+-- 	user_id text
+-- );
+--
+-- -- Google User
+-- CREATE TABLE user_google (
+-- 	id INTEGER NOT NULL PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE
+-- );
 
 
 CREATE TABLE animal_shelters (
