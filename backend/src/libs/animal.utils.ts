@@ -1,14 +1,21 @@
 import { AnimalColourSchema, AnimalLost } from "./zod/animals";
 
-function normalizeMatchCriteria(lostAnimal: any) {
+function normalizeMatchCriteria(
+	name: string | undefined,
+	colour: string | undefined,
+	sex: string | undefined,
+	kind: string | undefined,
+	variety: string | undefined,
+	lost_place: string | undefined
+) {
 	const normalizedName = () => {
-		let name = lostAnimal.name || '';
-		return name.trim();
+		const nName = name || '';
+		return nName.trim();
 	}
 
 	const normalizedColor = () => {
-		let color = lostAnimal.colour
-		const result = AnimalColourSchema.safeParse(color)
+		const nColor = colour || '';
+		const result = AnimalColourSchema.safeParse(nColor)
 		if (result.success) {
 			return result.data
 		}
@@ -16,30 +23,30 @@ function normalizeMatchCriteria(lostAnimal: any) {
 	}
 
 	const normalizedSex = () => {
-		if (lostAnimal.sex === '公') return 'M';
-		if (lostAnimal.sex === '母') return 'F';
-		return lostAnimal.sex;
+		if (sex === '公') return 'M';
+		if (sex === '母') return 'F';
+		return sex;
 	}
 
 	const normalizedKind = () => {
-		let kind = lostAnimal.kind || '';
-		if (kind.endsWith('犬')) {
-			kind = kind.slice(0, -1);
+		let nKind = kind || '';
+		if (nKind.endsWith('犬')) {
+			nKind = nKind.slice(0, -1);
 		}
-		return kind.trim();
+		return nKind.trim();
 	}
 
 	const normalizedVariety = () => {
-		let variety = lostAnimal.variety || '';
-		if (variety.endsWith('犬')) {
-			variety = variety.slice(0, -1);
+		let nVariety = variety || '';
+		if (nVariety.endsWith('犬')) {
+			nVariety = nVariety.slice(0, -1);
 		}
-		return variety.trim();
+		return nVariety.trim();
 	}
 
 	const normalizedLostPlace = () => {
-		let lostPlace = lostAnimal.lost_place || '';
-		return lostPlace.trim();
+		let nLostPlace = lost_place || '';
+		return nLostPlace.trim();
 	}
 
 	return {

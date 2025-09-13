@@ -4,22 +4,18 @@ import path from 'path';
 import cors from 'cors';
 import bodyParser from 'body-parser';
 import logger from './config/logger';
-import { cronSchedule as fetchDataSchedule } from './utils/dataSchedule.utils';
+import { cronSchedule as fetchDataSchedule } from './libs/dataSchedule.utils';
 import appHandler from './middleware/handler';
 
 const app = express();
 
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, '..', 'views'));
+
 app.use(cors());
 app.use(express.json());
-app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true })); // 使用 urlencoded 來解析表單數據
 app.use(express.static(path.join(__dirname, './public/')));
-
-// app.use('/', webhookRouter);
-// app.use('/api/users', userRouter);
-// app.use('/api/animals', animalRouter);
-// app.use('*', (req, res, next) => {
-// 	res.status(404).end('This route is not provided');
-// });
 
 appHandler(app)
 

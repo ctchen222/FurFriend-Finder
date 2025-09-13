@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>快速使用 - FurFriend Finder</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&display=swap" rel="stylesheet">
+	<style>
+		:root {
+			--bg-color: #FEFBF6;
+			--text-color: #5D5753;
+			--heading-color: #A77B5A;
+			--primary-color: #81A6D3;
+			--card-bg-color: #FFFFFF;
+			--shadow-color: rgba(0, 0, 0, 0.08);
+			--border-color: #EAE0D5;
+		}
+
+		body {
+			font-family: 'Nunito', 'Microsoft JhengHei', sans-serif;
+			background-color: var(--bg-color);
+			color: var(--text-color);
+			margin: 0;
+			padding: 20px;
+		}
+
+		.container {
+			max-width: 800px;
+			margin: 40px auto;
+			background-color: var(--card-bg-color);
+			padding: 40px;
+			border-radius: 20px;
+			box-shadow: 0 10px 30px var(--shadow-color);
+		}
+
+		h1 {
+			color: var(--heading-color);
+			text-align: center;
+			font-size: 2.5em;
+			margin-bottom: 30px;
+		}
+
+		.form-group {
+			margin-bottom: 20px;
+		}
+
+		label {
+			display: block;
+			margin-bottom: 8px;
+			font-weight: bold;
+		}
+
+		input,
+		select {
+			width: 100%;
+			padding: 12px;
+			border: 1px solid var(--border-color);
+			border-radius: 10px;
+			box-sizing: border-box;
+			font-size: 1em;
+		}
+
+		button {
+			width: 100%;
+			padding: 12px;
+			background-color: var(--primary-color);
+			color: white;
+			border: none;
+			border-radius: 10px;
+			cursor: pointer;
+			font-size: 1.1em;
+			font-weight: bold;
+			margin-top: 20px;
+		}
+
+		.results-section {
+			margin-top: 40px;
+			border-top: 1px solid var(--border-color);
+			padding-top: 20px;
+		}
+
+		.result-item {
+			background-color: #F9F9F9;
+			border: 1px solid #E0E0E0;
+			border-radius: 10px;
+			padding: 15px;
+			margin-bottom: 15px;
+			display: flex;
+			align-items: center;
+		}
+
+		.result-item img {
+			width: 100px;
+			height: 100px;
+			object-fit: cover;
+			border-radius: 8px;
+			margin-right: 15px;
+		}
+
+		.result-details {
+			flex-grow: 1;
+		}
+
+		.result-details p {
+			margin: 5px 0;
+		}
+
+		.cta-section {
+			text-align: center;
+			margin-top: 40px;
+			padding-top: 20px;
+			border-top: 1px solid var(--border-color);
+		}
+
+		.cta-section a {
+			color: var(--primary-color);
+			text-decoration: none;
+			font-weight: bold;
+		}
+	</style>
+</head>
+
+<body>
+	<div class="container">
+		<h1>快速尋找走失毛孩</h1>
+		<p>輸入毛孩資訊，快速比對潛在的收容所資料。</p>
+
+		<form id="quickMatchForm">
+			<div class="form-group">
+				<label for="name">毛孩名稱 (選填)</label>
+				<input type="text" id="name" name="name">
+			</div>
+			<div class="form-group">
+				<label for="kind">種類</label>
+				<select id="kind" name="kind" required>
+					<option value="">請選擇</option>
+					<option value="狗">狗</option>
+					<option value="貓">貓</option>
+					<option value="其他">其他</option>
+				</select>
+			</div>
+			<div class="form-group">
+				<label for="variety">品種 (選填)</label>
+				<input type="text" id="variety" name="variety">
+			</div>
+			<div class="form-group">
+				<label for="sex">性別</label>
+				<select id="sex" name="sex" required>
+					<option value="">請選擇</option>
+					<option value="M">公</option>
+					<option value="F">母</option>
+					<option value="UNKNOWN">不確定</option>
+				</select>
+			</div>
+			<div class="form-group">
+				<label for="colour">毛色 (選填)</label>
+				<input type="text" id="colour" name="colour">
+			</div>
+			<div class="form-group">
+				<label for="lost_place">走失地點 (縣市區)</label>
+				<input type="text" id="lost_place" name="lost_place" placeholder="例如：新北市中和區" required>
+			</div>
+			<button type="submit">開始比對</button>
+		</form>
+
+		<div class="results-section">
+			<h2>比對結果</h2>
+			<div id="matchResults"></div>
+			<p id="noResultsMessage" style="display: none;">沒有找到符合條件的毛孩。</p>
+		</div>
+
+		<div class="cta-section">
+			<p>想要每天收到更多比對資訊？</p>
+			<p><a href="/register">立即註冊帳號</a></p>
+		</div>
+	</div>
+
+	<script>
+		document.getElementById('quickMatchForm').addEventListener('submit', async function (event) {
+			event.preventDefault();
+
+			const form = event.target;
+			const formData = new FormData(form);
+			const data = {};
+			formData.forEach((value, key) => {
+				data[key] = value;
+			});
+
+			try {
+				const response = await fetch('/api/lost-animals/quick-match', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json'
+					},
+					body: JSON.stringify(data)
+				});
+
+				const result = await response.json();
+				const matchResultsDiv = document.getElementById('matchResults');
+				const noResultsMessage = document.getElementById('noResultsMessage');
+				matchResultsDiv.innerHTML = ''; // Clear previous results
+
+				if (result.extras.top10Matches && result.extras.top10Matches.length > 0) {
+					noResultsMessage.style.display = 'none';
+					result.extras.top10Matches.forEach(animal => {
+						const itemDiv = document.createElement('div');
+						itemDiv.className = 'result-item';
+						itemDiv.innerHTML = `
+                            <img src="${animal.picture || 'https://via.placeholder.com/100'}" alt="${animal.kind}">
+                            <div class="result-details">
+                                <p><strong>種類:</strong> ${animal.kind}</p>
+                                <p><strong>品種:</strong> ${animal.variety}</p>
+                                <p><strong>性別:</strong> ${animal.sex}</p>
+                                <p><strong>毛色:</strong> ${animal.colour}</p>
+                                <p><strong>走失地點:</strong> ${animal.found_place}</p>
+                                <p><strong>收容所:</strong> ${animal.name} (${animal.tel})</p>
+                                <p><strong>距離:</strong> ${animal.distance} 公里</p>
+                            </div>
+                        `;
+						matchResultsDiv.appendChild(itemDiv);
+					});
+				} else {
+					noResultsMessage.style.display = 'block';
+				}
+
+			} catch (error) {
+				console.error('Error:', error);
+				document.getElementById('matchResults').innerHTML = '<p>比對失敗，請稍後再試。</p>';
+			}
+		});
+	</script>
+</body>
+
+</html>

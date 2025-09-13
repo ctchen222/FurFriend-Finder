@@ -1,0 +1,43 @@
+<header class="main-header">
+    <div class="header-container">
+        <a href="/" class="logo">🐾 FurFriend Finder</a>
+        <nav class="main-nav">
+            <a href="/">首頁</a>
+            <a href="/report-lost">協尋登記</a>
+            <% if (user) { %>
+                <a href="/profile">個人資料</a>
+                <a href="#" id="logout-link">登出</a>
+            <% } else { %>
+                <a href="/login">登入</a>
+            <% } %>
+        </nav>
+    </div>
+</header>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const logoutLink = document.getElementById('logout-link');
+        if (logoutLink) {
+            logoutLink.addEventListener('click', function(event) {
+                event.preventDefault(); // Prevent the link from navigating
+
+                fetch('/api/auth/logout', {
+                    method: 'POST',
+                })
+                .then(response => {
+                    if (response.ok) {
+                        // Redirect to homepage after successful logout
+                        window.location.href = '/';
+                    } else {
+                        // Handle errors, maybe show an alert
+                        alert('登出失敗，請稍後再試。');
+                    }
+                })
+                .catch(error => {
+                    console.error('Logout error:', error);
+                    alert('登出時發生錯誤。');
+                });
+            });
+        }
+    });
+</script>

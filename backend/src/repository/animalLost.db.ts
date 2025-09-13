@@ -1,5 +1,5 @@
 import { pool } from "../db";
-import { Animal } from "../utils/zod/animals";
+import { Animal } from "../libs/zod/animals";
 import BaseRepository from "./base.db";
 
 class AnimalLostRepository extends BaseRepository {
@@ -30,14 +30,16 @@ class AnimalLostRepository extends BaseRepository {
 		}
 		if (variety) {
 			filters.push("variety LIKE $" + (values.length + 1));
-			values.push(variety + "%");
+			values.push("%" + variety + "%");
 		}
 
 		const whereClause = filters.length ? "WHERE " + filters.join(" AND ") : "";
 		const query = `
-			SELECT * FROM animals ${whereClause};
+			SELECT * FROM animals 
+			INNER JOIN animal_shelters
+			ON animals.animal_shelter_id = animal_shelters.id
+			${whereClause};
 		`;
-
 
 		const { rows } = await pool.query<Animal>(query, values);
 		return rows;

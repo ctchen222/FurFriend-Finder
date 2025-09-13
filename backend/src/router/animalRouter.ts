@@ -1,10 +1,8 @@
 import express from 'express';
-import { catchAsync } from '../utils/catchAsync';
+import { catchAsync } from '../libs/catchAsync';
 import AnimalController from '../Controller/animalController';
-import AnimalLostController from '../Controller/animalLostController';
 
 const animalCtrler = new AnimalController();
-const animalLostCtrler = new AnimalLostController();
 const router = express.Router();
 
 router.route('/')
@@ -15,13 +13,6 @@ router.route('/:id')
 
 router.route('/city/:city')
 	.get(catchAsync(animalCtrler.fetchByCity));
-
-router.route('/losts')
-	.post(catchAsync(animalLostCtrler.create));
-
-// For animal losts
-router.route('/losts/match/:id')
-	.get(catchAsync(animalLostCtrler.matchLostAnimal));
 
 // Manual update tables 
 router.route('/manualUpdate')
