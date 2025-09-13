@@ -68,15 +68,17 @@ class AnimalLostController {
 			owner_id: owner.id,
 		};
 
-		await this.animalLostRepository.create<AnimalLost>(animalToCreate);
+		const animalLostCreated = await this.animalLostRepository.create<AnimalLost>(animalToCreate);
 
 		// 使用您設計的 handler 來進行重新導向
 		res.locals.result = new SuccessResponse('redirect', '/profile');
+		res.locals.result = new SuccessResponse('api', { content: { animalLostCreated, owner } });
+		// res.locals.result = new SuccessResponse('redirect', '/profile');
 		return next();
 	};
 
 
-	public matchLostAnimal = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+	matchLostAnimal = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
 		const id = req.params.id as string;
 		if (!id) {
 			throw new CustomError(apiMessage.ID_MUST_PROVIDED);
@@ -91,6 +93,28 @@ class AnimalLostController {
 		const { metadata, lostAnimal, top10Matches } = result;
 
 		res.locals.result = new SuccessResponse('api', { metadata, lostAnimal, top10Matches });
+		return next();
+	}
+
+	quickMatch = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+		const { name, colour, kind, sex, variety, lost_place } = req.body
+
+		const lostAnimalForSearch = {
+			name,
+			colour,
+			sex,
+			kind,
+			variety,
+			lost_place
+		}
+		const result = await this.animalLostService.findMatches(lostAnimalForSearch);
+		if (result instanceof CustomError) {
+			return next();
+		}
+
+		const { metadata, top10Matches } = result;
+
+		res.locals.result = new SuccessResponse('api', { metadata, top10Matches });
 		return next();
 	}
 }

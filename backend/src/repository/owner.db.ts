@@ -1,6 +1,6 @@
 import { pool } from '../db';
-import { AnimalOwner } from '../utils/zod/animals';
-import { Owner } from '../utils/zod/owner';
+import { AnimalOwner } from '../libs/zod/animals';
+import { Owner } from '../libs/zod/owner';
 import BaseRepository from './base.db';
 
 class OwnerRepository extends BaseRepository {

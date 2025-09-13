@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>個人資料 - FurFriend Finder</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&display=swap" rel="stylesheet">
+	<style>
+		:root {
+			--bg-color: #FEFBF6;
+			--text-color: #5D5753;
+			--heading-color: #A77B5A;
+			--primary-color: #81A6D3;
+			--card-bg-color: #FFFFFF;
+			--shadow-color: rgba(0, 0, 0, 0.08);
+			--border-color: #EAE0D5;
+			--status-searching-bg: #FFF2D7;
+			--status-searching-text: #B58B00;
+			--status-found-bg: #DFF9E2;
+			--status-found-text: #2F8539;
+		}
+
+		body {
+			font-family: 'Nunito', 'Microsoft JhengHei', sans-serif;
+			line-height: 1.8;
+			padding: 20px;
+			background-color: var(--bg-color);
+			color: var(--text-color);
+		}
+
+		.container {
+			max-width: 800px;
+			margin: 40px auto;
+		}
+
+		h1 {
+			color: var(--heading-color);
+			text-align: center;
+			font-size: 2.2em;
+			margin-bottom: 40px;
+		}
+
+		.card {
+			background-color: var(--card-bg-color);
+			padding: 30px;
+			border-radius: 20px;
+			box-shadow: 0 10px 30px var(--shadow-color);
+			margin-bottom: 30px;
+		}
+
+		.card h2 {
+			color: var(--heading-color);
+			font-size: 1.6em;
+			margin-top: 0;
+			margin-bottom: 20px;
+			border-bottom: 2px solid var(--border-color);
+			padding-bottom: 10px;
+		}
+
+		.profile-info p {
+			font-size: 1.1em;
+			margin: 0 0 10px;
+		}
+
+		.profile-info strong {
+			color: var(--heading-color);
+			margin-right: 10px;
+		}
+
+		.case-list {
+			list-style: none;
+			padding: 0;
+		}
+
+		.case-item {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			padding: 15px;
+			border-radius: 10px;
+			margin-bottom: 10px;
+			border: 1px solid var(--border-color);
+			transition: background-color 0.2s ease;
+		}
+
+		.case-item:hover {
+			background-color: #F9F6F2;
+		}
+
+		.case-details {
+			font-size: 1.1em;
+		}
+
+		.status-badge {
+			padding: 5px 12px;
+			border-radius: 20px;
+			font-weight: bold;
+			font-size: 0.9em;
+		}
+
+		.status-searching {
+			background-color: var(--status-searching-bg);
+			color: var(--status-searching-text);
+		}
+
+		.status-found {
+			background-color: var(--status-found-bg);
+			color: var(--status-found-text);
+		}
+
+		.empty-state {
+			text-align: center;
+			padding: 40px;
+		}
+
+		.empty-state p {
+			font-size: 1.2em;
+			margin-bottom: 20px;
+		}
+
+		.cta-button {
+			display: inline-block;
+			padding: 12px 30px;
+			background-color: var(--primary-color);
+			color: white;
+			border-radius: 50px;
+			text-decoration: none;
+			font-weight: bold;
+			transition: transform 0.2s ease, box-shadow 0.2s ease;
+		}
+
+		.cta-button:hover {
+			transform: translateY(-3px);
+			box-shadow: 0 6px 15px rgba(129, 166, 211, 0.5);
+		}
+
+		/* Header Styles */
+		.main-header {
+			position: sticky;
+			top: 0;
+			z-index: 1000;
+			background-color: rgba(255, 255, 255, 0.85);
+			backdrop-filter: blur(10px);
+			box-shadow: 0 2px 10px var(--shadow-color);
+			padding: 10px 0;
+		}
+
+		.header-container {
+			max-width: 800px;
+			margin: 0 auto;
+			padding: 0 20px;
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+		}
+
+		.logo {
+			font-weight: bold;
+			font-size: 1.4em;
+			color: var(--heading-color);
+			text-decoration: none;
+		}
+
+		.main-nav a {
+			margin-left: 25px;
+			text-decoration: none;
+			color: var(--text-color);
+			font-weight: bold;
+			font-size: 1.1em;
+			transition: color 0.2s ease;
+		}
+
+		.main-nav a:hover {
+			color: var(--primary-color);
+		}
+	</style>
+</head>
+
+<body>
+	<%- include('partials/_header') %>
+		<div class="container">
+			<h1>個人資料</h1>
+
+			<div class="card">
+				<h2>👤 您的資訊</h2>
+				<div class="profile-info">
+					<p><strong>姓名:</strong>
+						<%= user.name %>
+					</p>
+					<p><strong>Email:</strong>
+						<%= user.email %>
+					</p>
+				</div>
+			</div>
+		</div>
+</body>
+
+</html>

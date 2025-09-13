@@ -3,14 +3,14 @@ import express from 'express'
 import {
 	updateAnimalLostTable,
 	updateAnimalTable,
-} from '../utils/updateDatabase.utils';
+} from '../libs/updateDatabase.utils';
 import AnimalRepository from '../repository/animal.db';
-import SuccessResponse from '../utils/successResponse';
-import * as apiMessage from '../utils/message'
-import CustomError from '../utils/customError';
-import DatabaseUtils from '../utils/database.utils';
+import SuccessResponse from '../libs/successResponse';
+import * as apiMessage from '../libs/message'
+import CustomError from '../libs/customError';
+import DatabaseUtils from '../libs/database.utils';
 import AnimalHelper from './helper/animalHelper';
-import { Animal, AnimalOwner } from '../utils/zod/animals';
+import { Animal, AnimalOwner } from '../libs/zod/animals';
 
 class AnimalController {
 	animalRepository: AnimalRepository;

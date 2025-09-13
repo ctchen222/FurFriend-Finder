@@ -1,8 +1,8 @@
 import express from 'express';
 import morgan from 'morgan';
 import logger from '../config/logger';
-import CustomError from '../utils/customError';
-import SuccessResponse from '../utils/successResponse';
+import CustomError from '../libs/customError';
+import SuccessResponse from '../libs/successResponse';
 import routes from '../router';
 
 // Morgan setup to use Winston for HTTP logging
