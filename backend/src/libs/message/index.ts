@@ -69,3 +69,9 @@ export const LOGOUT_FAILURE: Api.Error = {
 	httpCode: 500,
 	msg: "Logout failed"
 }
+
+export const BODY_NOT_COMPLETE: Api.Error = {
+	code: 601,
+	httpCode: 400,
+	msg: "Request body is not complete"
+}
