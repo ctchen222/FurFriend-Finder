@@ -69,6 +69,8 @@ class AnimalRepository extends BaseRepository {
 	}
 
 	async bulkInsertAnimals(animals: Animal[]): Promise<number> {
+		await pool.query("START TRANSACTION");
+
 		let insertedRowCount = 0
 		const batchSize = 100; // Adjust batch size as needed
 		for (let i = 0; i < animals.length; i += batchSize) {
@@ -93,7 +95,7 @@ class AnimalRepository extends BaseRepository {
 				id, name, address, tel)
 			    VALUES ${shelterPlaceholders}
 			    ON CONFLICT(id) DO NOTHING;
-`;
+				`;
 			await pool.query(insertShelterQuery, shelterValues);
 
 
@@ -124,75 +126,73 @@ class AnimalRepository extends BaseRepository {
 			const insertQuery = `
 				INSERT INTO animals(
 			    sub_id, kind, variety, sex, age, body_type, colour, found_place, remark, picture, status, animal_shelter_id, open_date, close_date, update_date )
-			    VALUES ${valuePlaceholders}
-			    ON CONFLICT(sub_id) DO NOTHING;
+			    VALUES ${valuePlaceholders};
 			`;
 			const result = await pool.query(insertQuery, values);
 			insertedRowCount += result.rowCount ?? 0;
 		}
+
+		await pool.query("COMMIT");
 		return insertedRowCount;
 	}
 
 	// TODO: 
-	// 1. animal_losts 對應的owners 檢查，目前好像不一定是正確
-	// 2. date format 需要確認
-	async bulkInsertAnimalLosts(animalLosts: AnimalLost[]): Promise<number> {
+	// refactor to service
+	async bulkInsertAnimalLosts(animalLosts: AnimalLostData[]): Promise<number> {
+		await pool.query("START TRANSACTION");
+
 		let insertedRowCount = 0;
 		const batchSize = 100;
 
 		// First, ensure the global "Unknown" owner exists
-		// const unknownOwnerQuery = `
-		// 	INSERT INTO owners(name, phone, email)
-		// 	VALUES('Unknown', 'Unknown', 'Unknown')
-		// 	ON CONFLICT(phone, email) DO UPDATE SET
-		// 		name = EXCLUDED.name
-		// 	RETURNING id;
-		// 	`;
-		// const unknownOwnerResult = await pool.query(unknownOwnerQuery);
-		// const unknownOwnerId = unknownOwnerResult.rows[0].id;
+		const unknownOwnerQuery = `
+			INSERT INTO owners(name, phone, email)
+			VALUES('Unknown', 'Unknown', 'Unknown')
+			ON CONFLICT(phone, email) DO UPDATE SET
+				name = EXCLUDED.name
+			RETURNING id;
+			`;
+		const unknownOwnerResult = await pool.query(unknownOwnerQuery);
+		const unknownOwnerId = unknownOwnerResult.rows[0].id;
 
 		for (let i = 0; i < animalLosts.length; i += batchSize) {
 			const batch = animalLosts.slice(i, i + batchSize);
 
 			// Separate animals with known vs unknown owners
-			// const knownOwnerAnimals = batch.filter(animal =>
-			// 	(animal.owner_phone && animal.owner_phone.trim() !== "") ||
-			// 	(animal.owner_email && animal.owner_email.trim() !== "")
-			// );
-			//
-			// const ownerMap = new Map<string, number>();
-			//
-			// // Insert known owners if any
-			// if (knownOwnerAnimals.length > 0) {
-			// 	const ownerValues: any[] = [];
-			// 	const ownerPlaceholders = knownOwnerAnimals.map((animal, idx) => {
-			// 		const baseIdx = idx * 3;
-			// 		ownerValues.push(
-			// 			animal.owner_name && animal.owner_name.trim() !== "" ? animal.owner_name.trim() : 'Unknown',
-			// 			animal.owner_phone && animal.owner_phone.trim() !== "" ? animal.owner_phone.trim() : 'Unknown',
-			// 			animal.owner_email && animal.owner_email.trim() !== "" ? animal.owner_email.trim() : 'Unknown'
-			// 		);
-			// 		return `(${baseIdx + 1}, ${baseIdx + 2}, ${baseIdx + 3})`;
-			// 	}).join(", ");
-			//
-			// 	const insertOwnerQuery = `
-			// 		INSERT INTO owners(name, phone, email)
-			// 		VALUES ${ownerPlaceholders}
-			// 		ON CONFLICT(phone, email) DO NOTHING
-			// 		RETURNING id, phone, email;
-			// 	`;
-			// 	console.log('Inserting owners with query:', insertOwnerQuery);
-			// 	console.log('With values:', ownerValues);
-			// 	// console.log('With values:', ownerValues.length);
-			// 	const ownerResult = await pool.query(insertOwnerQuery, ownerValues);
-			//
-			// 	// Map known owners
-			// 	ownerResult.rows.forEach(row => {
-			// 		const key = `${row.phone}_${row.email} `;
-			// 		console.log('Mapping owner:', key, 'to ID:', row.id);
-			// 		ownerMap.set(key, row.id);
-			// 	});
-			// }
+			const knownOwnerAnimals = batch.filter(animal =>
+				(animal.owner_phone && animal.owner_phone.trim() !== "") ||
+				(animal.owner_email && animal.owner_email.trim() !== "")
+			);
+
+			const ownerMap = new Map<string, number>();
+			// Insert known owners if any
+			if (knownOwnerAnimals.length > 0) {
+				const ownerValues: any[] = [];
+				const ownerPlaceholders = knownOwnerAnimals.map((animal, idx) => {
+					const baseIdx = idx * 3;
+					ownerValues.push(
+						animal.owner_name && animal.owner_name.trim() !== "" ? animal.owner_name.trim() : 'Unknown',
+						animal.owner_phone && animal.owner_phone.trim() !== "" ? animal.owner_phone.trim() : 'Unknown',
+						animal.owner_email && animal.owner_email.trim() !== "" ? animal.owner_email.trim() : 'Unknown'
+					);
+					return `($${baseIdx + 1}, $${baseIdx + 2}, $${baseIdx + 3})`;
+				}).join(", ");
+
+				const insertOwnerQuery = `
+					INSERT INTO owners(name, phone, email)
+					VALUES ${ownerPlaceholders}
+					ON CONFLICT(phone, email) DO NOTHING
+					RETURNING id, phone, email;
+				`;
+				const ownerResult = await pool.query(insertOwnerQuery, ownerValues);
+
+				// Map known owners
+				ownerResult.rows.forEach(row => {
+					const key = `${row.phone}_${row.email} `;
+					// console.log('Mapping owner:', key, 'to ID:', row.id);
+					ownerMap.set(key, row.id);
+				});
+			}
 
 			// Insert lost animals
 			const animalValues: any[] = [];
@@ -200,15 +200,15 @@ class AnimalRepository extends BaseRepository {
 				const baseIdx = idx * 12;
 
 				let ownerId: number;
-				// if ((animal.owner_phone && animal.owner_phone.trim() !== "") ||
-				// 	(animal.owner_email && animal.owner_email.trim() !== "")) {
-				// 	const ownerKey = `
-				// 		${animal.owner_phone && animal.owner_phone.trim() !== "" ? animal.owner_phone.trim() : 'Unknown'}_${animal.owner_email && animal.owner_email.trim() !== "" ? animal.owner_email.trim() : 'Unknown'} `;
-				// 	ownerId = ownerMap.get(ownerKey) || unknownOwnerId;
-				// } else {
-				// 	ownerId = unknownOwnerId;
-				// }
-				ownerId = 1;
+				if ((animal.owner_phone && animal.owner_phone.trim() !== "") ||
+					(animal.owner_email && animal.owner_email.trim() !== "")) {
+					const ownerKey = `
+						${animal.owner_phone && animal.owner_phone.trim() !== "" ?
+							animal.owner_phone.trim() : 'Unknown'}_${animal.owner_email && animal.owner_email.trim() !== "" ? animal.owner_email.trim() : 'Unknown'} `;
+					ownerId = ownerMap.get(ownerKey) || unknownOwnerId
+				} else {
+					ownerId = unknownOwnerId
+				}
 
 				animalValues.push(
 					animal.chipid ?? null,
@@ -236,6 +236,8 @@ class AnimalRepository extends BaseRepository {
 			const result = await pool.query(insertAnimalQuery, animalValues);
 			insertedRowCount += result.rowCount ?? 0;
 		}
+
+		await pool.query("COMMIT");
 
 		return insertedRowCount;
 	}

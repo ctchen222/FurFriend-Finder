@@ -1,21 +1,24 @@
 import cron from 'node-cron';
-import { updateAnimalLostTable, updateAnimalTable } from './updateDatabase.utils';
+import AnimalService from '../Service/animal';
+import AnimalLostService from '../Service/animalLost';
+import { logger } from 'better-auth';
+
+const animalService = new AnimalService()
+const animalLostService = new AnimalLostService()
 
 export const cronSchedule = cron.schedule(
 	'0 0 * * *',
 	async () => {
-		// TODO: Logger
-		console.log("Fetching data...")
+		logger.info('Cron job started: Updating animal and animal_lost tables');
+
 		// execute on every 00:00 am
 		try {
-			const animalTableUpdateCount = await updateAnimalTable();
-			const animalLostUpdateCount = await updateAnimalLostTable();
+			const animalTableUpdateCount = await animalService.updateAnimalTable();
+			const animalLostUpdateCount = await animalLostService.updateTableAnimalLosts();
 
-			console.log(
-				`[Daily Update]: \n${animalTableUpdateCount} data were updated in table Animal \n${animalLostUpdateCount} data were updated in table Animal_lost`,
-			);
+			logger.info(`[Daily Update]: \n${animalTableUpdateCount} data were updated in table Animal \n${animalLostUpdateCount} data were updated in table Animal_lost`);
 		} catch (error) {
-			console.error('Something went wrong upon updating');
+			logger.error('Error occurred during cron job:', error);
 		}
 	},
 	{

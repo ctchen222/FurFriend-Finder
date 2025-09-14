@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const animalResponseScheme = z.array(z.object({
+export const AnimalResponseSchema = z.array(z.object({
 	animal_id: z.number().optional(),
 	animal_subid: z.string().optional(),
 	animal_area_pkid: z.number().optional(),
@@ -30,7 +30,7 @@ export const animalResponseScheme = z.array(z.object({
 	shelter_address: z.string().optional(),
 	shelter_tel: z.string().optional(),
 }))
-export type AnimalResponse = z.infer<typeof animalResponseScheme>[number];
+export type AnimalResponse = z.infer<typeof AnimalResponseSchema>[number];
 
 const AnimalSchema = z.object({
 	id: z.number().optional(),
