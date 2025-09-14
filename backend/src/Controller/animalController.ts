@@ -82,7 +82,7 @@ class AnimalController {
 		const animalLostTableCount = await updateAnimalLostTable();
 
 		res.locals.result = new SuccessResponse('api', {
-			// animalTables: animalTableinsertCount,
+			animalTables: animalTableinsertCount,
 			animalLostTables: animalLostTableCount
 		})
 		next()
