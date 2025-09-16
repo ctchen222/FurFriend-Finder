@@ -17,10 +17,6 @@
 			--card-bg-color: #FFFFFF;
 			--shadow-color: rgba(0, 0, 0, 0.08);
 			--border-color: #EAE0D5;
-			--status-searching-bg: #FFF2D7;
-			--status-searching-text: #B58B00;
-			--status-found-bg: #DFF9E2;
-			--status-found-text: #2F8539;
 		}
 
 		body {
@@ -70,71 +66,95 @@
 			margin-right: 10px;
 		}
 
-		.case-list {
-			list-style: none;
-			padding: 0;
-		}
-
-		.case-item {
+		.setting-item {
 			display: flex;
 			justify-content: space-between;
 			align-items: center;
-			padding: 15px;
-			border-radius: 10px;
-			margin-bottom: 10px;
-			border: 1px solid var(--border-color);
-			transition: background-color 0.2s ease;
-		}
-
-		.case-item:hover {
-			background-color: #F9F6F2;
-		}
-
-		.case-details {
 			font-size: 1.1em;
 		}
 
-		.status-badge {
-			padding: 5px 12px;
-			border-radius: 20px;
-			font-weight: bold;
-			font-size: 0.9em;
+		.setting-item.disabled {
+			opacity: 0.5;
+			cursor: not-allowed;
 		}
 
-		.status-searching {
-			background-color: var(--status-searching-bg);
-			color: var(--status-searching-text);
+		.coming-soon {
+			font-size: 0.8em;
+			color: #999;
+			margin-left: 5px;
 		}
 
-		.status-found {
-			background-color: var(--status-found-bg);
-			color: var(--status-found-text);
+		.divider {
+			border: none;
+			border-top: 1px solid var(--border-color);
+			margin: 25px 0;
 		}
 
-		.empty-state {
-			text-align: center;
-			padding: 40px;
-		}
-
-		.empty-state p {
-			font-size: 1.2em;
-			margin-bottom: 20px;
-		}
-
-		.cta-button {
+		.switch {
+			position: relative;
 			display: inline-block;
-			padding: 12px 30px;
-			background-color: var(--primary-color);
-			color: white;
-			border-radius: 50px;
-			text-decoration: none;
-			font-weight: bold;
-			transition: transform 0.2s ease, box-shadow 0.2s ease;
+			width: 60px;
+			height: 34px;
 		}
 
-		.cta-button:hover {
-			transform: translateY(-3px);
-			box-shadow: 0 6px 15px rgba(129, 166, 211, 0.5);
+		.switch input {
+			opacity: 0;
+			width: 0;
+			height: 0;
+		}
+
+		.slider {
+			position: absolute;
+			cursor: pointer;
+			top: 0;
+			left: 0;
+			right: 0;
+			bottom: 0;
+			background-color: #ccc;
+			-webkit-transition: .4s;
+			transition: .4s;
+		}
+
+		.slider:before {
+			position: absolute;
+			content: "";
+			height: 26px;
+			width: 26px;
+			left: 4px;
+			bottom: 4px;
+			background-color: white;
+			-webkit-transition: .4s;
+			transition: .4s;
+		}
+
+		input:checked+.slider {
+			background-color: var(--primary-color);
+		}
+
+		input:focus+.slider {
+			box-shadow: 0 0 1px var(--primary-color);
+		}
+
+		input:checked+.slider:before {
+			-webkit-transform: translateX(26px);
+			-ms-transform: translateX(26px);
+			transform: translateX(26px);
+		}
+
+		.slider.round {
+			border-radius: 34px;
+		}
+
+		.slider.round:before {
+			border-radius: 50%;
+		}
+
+		.save-status {
+			margin-top: 15px;
+			font-style: italic;
+			color: var(--primary-color);
+			text-align: right;
+			height: 1em;
 		}
 
 		/* Header Styles */
@@ -180,6 +200,7 @@
 </head>
 
 <body>
+	<script>console.log(<%- JSON.stringify(user || null) %>);</script>
 	<%- include('partials/_header') %>
 		<div class="container">
 			<h1>個人資料</h1>
@@ -195,7 +216,67 @@
 					</p>
 				</div>
 			</div>
+
+			<div class="card">
+				<h2>⚙️ 通知設定</h2>
+				<div class="setting-item">
+					<label for="mail-notification">開啟遺失動物郵件通知</label>
+					<label class="switch">
+						<input type="checkbox" id="mail-notification" <%= user.isLostAnimalMailEnabled ? 'checked' : '' %>>
+						<span class="slider round"></span>
+					</label>
+				</div>
+				<p id="save-status" class="save-status"></p>
+				<hr class="divider">
+				<div class="setting-item disabled">
+					<label for="sms-notification">
+						開啟手機簡訊通知
+						<span class="coming-soon">(即將推出)</span>
+					</label>
+					<label class="switch">
+						<input type="checkbox" id="sms-notification" disabled>
+						<span class="slider round"></span>
+					</label>
+				</div>
+			</div>
+
 		</div>
+
+		<script>
+			document.addEventListener('DOMContentLoaded', () => {
+				const toggle = document.getElementById('mail-notification');
+				const status = document.getElementById('save-status');
+
+				toggle.addEventListener('change', async (event) => {
+					const isEnabled = event.target.checked;
+					status.textContent = '儲存中...';
+
+					try {
+						const response = await fetch('/api/auth/settings', {
+							method: 'PATCH',
+							headers: {
+								'Content-Type': 'application/json'
+							},
+							body: JSON.stringify({ isLostAnimalMailEnabled: isEnabled })
+						});
+
+						if (!response.ok) {
+							throw new Error('儲存失敗');
+						}
+
+						status.textContent = '✓ 已儲存';
+					} catch (error) {
+						status.textContent = '儲存失敗，請重試';
+						// Revert the toggle on error
+						event.target.checked = !isEnabled;
+					}
+
+					setTimeout(() => {
+						status.textContent = '';
+					}, 2000);
+				});
+			});
+		</script>
 </body>
 
 </html>

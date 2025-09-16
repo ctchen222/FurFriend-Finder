@@ -20,6 +20,9 @@ router.route('/logout')
 router.route('/reset-password')
 	.post(authCtrler.resetPassword);
 
+router.route('/settings')
+	.patch(authCtrler.updateSettings);
+
 router.all("*", toNodeHandler(auth))
 
 

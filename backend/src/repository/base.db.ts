@@ -67,7 +67,7 @@ class BaseRepository {
 	async create<T>(data: { [key: string]: any }, options?: string[]): Promise<T> {
 		const keys = Object.keys(data);
 		const values = Object.values(data);
-		const placeholders = keys.map((_, index) => `$${index + 1}`);
+		const placeholders = keys.map((_, index) => `${index + 1}`);
 
 		const query = `
 			INSERT INTO ${this.tableName} (${keys.join(", ")})
@@ -77,6 +77,26 @@ class BaseRepository {
 
 		const result = await pool.query(query, values);
 		return result.rows[0];
+	}
+
+	async update<T>(id: number | string, data: { [key: string]: any }, options?: string[]): Promise<T | null> {
+		const keys = Object.keys(data);
+		if (keys.length === 0) {
+			throw new Error("No data provided for update.");
+		}
+		const setString = keys.map((key, index) => `"${key}" = $${index + 2}`).join(", ");
+
+		const query = `
+			UPDATE ${this.tableName}
+			SET ${setString}
+			WHERE id = $1
+			RETURNING ${options ? options.join(", ") : "*"};
+		`;
+
+		const values = [id, ...Object.values(data)];
+		const result = await pool.query(query, values);
+
+		return result.rows[0] || null;
 	}
 }
 

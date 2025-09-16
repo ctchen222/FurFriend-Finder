@@ -8,7 +8,7 @@ import { addUserToLocals } from '../middleware/userSession';
 export default function routes(app: express.Express) {
 	app.use("/api/animals", animalRoute)
 	app.use("/api/lost-animals", animalLostRoute)
-	app.use("/api/auth", authRoute)
+	app.use("/api/auth", addUserToLocals, authRoute)
 
 	// View rendering
 	app.use("/", addUserToLocals, viewRoute)

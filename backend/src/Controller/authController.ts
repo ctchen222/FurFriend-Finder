@@ -1,17 +1,16 @@
 import express from 'express';
 import { Request, Response } from 'express';
 
-import UserRepository from '../repository/user.db';
 import SuccessResponse from '../libs/successResponse';
 import { auth } from '../middleware/auth';
 import CustomError from '../libs/customError';
 import * as apiMessage from '../libs/message'
+import UserRepository from '../repository/user.db';
 
 class AuthController {
-	UserRepository: UserRepository;
-
+	private userRepository: UserRepository
 	constructor() {
-		this.UserRepository = new UserRepository();
+		this.userRepository = new UserRepository();
 	}
 
 	createUser = async (
@@ -110,6 +109,24 @@ class AuthController {
 
 		res.locals.result = new SuccessResponse("redirect", "/");
 		next('router')
+	}
+
+	updateSettings = async (
+		req: Request,
+		res: Response,
+		next: express.NextFunction
+	): Promise<void> => {
+		const { isLostAnimalMailEnabled } = req.body;
+		const userId = res.locals.user?.id;
+
+		if (typeof isLostAnimalMailEnabled !== 'boolean' || !userId) {
+			throw new CustomError(apiMessage.BODY_NOT_COMPLETE)
+		}
+
+		const updatedUser = await this.userRepository.update(userId, { isLostAnimalMailEnabled });
+
+		res.locals.result = new SuccessResponse("api", { content: updatedUser });
+		next('router');
 	}
 }
 export default AuthController;

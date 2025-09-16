@@ -15,6 +15,8 @@
             --primary-color: #81A6D3;
             --card-bg-color: #FFFFFF;
             --shadow-color: rgba(0, 0, 0, 0.08);
+            --success-color: #4CAF50;
+            --error-color: #F44336;
         }
 
         body {
@@ -158,10 +160,42 @@
             color: var(--primary-color);
         }
 
+        /* Toast Styles */
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 8px;
+            color: white;
+            font-size: 1em;
+            font-weight: bold;
+            z-index: 1001;
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .toast.success {
+            background-color: var(--success-color);
+        }
+
+        .toast.error {
+            background-color: var(--error-color);
+        }
+
     </style>
 </head>
 <body>
     <%- include('partials/_header') %>
+
+    <div id="toast" class="toast"></div>
+
     <div class="container">
         <h1>🐾 FurFriend Finder 🐾</h1>
         <p class="subtitle">一個致力於幫助走失毛孩找到回家的路的平台。</p>
@@ -186,5 +220,51 @@
             <a href="/quick-use" class="cta-button">快速使用</a>
         </div>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const toast = document.getElementById('toast');
+            const urlParams = new URLSearchParams(window.location.search);
+            const message = urlParams.get('message');
+
+            if (message) {
+                let toastMessage = '';
+                let toastType = 'success';
+
+                switch (message) {
+                    case 'signup-success':
+                        toastMessage = '註冊成功！歡迎您的加入。';
+                        break;
+                    case 'login-success':
+                        toastMessage = '登入成功！';
+                        break;
+                    case 'logout-success':
+                        toastMessage = '您已成功登出。';
+                        break;
+                    case 'signup-failed':
+                        toastMessage = '註冊失敗，請檢查您輸入的資料。';
+                        toastType = 'error';
+                        break;
+                    case 'login-failed':
+                        toastMessage = '登入失敗，請確認您的信箱與密碼。';
+                        toastType = 'error';
+                        break;
+                }
+
+                if (toastMessage) {
+                    toast.textContent = toastMessage;
+                    toast.classList.add(toastType, 'show');
+
+                    setTimeout(() => {
+                        toast.classList.remove('show');
+                    }, 3000);
+                }
+
+                // Clean the URL
+                const newUrl = window.location.pathname;
+                window.history.replaceState({}, document.title, newUrl);
+            }
+        });
+    </script>
 </body>
 </html>
