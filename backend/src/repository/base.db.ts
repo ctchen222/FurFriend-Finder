@@ -6,6 +6,18 @@ class BaseRepository {
 		this.tableName = tableName;
 	}
 
+	async start(): Promise<void> {
+		const queryStartTransaction = 'START TRANSACTION;'
+
+		await pool.query(queryStartTransaction)
+	}
+
+	async commit(): Promise<void> {
+		const queryCommit = 'COMMIT;'
+
+		await pool.query(queryCommit)
+	}
+
 	async findAll<T>(
 		pageSize: number = 10,
 		cursor?: string | undefined,
@@ -67,7 +79,7 @@ class BaseRepository {
 	async create<T>(data: { [key: string]: any }, options?: string[]): Promise<T> {
 		const keys = Object.keys(data);
 		const values = Object.values(data);
-		const placeholders = keys.map((_, index) => `${index + 1}`);
+		const placeholders = keys.map((_, index) => `$${index + 1}`);
 
 		const query = `
 			INSERT INTO ${this.tableName} (${keys.join(", ")})

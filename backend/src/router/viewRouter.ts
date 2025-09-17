@@ -15,7 +15,14 @@ router.get('/', (req, res) => {
 });
 
 router.get('/report-lost', (req, res) => {
-	res.render('lost-pet-form', { user: res.locals.user });
+	const animalOwner = res.locals.user ? {
+		name: res.locals.user.name,
+		email: res.locals.user.email,
+	} : {};
+	res.render('lost-pet-form', { 
+		user: res.locals.user,
+		animalOwner: animalOwner
+	});
 });
 
 router.get('/profile', (req, res) => {

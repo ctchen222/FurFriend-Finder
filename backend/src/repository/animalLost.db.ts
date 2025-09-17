@@ -6,7 +6,7 @@ import BaseRepository from "./base.db";
 class AnimalLostRepository extends BaseRepository {
 
 	constructor() {
-		super("animal_losts");
+		super("animal_lost");
 	}
 
 	async findMatchingAnimals(colour?: string[], kind?: string, sex?: string, variety?: string) {
@@ -36,14 +36,25 @@ class AnimalLostRepository extends BaseRepository {
 
 		const whereClause = filters.length ? "WHERE " + filters.join(" AND ") : "";
 		const query = `
-			SELECT * FROM animals 
-			INNER JOIN animal_shelters
-			ON animals.animal_shelter_id = animal_shelters.id
+			SELECT * FROM animal
+			INNER JOIN animal_shelter
+			ON animal.animal_shelter_id = animal_shelter.id
 			${whereClause};
 		`;
 
 		const { rows } = await pool.query<Animal>(query, values);
 		return rows;
+	}
+
+	async findByOwnerId(ownerId: number): Promise<AnimalLostData[]> {
+		const query = `
+			SELECT *
+			FROM ${this.tableName}
+			WHERE owner_id = $1
+		`;
+		const values = [ownerId];
+		const result = await pool.query(query, values);
+		return result.rows;
 	}
 
 	async bulkInsertAnimalLosts(animalLosts: AnimalLostData[]): Promise<number> {
@@ -54,7 +65,7 @@ class AnimalLostRepository extends BaseRepository {
 
 		// First, ensure the global "Unknown" owner exists
 		const unknownOwnerQuery = `
-			INSERT INTO owners(name, phone, email)
+			INSERT INTO owner(name, phone, email)
 			VALUES('Unknown', 'Unknown', 'Unknown')
 			ON CONFLICT(phone, email) DO UPDATE SET
 				name = EXCLUDED.name
@@ -87,7 +98,7 @@ class AnimalLostRepository extends BaseRepository {
 				}).join(", ");
 
 				const insertOwnerQuery = `
-					INSERT INTO owners(name, phone, email)
+					INSERT INTO owner(name, phone, email)
 					VALUES ${ownerPlaceholders}
 					ON CONFLICT(phone, email) DO NOTHING
 					RETURNING id, phone, email;
@@ -127,7 +138,7 @@ class AnimalLostRepository extends BaseRepository {
 					animal.colour ?? null,
 					animal.outlook ?? null,
 					animal.feature ?? null,
-					animal.lost_time ? formatDate(animal.lost_time) : '9999-12-31',
+					animal.lost_time ? formatDate(animal.lost_time) : '1970-01-01',
 					animal.lost_place ?? null,
 					animal.picture ?? null,
 					ownerId
@@ -136,7 +147,7 @@ class AnimalLostRepository extends BaseRepository {
 			}).join(", ");
 
 			const insertAnimalQuery = `
-				INSERT INTO animal_losts(
+				INSERT INTO animal_lost(
 				chip_id, name, kind, variety, sex, colour, outlook, feature, lost_time, lost_place, picture, owner_id)
 				VALUES ${animalPlaceholders}
 				ON CONFLICT(chip_id) DO NOTHING;

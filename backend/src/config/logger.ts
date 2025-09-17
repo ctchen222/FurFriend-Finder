@@ -49,4 +49,15 @@ const logger = winston.createLogger({
 	transports,
 });
 
+export const matchLogger = winston.createLogger({
+	level: 'http',
+	format: combine(
+		timestamp(),
+		json()
+	),
+	transports: [
+		new winston.transports.File({ filename: './logs/match-requests.log' })
+	]
+});
+
 export default logger;

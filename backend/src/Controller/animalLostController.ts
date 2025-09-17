@@ -11,12 +11,12 @@ import AnimalHelper from './helper/animalHelper';
 import DatabaseUtils from '../libs/database.utils';
 
 class AnimalLostController {
-	private animalLostRepository: AnimalLostRepository
+	private repository: AnimalLostRepository
 	private animalLostService: AnimalLostService
 	private ownerRepository: OwnerRepository
 
 	constructor() {
-		this.animalLostRepository = new AnimalLostRepository();
+		this.repository = new AnimalLostRepository();
 		this.animalLostService = new AnimalLostService();
 		this.ownerRepository = new OwnerRepository();
 	}
@@ -28,7 +28,7 @@ class AnimalLostController {
 	) => {
 		const { parsedPageSize, id } = AnimalHelper.getQueryString(req)
 
-		const animals = await this.animalLostRepository.findAll<AnimalLost>(parsedPageSize, id)
+		const animals = await this.repository.findAll<AnimalLost>(parsedPageSize, id)
 		const { prevCursor, nextCursor } = DatabaseUtils.cursorPairGenerate(animals)
 
 		res.locals.result = new SuccessResponse('api',
@@ -48,33 +48,35 @@ class AnimalLostController {
 		res: express.Response,
 		next: express.NextFunction
 	) => {
-		// 使用 AnimalLostRequestSchema 驗證來自前端的請求
-		const animalLostResult = AnimalLostRequestSchema.safeParse(req.body.animalLost);
-		const animalOwnerResult = AnimalOwnerSchema.safeParse(req.body.animalOwner);
+		try {
+			const animalLostResult = AnimalLostRequestSchema.safeParse(req.body.animalLost);
+			const animalOwnerResult = AnimalOwnerSchema.safeParse(req.body.animalOwner);
 
-		if (!animalLostResult.success || !animalOwnerResult.success) {
-			// 可以將 animalLostResult.error 和 animalOwnerResult.error log 出來以供偵錯
-			throw new CustomError(apiMessage.VALIDATION_ERROR);
+			if (!animalLostResult.success || !animalOwnerResult.success) {
+				throw new CustomError(apiMessage.VALIDATION_ERROR);
+			}
+
+			const animalLostData = animalLostResult.data;
+			const animalOwner = animalOwnerResult.data as AnimalOwner;
+
+			await this.repository.start()
+
+			const owner = await this.ownerRepository.findOrCreate(animalOwner);
+
+			const animalToCreate: AnimalLost = {
+				...animalLostData,
+				owner_id: owner.id,
+			};
+
+			await this.repository.create<AnimalLost>(animalToCreate);
+
+			await this.repository.commit()
+
+			res.locals.result = new SuccessResponse('redirect', '/profile?message=協尋案件已成功登錄');
+		} catch (error) {
+			res.locals.result = new SuccessResponse('redirect', '/profile?error=登錄失敗，請稍後再試');
 		}
-
-		const animalLostData = animalLostResult.data;
-		const animalOwner = animalOwnerResult.data as AnimalOwner;
-
-		const owner = await this.ownerRepository.findOrCreate(animalOwner);
-
-		// 驗證通過後，補上 owner_id，準備存入資料庫
-		const animalToCreate: AnimalLost = {
-			...animalLostData,
-			owner_id: owner.id,
-		};
-
-		const animalLostCreated = await this.animalLostRepository.create<AnimalLost>(animalToCreate);
-
-		// 使用您設計的 handler 來進行重新導向
-		res.locals.result = new SuccessResponse('redirect', '/profile');
-		res.locals.result = new SuccessResponse('api', { content: { animalLostCreated, owner } });
-		// res.locals.result = new SuccessResponse('redirect', '/profile');
-		return next();
+		next('router');
 	};
 
 
@@ -112,9 +114,9 @@ class AnimalLostController {
 			return next();
 		}
 
-		const { metadata, top10Matches } = result;
+		const { metadata, matchedAnimals } = result;
 
-		res.locals.result = new SuccessResponse('api', { metadata, top10Matches });
+		res.locals.result = new SuccessResponse('api', { metadata, matchedAnimals });
 		return next();
 	}
 }

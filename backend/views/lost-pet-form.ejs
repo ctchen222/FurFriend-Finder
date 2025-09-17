@@ -169,10 +169,6 @@
 						<input type="text" id="pet-name" name="animalLost[name]">
 					</div>
 					<div class="form-group">
-						<label for="pet-chip-id">晶片號碼</label>
-						<input type="text" id="pet-chip-id" name="animalLost[chip_id]">
-					</div>
-					<div class="form-group">
 						<label for="pet-lost-time">走失時間</label>
 						<input type="date" id="pet-lost-time" name="animalLost[lost_time]">
 					</div>
@@ -187,7 +183,6 @@
 					<div class="form-group">
 						<label for="pet-sex">性別</label>
 						<select id="pet-sex" name="animalLost[sex]">
-							<option value="">未知</option>
 							<option value="M">公</option>
 							<option value="F">母</option>
 						</select>
@@ -210,26 +205,21 @@
 						<label for="pet-lost-place">走失地點</label>
 						<input type="text" id="pet-lost-place" name="animalLost[lost_place]" required>
 					</div>
-					<div class="form-group">
-						<label for="pet-remark">走失原因</label>
-						<textarea id="pet-remark" name="animalLost[remark]" rows="4"
-							placeholder="例如: 當時天氣、走失的可能原因等"></textarea>
-					</div>
 				</fieldset>
 
 				<fieldset>
 					<legend>👤 飼主聯絡資訊</legend>
 					<div class="form-group">
 						<label for="owner-name">您的姓名</label>
-						<input type="text" id="owner-name" name="animalOwner[name]" required>
+						<input type="text" id="owner-name" name="animalOwner[name]" value="<%= animalOwner.name || '' %>" required>
 					</div>
 					<div class="form-group">
 						<label for="owner-email">Email</label>
-						<input type="email" id="owner-email" name="animalOwner[email]" required>
+						<input type="email" id="owner-email" name="animalOwner[email]" value="<%= animalOwner.email || '' %>" required>
 					</div>
 					<div class="form-group">
 						<label for="owner-phone">手機</label>
-						<input type="tel" id="owner-phone" name="animalOwner[phone]">
+						<input type="tel" id="owner-phone" name="animalOwner[phone]" value="<%= animalOwner.phone || '' %>">
 					</div>
 				</fieldset>
 

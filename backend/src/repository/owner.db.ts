@@ -5,7 +5,11 @@ import BaseRepository from './base.db';
 
 class OwnerRepository extends BaseRepository {
 	constructor() {
-		super('owners');
+		super('owner');
+	}
+
+	public async findByEmail(email: string): Promise<Owner | null> {
+		return this.findOne<Owner>({ email });
 	}
 
 	/**

@@ -134,7 +134,7 @@ class AnimalLostService {
 
 		return {
 			metadata,
-			top10Matches
+			matchedAnimals: top10Matches
 		}
 	}
 
