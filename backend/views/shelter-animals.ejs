@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>收容所動物 - FurFriend Finder</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&display=swap" rel="stylesheet">
+	<style>
+		:root {
+			--bg-color: #FEFBF6;
+			--text-color: #5D5753;
+			--heading-color: #A77B5A;
+			--primary-color: #81A6D3;
+			--card-bg-color: #FFFFFF;
+			--shadow-color: rgba(0, 0, 0, 0.08);
+			--border-color: #EAE0D5;
+		}
+
+		body {
+			font-family: 'Nunito', 'Microsoft JhengHei', sans-serif;
+			background-color: var(--bg-color);
+			color: var(--text-color);
+			line-height: 1.8;
+			padding: 20px;
+			background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 100 100'%3E%3Cpath d='M12.9,66.3c-3.5-3.5-5.8-8.3-5.8-13.5c0-10.5,8.5-19,19-19c5.2,0,10,2.1,13.5,5.8c3.5,3.5,5.8,8.3,5.8,13.5 c0,10.5-8.5,19-19,19C21.2,72.1,16.4,69.8,12.9,66.3z M87.1,66.3c-3.5-3.5-5.8-8.3-5.8-13.5c0-10.5,8.5-19,19-19 c5.2,0,10,2.1,13.5,5.8c3.5,3.5,5.8,8.3,5.8,13.5c0,10.5-8.5,19-19,19C95.5,72.1,90.6,69.8,87.1,66.3z M50,87.1 c-3.5-3.5-5.8-8.3-5.8-13.5c0-10.5,8.5-19,19-19c5.2,0,10,2.1,13.5,5.8c3.5,3.5,5.8,8.3,5.8,13.5c0,10.5-8.5,19-19,19 C58.3,92.9,53.5,90.6,50,87.1z M26.1,26.8c-3.5-3.5-5.8-8.3-5.8-13.5C20.3,2.8,28.8-5.7,39.3-5.7c5.2,0,10,2.1,13.5,5.8 c3.5,3.5,5.8,8.3,5.8,13.5c0,10.5-8.5,19-19,19C34.4,32.6,29.6,30.3,26.1,26.8z M73.9,26.8c-3.5-3.5-5.8-8.3-5.8-13.5 c0-10.5,8.5-19,19-19c5.2,0,10,2.1,13.5,5.8c3.5,3.5,5.8,8.3,5.8,13.5c0,10.5-8.5,19-19,19C82.2,32.6,77.4,30.3,73.9,26.8z' fill='%23F4EFE8'/%3E%3C/svg%3E");
+			background-repeat: repeat;
+		}
+
+		.toast {
+			position: fixed;
+			top: 20px;
+			right: 20px;
+			padding: 15px 20px;
+			border-radius: 8px;
+			color: white;
+			font-size: 1em;
+			font-weight: bold;
+			z-index: 1001;
+			opacity: 0;
+			transform: translateY(-20px);
+			transition: opacity 0.3s ease, transform 0.3s ease;
+		}
+
+		.toast.show {
+			opacity: 1;
+			transform: translateY(0);
+		}
+
+		.toast.success {
+			background-color: var(--success-color);
+		}
+
+		.toast.error {
+			background-color: var(--error-color);
+		}
+
+		/* Header Styles */
+		.main-header {
+			position: sticky;
+			top: 0;
+			z-index: 1000;
+			background-color: rgba(255, 255, 255, 0.85);
+			backdrop-filter: blur(10px);
+			box-shadow: 0 2px 10px var(--shadow-color);
+			padding: 10px 0;
+		}
+
+		.header-container {
+			max-width: 1200px;
+			/* Adjusted for wider layout */
+			margin: 0 auto;
+			padding: 0 20px;
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+		}
+
+		.logo {
+			font-weight: bold;
+			font-size: 1.4em;
+			color: var(--heading-color);
+			text-decoration: none;
+		}
+
+		.main-nav a {
+			margin-left: 25px;
+			text-decoration: none;
+			color: var(--text-color);
+			font-weight: bold;
+			font-size: 1.1em;
+			transition: color 0.2s ease;
+		}
+
+		.main-nav a:hover {
+			color: var(--primary-color);
+		}
+
+		.container {
+			max-width: 1200px;
+			margin: 40px auto;
+		}
+
+		h1 {
+			color: var(--heading-color);
+			text-align: center;
+			font-size: 2.2em;
+			margin-bottom: 40px;
+		}
+
+		.animal-grid {
+			display: grid;
+			grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+			gap: 30px;
+		}
+
+		.animal-card {
+			background-color: var(--card-bg-color);
+			border-radius: 20px;
+			box-shadow: 0 10px 30px var(--shadow-color);
+			overflow: hidden;
+			transition: transform 0.2s ease, box-shadow 0.2s ease;
+		}
+
+		.animal-card:hover {
+			transform: translateY(-5px);
+			box-shadow: 0 15px 35px rgba(0, 0, 0, 0.12);
+		}
+
+		.animal-card img {
+			width: 100%;
+			height: 200px;
+			object-fit: cover;
+		}
+
+		.animal-card-content {
+			padding: 20px;
+		}
+
+		.animal-card h2 {
+			color: var(--heading-color);
+			font-size: 1.5em;
+			margin-top: 0;
+			margin-bottom: 10px;
+		}
+
+		.animal-card p {
+			margin: 0 0 10px;
+		}
+
+		.animal-card strong {
+			color: var(--heading-color);
+			margin-right: 8px;
+		}
+
+		.pagination-controls {
+			text-align: center;
+			margin-top: 40px;
+		}
+
+		.pagination-controls button {
+			background-color: var(--primary-color);
+			color: white;
+			border: none;
+			padding: 12px 24px;
+			margin: 0 10px;
+			border-radius: 10px;
+			font-family: 'Nunito', 'Microsoft JhengHei', sans-serif;
+			font-weight: bold;
+			font-size: 1.1em;
+			cursor: pointer;
+			transition: background-color 0.2s ease, transform 0.2s ease;
+			box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+		}
+
+		.pagination-controls button:hover:not(:disabled) {
+			background-color: #6a93c2;
+			/* A slightly darker shade of primary-color */
+			transform: translateY(-2px);
+		}
+
+		.pagination-controls button:disabled {
+			background-color: #ccc;
+			color: #888;
+			cursor: not-allowed;
+			box-shadow: none;
+			transform: none;
+		}
+	</style>
+</head>
+
+<body>
+	<div id="toast" class="toast"></div>
+	<%- include('partials/_header') %>
+
+		<div class="container">
+			<h1>收容所動物列表</h1>
+			<div id="animal-grid" class="animal-grid">
+				<p>載入中...</p>
+			</div>
+
+			<div class="pagination-controls">
+				<button id="prev-page" disabled>上一頁</button>
+				<button id="next-page" disabled>下一頁</button>
+			</div>
+		</div>
+
+		<script>
+			document.addEventListener('DOMContentLoaded', async () => {
+				const grid = document.getElementById('animal-grid');
+				const prevButton = document.getElementById('prev-page');
+				const nextButton = document.getElementById('next-page');
+
+				let currentPageSize = 10; // Default page size
+				let currentPrevCursor = null;
+				let currentNextCursor = null;
+
+				async function fetchAnimals(cursor = null) {
+					grid.innerHTML = '<p>載入中...</p>'; // Show loading message
+
+					let url = `/api/animals?pageSize=${currentPageSize}`;
+					if (cursor) {
+						url += `&cursor=${cursor}`;
+					}
+
+					try {
+						const response = await fetch(url); // Corrected endpoint
+						if (!response.ok) {
+							throw new Error('無法取得動物資料');
+						}
+						const result = await response.json(); // Renamed data to result for clarity
+						const animals = result.extras.animals; // Corrected data access
+						const cursors = result.extras.cursors;
+
+						grid.innerHTML = ''; // Clear loading message
+
+						if (animals && animals.length > 0) {
+							animals.forEach(animal => {
+								const card = document.createElement('div');
+								card.className = 'animal-card';
+
+								const imageUrl = animal.picture ? animal.picture : 'https://placehold.co/600x400?text=沒有圖片';
+
+								card.innerHTML = `
+									<img src="${imageUrl}" alt="${'Animal'}">
+									<div class="animal-card-content">
+										<h2>${animal.variety}</h2>
+										<p><strong>物種:</strong> ${animal.kind}</p>
+										<p><strong>性別:</strong> ${animal.sex === 'M' ? '公' : '母'}</p>
+										<p><strong>毛色:</strong> ${animal.colour}</p>
+										<!-- <p><strong>收容所:</strong> ${animal.name}</p> -->
+									</div>
+								`;
+								grid.appendChild(card);
+							});
+						} else {
+							grid.innerHTML = '<p>目前沒有動物資料。</p>';
+						}
+
+						// Update cursors and button states
+						currentPrevCursor = cursors.prevCursor;
+						currentNextCursor = cursors.nextCursor;
+						console.log('Prev Cursor:', currentPrevCursor);
+						console.log('Next Cursor:', currentNextCursor);
+
+						prevButton.disabled = !currentPrevCursor;
+						nextButton.disabled = !currentNextCursor;
+
+					} catch (error) {
+						grid.innerHTML = `<p>${error.message}</p>`;
+						prevButton.disabled = true;
+						nextButton.disabled = true;
+					}
+				}
+
+				// Initial fetch
+				fetchAnimals();
+
+				// Event listeners for pagination buttons
+				prevButton.addEventListener('click', () => {
+					if (currentPrevCursor) {
+						fetchAnimals(currentPrevCursor);
+					}
+				});
+
+				nextButton.addEventListener('click', () => {
+					if (currentNextCursor) {
+						fetchAnimals(currentNextCursor);
+					}
+				});
+
+				// Toast notification logic (existing)
+				const toast = document.getElementById('toast');
+				const urlParams = new URLSearchParams(window.location.search);
+				const message = urlParams.get('message');
+				const urlError = urlParams.get('error');
+
+				if (message) {
+					toast.textContent = decodeURIComponent(message);
+					toast.classList.add('success', 'show');
+
+					setTimeout(() => {
+						toast.classList.remove('show');
+					}, 3000);
+				}
+
+				if (urlError) {
+					toast.textContent = decodeURIComponent(urlError);
+					toast.classList.add('error', 'show');
+
+					setTimeout(() => {
+						toast.classList.remove('show');
+					}, 3000);
+				}
+			});
+		</script>
+</body>
+
+</html>

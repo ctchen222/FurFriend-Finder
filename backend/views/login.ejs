@@ -97,6 +97,26 @@
 			font-weight: bold;
 			margin: 0 10px;
 		}
+
+		.toast {
+			position: fixed;
+			top: 20px;
+			right: 20px;
+			background-color: #ff4d4d;
+			color: white;
+			padding: 15px 20px;
+			border-radius: 5px;
+			box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+			opacity: 0;
+			transition: opacity 0.3s, transform 0.3s;
+			transform: translateY(-20px);
+			z-index: 1001;
+		}
+
+		.toast.show {
+			opacity: 1;
+			transform: translateY(0);
+		}
 	</style>
 </head>
 
@@ -122,6 +142,23 @@
 			<p>沒有帳號？ <a href="/register">點此註冊</a></p>
 		</div>
 	</div>
+
+	<div id="toast" class="toast"></div>
+
+	<script>
+		document.addEventListener('DOMContentLoaded', () => {
+			const urlParams = new URLSearchParams(window.location.search);
+			const error = urlParams.get('error');
+			if (error) {
+				const toast = document.getElementById('toast');
+				toast.textContent = decodeURIComponent(error);
+				toast.classList.add('show');
+				setTimeout(() => {
+					toast.classList.remove('show');
+				}, 3000);
+			}
+		});
+	</script>
 </body>
 
 </html>

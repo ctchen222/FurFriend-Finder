@@ -1,4 +1,9 @@
 import express from 'express';
+import OwnerRepository from '../repository/owner.db';
+import AnimalLostRepository from '../repository/animalLost.db';
+
+const ownerRepository = new OwnerRepository();
+const animalLostRepository = new AnimalLostRepository();
 
 const router = express.Router();
 
@@ -19,22 +24,33 @@ router.get('/report-lost', (req, res) => {
 		name: res.locals.user.name,
 		email: res.locals.user.email,
 	} : {};
-	res.render('lost-pet-form', { 
+	res.render('lost-pet-form', {
 		user: res.locals.user,
 		animalOwner: animalOwner
 	});
 });
 
-router.get('/profile', (req, res) => {
-	res.render('profile',
-		{
-			user: res.locals.user
+router.get('/profile', async (req, res) => {
+	let lostAnimals: any[] = [];
+	if (res.locals.user && res.locals.user.email) {
+		const owner = await ownerRepository.findByEmail(res.locals.user.email);
+		if (owner) {
+			lostAnimals = await animalLostRepository.findByOwnerId(owner.id);
 		}
-	);
+	}
+
+	res.render('profile', {
+		user: res.locals.user,
+		lostAnimals: lostAnimals
+	});
 });
 
 router.get('/quick-use', (req, res) => {
 	res.render('quick-use', { user: res.locals.user });
+});
+
+router.get('/shelter-animals', (req, res) => {
+	res.render('shelter-animals', { user: res.locals.user });
 });
 
 export { router };
