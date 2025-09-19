@@ -6,12 +6,12 @@ import BaseRepository from "./base.db";
 
 class AnimalRepository extends BaseRepository {
 	constructor() {
-		super("animals");
+		super("animal");
 	}
 
 	async findAnimalsByCity(city: string) {
 		const query = `
-			SELECT * FROM animals
+			SELECT * FROM ${this.tableName}
 			LEFT JOIN animal_shelters ON animals.animal_shelter_id = animal_shelters.id
 			WHERE animal_shelters.address LIKE $1;
 		`
@@ -23,7 +23,32 @@ class AnimalRepository extends BaseRepository {
 		return rows
 	}
 
-	async findAllWithShelter(options?: string[]) {
+	async findAll<T>(
+		pageSize: number = 10,
+		cursor?: string | undefined,
+		options?: string[],
+		orderBy?: string[],
+	): Promise<T[]> {
+		const orderByStr = orderBy && orderBy.length > 0 ?
+			`ORDER BY ( ${orderBy.join(", ")} ) DESC` : "ORDER BY id ASC";
+
+		const query = `
+			SELECT ${options ? options.join(", ") : "*"}
+			FROM ${this.tableName}
+			${cursor ? `WHERE id > ${cursor}` : ""}
+			${orderByStr}
+			LIMIT ${pageSize};
+		`;
+
+		const result = await pool.query(query)
+		return result.rows;
+	}
+
+	async findAllWithShelter(
+		pageSize: number = 10,
+		cursor?: string | undefined,
+		options?: string[]
+	) {
 		const animalFields = [
 			'id', 'sub_id', 'kind', 'variety', 'sex', 'age', 'body_type', 'colour', 'found_place', 'remark', 'picture', 'status', 'animal_shelter_id', 'open_date', 'close_date', 'update_date'
 		];
@@ -33,18 +58,20 @@ class AnimalRepository extends BaseRepository {
 
 		let selectFields: string;
 		if (options && options.length > 0) {
-			const safeAnimalFields = options.filter(opt => animalFields.includes(opt)).map(opt => `animals.${opt}`);
-			selectFields = [...safeAnimalFields, ...shelterFields.map(f => `animal_shelters.${f} as shelter_${f}`)].join(', ');
+			const safeAnimalFields = options.filter(opt => animalFields.includes(opt)).map(opt => `animal.${opt}`);
+			selectFields = [...safeAnimalFields, ...shelterFields.map(f => `animal_shelter.${f} as shelter_${f}`)].join(', ');
 		} else {
 			selectFields = '*';
 		}
 
 		const query = `
 			SELECT ${selectFields}
-			FROM animals
-			LEFT JOIN animal_shelters 
-			ON animals.animal_shelter_id = animal_shelters.id
-			ORDER BY ( animals.update_date, animals.open_date ) DESC;
+			FROM ${this.tableName}
+			LEFT JOIN animal_shelter 
+			ON animal.animal_shelter_id = animal_shelter.id
+			${cursor ? `WHERE animal.id > ${cursor}` : ""}
+			ORDER BY ( animal.update_date, animal.open_date ) DESC
+			LIMIT ${pageSize};
 		`
 
 		const { rows } = await pool.query(query)
@@ -54,12 +81,12 @@ class AnimalRepository extends BaseRepository {
 	async findAnimalShelterById(animalId: string): Promise<Animal | null> {
 		const query = `
 			SELECT 
-				animals.*, animal_shelters.name AS shelter_name, 
-				animal_shelters.address AS shelter_address, animal_shelters.tel AS shelter_tel
-			FROM animals
-			LEFT JOIN animal_shelters 
-			ON animals.animal_shelter_id = animal_shelters.id
-			WHERE animals.id = $1;
+				animal.*, animal_shelter.name AS shelter_name,
+				animal_shelter.address AS shelter_address, animal_shelter.tel AS shelter_tel
+			FROM animal
+			LEFT JOIN animal_shelter
+			ON animal.animal_shelter_id = animal_shelter.id
+			WHERE animal.id = $1;
 		`
 
 		const values = [animalId]
@@ -91,7 +118,7 @@ class AnimalRepository extends BaseRepository {
 			).join(", ");
 
 			const insertShelterQuery = `
-				INSERT INTO animal_shelters(
+				INSERT INTO animal_shelter(
 				id, name, address, tel)
 			    VALUES ${shelterPlaceholders}
 			    ON CONFLICT(id) DO NOTHING;
@@ -116,15 +143,15 @@ class AnimalRepository extends BaseRepository {
 					animal.picture,
 					animal.status,
 					animal.animal_shelter_id,
-					animal.opendate ? animal.opendate : "9999-12-31",
-					animal.closedate ? animal.closedate : "9999-12-31",
-					animal.updatedate ? flexibleDateSchema.parse(animal.updatedate) : "9999-12-31"
+					animal.opendate ? animal.opendate : "1970-01-01",
+					animal.closedate ? animal.closedate : "1970-01-01",
+					animal.updatedate ? flexibleDateSchema.parse(animal.updatedate) : "1970-01-01"
 				);
 				return `($${baseIdx + 1}, $${baseIdx + 2}, $${baseIdx + 3}, $${baseIdx + 4}, $${baseIdx + 5}, $${baseIdx + 6}, $${baseIdx + 7}, $${baseIdx + 8}, $${baseIdx + 9}, $${baseIdx + 10}, $${baseIdx + 11}, $${baseIdx + 12}, $${baseIdx + 13}, $${baseIdx + 14}, $${baseIdx + 15})`;
 			}).join(", ");
 
 			const insertQuery = `
-				INSERT INTO animals(
+				INSERT INTO animal(
 			    sub_id, kind, variety, sex, age, body_type, colour, found_place, remark, picture, status, animal_shelter_id, open_date, close_date, update_date )
 			    VALUES ${valuePlaceholders};
 			`;
@@ -136,8 +163,6 @@ class AnimalRepository extends BaseRepository {
 		return insertedRowCount;
 	}
 
-	// TODO: 
-	// refactor to service
 	async bulkInsertAnimalLosts(animalLosts: AnimalLostData[]): Promise<number> {
 		await pool.query("START TRANSACTION");
 
@@ -146,7 +171,7 @@ class AnimalRepository extends BaseRepository {
 
 		// First, ensure the global "Unknown" owner exists
 		const unknownOwnerQuery = `
-			INSERT INTO owners(name, phone, email)
+			INSERT INTO owner(name, phone, email)
 			VALUES('Unknown', 'Unknown', 'Unknown')
 			ON CONFLICT(phone, email) DO UPDATE SET
 				name = EXCLUDED.name
@@ -179,7 +204,7 @@ class AnimalRepository extends BaseRepository {
 				}).join(", ");
 
 				const insertOwnerQuery = `
-					INSERT INTO owners(name, phone, email)
+					INSERT INTO owner(name, phone, email)
 					VALUES ${ownerPlaceholders}
 					ON CONFLICT(phone, email) DO NOTHING
 					RETURNING id, phone, email;
@@ -228,7 +253,7 @@ class AnimalRepository extends BaseRepository {
 			}).join(", ");
 
 			const insertAnimalQuery = `
-				INSERT INTO animal_losts(
+				INSERT INTO animal_lost(
 				chip_id, name, kind, variety, sex, colour, outlook, feature, lost_time, lost_place, picture, owner_id)
 				VALUES ${animalPlaceholders}
 				ON CONFLICT(chip_id) DO NOTHING;
