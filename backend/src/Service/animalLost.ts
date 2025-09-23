@@ -109,6 +109,7 @@ class AnimalLostService {
 		// Step 2: Find animals based on other criteria
 		const matchedAnimals = await this.repository.findMatchingAnimals(colour, kind, sex, variety);
 
+		// TODO: redis for Geo coding results cache
 		// Step 3: Calculate distance for each matched animal, sort them, and take the top 5
 		const animalsWithDistance = await Promise.all(
 			matchedAnimals.map(async (animal) => {

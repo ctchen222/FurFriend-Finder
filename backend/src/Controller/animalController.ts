@@ -20,7 +20,6 @@ class AnimalController {
 		this.animalService = new AnimalService();
 	}
 
-	// TODO: Lack of prevCursor
 	fetchList = async (
 		req: express.Request,
 		res: express.Response,
@@ -28,7 +27,9 @@ class AnimalController {
 	) => {
 		const { parsedPageSize, id } = AnimalHelper.getQueryString(req)
 
+		// TODO: switch to findAllWithShelter later
 		const animals = await this.repository.findAll<Animal>(parsedPageSize, id)
+		// const animals = await this.repository.findAllWithShelter(parsedPageSize, id)
 		const { prevCursor, nextCursor } = DatabaseUtils.cursorPairGenerate(animals)
 
 		res.locals.result = new SuccessResponse('api',

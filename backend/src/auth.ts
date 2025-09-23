@@ -11,7 +11,6 @@ export const auth = betterAuth({
 	},
 	emailVerification: {
 		sendVerificationEmail: async ({ user, url, token }, request) => {
-			//TODO: refactor to mail service
 			await new MailService().mailer.sendMail({
 				from: mailConfig.sentFrom,
 				to: user.email,

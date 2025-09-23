@@ -28,7 +28,6 @@ class AuthController {
 				name,
 				email,
 				password,
-				// image: "https://example.com/image.png",
 				// TODO: change callbackURL to your frontend URL
 				// callbackURL: "https://example.com/callback",
 			},
@@ -41,8 +40,8 @@ class AuthController {
 			res.setHeader('Set-Cookie', cookies);
 		}
 
-		// res.locals.result = new SuccessResponse("api", { content: content });
-		res.locals.result = new SuccessResponse("redirect", "/");
+		// res.locals.result = new SuccessResponse("api", content);
+		res.locals.result = new SuccessResponse("redirect", "/?message=signup-success");
 		next('router')
 	}
 
@@ -56,22 +55,32 @@ class AuthController {
 			throw new CustomError(apiMessage.BODY_NOT_COMPLETE);
 		}
 
-		const authResponse = await auth.api.signInEmail({
-			body: {
-				email,
-				password,
-			},
-			asResponse: true,
-		});
+		try {
+			const authResponse = await auth.api.signInEmail({
+				body: {
+					email,
+					password,
+				},
+				asResponse: true,
+			});
 
-		// Forward cookies from the auth response to the client
-		const cookies = authResponse.headers.getSetCookie();
+			if (authResponse.status !== 200) {
+				const errorData = await authResponse.json();
+				const errorMessage = errorData.message || '登入失敗，請檢查您的帳號密碼';
+				res.locals.result = new SuccessResponse("redirect", `/login?error=${encodeURIComponent(errorMessage)}`);
+			} else {
+				// Forward cookies from the auth response to the client
+				const cookies = authResponse.headers.getSetCookie();
 
-		if (cookies && cookies.length > 0) {
-			res.setHeader('Set-Cookie', cookies);
+				if (cookies && cookies.length > 0) {
+					res.setHeader('Set-Cookie', cookies);
+				}
+
+				res.locals.result = new SuccessResponse("redirect", "/?message=login-success");
+			}
+		} catch (error) {
+			res.locals.result = new SuccessResponse("redirect", "/login?error=登入失敗，請檢查您的帳號密碼");
 		}
-
-		res.locals.result = new SuccessResponse("redirect", "/");
 		next('router')
 	}
 
@@ -81,11 +90,10 @@ class AuthController {
 		next: express.NextFunction
 	): Promise<void> => {
 		await auth.api.signOut({
-			// This endpoint requires session cookies.
 			headers: { cookie: req.headers.cookie || '' },
 		});
 
-		res.locals.result = new SuccessResponse("redirect", "/");
+		res.locals.result = new SuccessResponse("redirect", "/?message=logout-success");
 		next('router')
 	}
 

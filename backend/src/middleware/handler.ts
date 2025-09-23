@@ -27,6 +27,13 @@ const Handler = {
 		const stackMessage = err.stack.split('\n')[1]
 		const errorPosition = stackMessage.split('\\')[stackMessage.split('\\').length - 1]
 
+		if (req.originalUrl.includes('/signup')) {
+			return res.redirect('/?message=signup-failed');
+		}
+		if (req.originalUrl.includes('/login')) {
+			return res.redirect('/?message=login-failed');
+		}
+
 		if (!(err instanceof CustomError)) {
 			logger.error(`{System Error} [${errorPosition}] [${req.method}] ${req.originalUrl} - ${JSON.stringify(err.stack)}`)
 			res.status(400).send({ success: false, error: { code: 1000, msg: err.message } })
