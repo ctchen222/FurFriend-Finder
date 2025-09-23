@@ -277,6 +277,25 @@ class AnimalRepository extends BaseRepository {
 		const { rows } = await pool.query(query, values)
 		return rows
 	}
+
+	async findRandomAnimal() {
+		const query = `
+			SELECT
+				animal.*,
+				animal_shelter.name AS shelter_name,
+				animal_shelter.address AS shelter_address,
+				animal_shelter.tel AS shelter_tel
+			FROM ${this.tableName}
+			LEFT JOIN animal_shelter
+			ON ${this.tableName}.animal_shelter_id = animal_shelter.id
+			WHERE ${this.tableName}.picture IS NOT NULL AND ${this.tableName}.picture <> ''
+			ORDER BY RANDOM()
+			LIMIT 1;
+		`
+
+		const { rows } = await pool.query(query)
+		return rows[0]
+	}
 }
 
 export default AnimalRepository;

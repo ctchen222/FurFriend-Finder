@@ -1,14 +1,13 @@
 import express from 'express';
-import {
-  sendTextMsgManually,
-  webhookServer,
-} from '../Controller/webhook.Controller';
+import { client } from '../lineClient';
+import { catchAsync } from '../libs/catchAsync';
+import WebhookController from '../Controller/webhook.Controller';
+
+const webhookCtrler = new WebhookController()
 
 const router = express.Router();
 
-router.route('/').post(webhookServer);
-
-// This Route should be protected
-router.route('/sendMsg/:userId').post(sendTextMsgManually);
+router.route('/')
+	.post(catchAsync(webhookCtrler.handleWebhook))
 
 export { router };

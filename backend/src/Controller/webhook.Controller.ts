@@ -1,143 +1,71 @@
-import { Request, Response } from 'express';
-import { z } from 'zod';
-import { prisma } from '../db';
-import { catchAsync } from '../utils/catchAsync';
-import { client, line } from '../lineClient';
-import { findAnimalsByCity, findAnimalsByVariery } from '../factory/animal.db';
-import prettifyAnimalData from '../utils/prettifyAnimalData.utils';
-import { cityInTaiwan, taiwanCities } from '../utils/taiwanCities.utils';
+import express from 'express'
+import crypto from 'crypto'
 
-const UserInputSchema = z
-  .object({
-    name: z.string().min(1).max(10),
-    email: z.string().email({ message: 'Invalid meesage' }),
-    city: z.enum(taiwanCities as [string]),
-    kind: z.string(),
-  })
-  .partial();
-type UserInput = z.infer<typeof UserInputSchema>;
+import { client } from "../lineClient"
+import CustomError from '../libs/customError';
+import * as apiMessage from '../libs/message'
+import AnimalRepository from '../repository/animal.db';
 
-export const webhookServer = catchAsync(async (req: Request, res: Response) => {
-  // check sentFrom is in db or not(user exist or not)
-  const destination = req.body.destination;
-  const userId = req.body.events.at(0).source.userId;
-  const userExisted = await checkUserExistance(destination);
-  const msgFromUser = req.body.events.at(0).message.text as string;
+class WebhookController {
+	private animalRepository: AnimalRepository
+	constructor() {
+		this.animalRepository = new AnimalRepository()
+	}
 
-  // if user need help
-  if (msgFromUser === '我需要協助') {
-    console.log(`User ${userId} need help!`);
-    sendTextMsgAuto(req, '收到！請等候專人回覆！');
-  }
+	handleWebhook = async (
+		req: express.Request,
+		res: express.Response,
+		next: express.NextFunction
+	) => {
+		const channelSecret = process.env.CHANNEL_SECRET;
+		if (!channelSecret) throw new CustomError(apiMessage.INVALID_LINE_SECRET);
 
-  const count = msgFromUser.split(' ').length; // count how many parts user enter
+		const body = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+		const hash = crypto.createHmac('sha256', channelSecret).update(body).digest('base64');
+		const signature = req.get('X-Line-Signature');
+		if (signature !== hash) {
+			throw new CustomError(apiMessage.INVALID_LINE_REQUEST);
+		}
+		const event = req.body.events && req.body.events[0];
 
-  // ---------------------------------------------------------------------------------------
-  // count: 3 -> User attempt sign up or try to get animals message
-  if (count === 3) {
-    const [name, email, city] = msgFromUser.split(' ');
+		if (!event) {
+			return res.status(200).send('OK');
+		}
 
-    if (!userExisted) {
-      // if user not exist, create one
-      await prisma.users.create({
-        data: {
-          name: name,
-          email: email,
-          city: city,
-          sentfrom: destination,
-          userId: userId,
-        },
-      });
+		// Handle postback events
+		if (event.type === 'postback') {
+			const postbackData = new URLSearchParams(event.postback.data);
+			if (postbackData.get('action') === 'previous') {
+				await client.replyMessage({
+					replyToken: event.replyToken,
+					messages: [{ type: 'text', text: '這是之前的內容。' }],
+				});
+				return res.status(200).json({});
+			}
 
-      const text =
-        '成功將您的個人資料加進資料庫！\n請輸入您所在的縣市以取得領養資訊！';
-      sendTextMsgAuto(req, text);
-      console.log(`User ${name} has been created`);
-    } else {
-      // user exist, send animal data back to user
-      const data = await findAnimalsByCity(city); // data send back
-      const text = prettifyAnimalData(data);
-      sendTextMsgAuto(req, text);
-      console.log(`資料已傳送給用戶${name}`);
-    }
-  }
+			if (postbackData.get('action') === 'draw') {
+				const animal = await this.animalRepository.findRandomAnimal();
 
-  // --------------------------------------------------------------------------------------
-  // count: 1 -> User Try to get animals data by entering city name
-  if (count === 1) {
-    if (!userExisted) {
-      // if user not exist
-      console.log(
-        `User ${userId} tries to use the service, but not sign up yet.`,
-      );
-      sendTextMsgAuto(
-        req,
-        '請先按照說明輸入您的個人資料，才能使用我們的服務呦！',
-      );
-    } else {
-      // if user exist
-      if (cityInTaiwan(msgFromUser)) {
-        // 使用者輸入台灣的縣市
-        const city = msgFromUser;
-        const data = await findAnimalsByCity(city);
-        if (!data) {
-          sendTextMsgAuto(
-            req,
-            '您輸入的縣市並不屬於台灣！\n若有問題，請輸入：我需要協助，將會有專人替您解答問題。',
-          );
-        }
-        const text = prettifyAnimalData(data);
-        sendTextMsgAuto(req, text);
-      } else {
-        // 使用者輸入品種
-        const data = await findAnimalsByVariery(msgFromUser);
-        if (!data) {
-          sendTextMsgAuto(
-            req,
-            '您輸入的品種目前並未存在於資料庫！\n若有問題，請輸入：我需要協助，將會有專人替您解答問題。',
-          );
-        }
-        const text = prettifyAnimalData(data);
-        sendTextMsgAuto(req, text);
-      }
-    }
-  }
-});
+				if (animal) {
+					const replyText = `✨ 找到您專屬的毛茸茸夥伴！ ✨\n\n這是一隻正在等待一個溫暖的家的可愛動物：\n\n🐾【基本資料】\n- 種類：${animal.kind}\n- 品種：${animal.variety}\n- 性別：${animal.sex}\n- 年齡：${animal.age}\n- 體型：${animal.body_type}\n- 毛色：${animal.colour}\n\n🏠【收容所資訊】\n- 名稱：${animal.shelter_name}\n- 地址：${animal.shelter_address}\n- 電話：${animal.shelter_tel}\n\n💖 如果您對牠有興趣，請直接透過上方電話聯繫收容所，給牠一個機會！\n\n👇 點擊下方圖片查看牠可愛的模樣！`;
+					await client.replyMessage({
+						replyToken: event.replyToken,
+						messages: [
+							{ type: 'text', text: replyText },
+							{ type: 'image', originalContentUrl: animal.picture, previewImageUrl: animal.picture }
+						],
+					});
+				} else {
+					await client.replyMessage({
+						replyToken: event.replyToken,
+						messages: [{ type: 'text', text: '抱歉，目前沒有可抽的動物。' }],
+					});
+				}
+				return res.status(200).json({});
+			}
+			res.status(200).send('OK');
+		}
+	}
+}
 
-// Send Data to Specific User manually
-export const sendTextMsgManually = (req: Request, res: Response) => {
-  const userId = req.query.userId as string;
-  const textMsg = ''; // Enter the msg you want to send back to user
-  const message: line.TextMessage = { type: 'text', text: textMsg };
-  client
-    .pushMessage({ to: userId, messages: [message] })
-    .then(() => {
-      console.log('Message sent successfully');
-      res.status(200).send('Message sent successfully');
-    })
-    .catch((err) => {
-      console.error('Error sending message:', err);
-      res.status(500).send('Error sending message');
-    });
-};
-
-const checkUserExistance = async (destination: string) => {
-  const user = await prisma.users.findFirst({
-    where: {
-      sentfrom: destination,
-    },
-  });
-  const userExisted = user !== null;
-  return userExisted;
-};
-
-const sendTextMsgAuto = (req: Request, text: string) => {
-  const replyMsg = {
-    type: 'text',
-    text: text,
-  };
-  client.replyMessage({
-    replyToken: req.body.events.at(0).replyToken,
-    messages: [replyMsg as line.TextMessage],
-  });
-};
+export default WebhookController
