@@ -75,3 +75,15 @@ export const BODY_NOT_COMPLETE: Api.Error = {
 	httpCode: 400,
 	msg: "Request body is not complete"
 }
+
+export const INVALID_LINE_SECRET: Api.Error = {
+	code: 602,
+	httpCode: 400,
+	msg: "Invalid LINE channel secret"
+}
+
+export const INVALID_LINE_REQUEST: Api.Error = {
+	code: 603,
+	httpCode: 400,
+	msg: "Invalid LINE request"
+}
