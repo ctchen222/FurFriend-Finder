@@ -57,7 +57,7 @@ CREATE TABLE animal_shelter (
 
 CREATE TABLE animal (
 	id SERIAL NOT NULL PRIMARY KEY,
-	sub_id VARCHAR(20),
+	sub_id VARCHAR(20) UNIQUE,
 	kind VARCHAR(20),
 	variety VARCHAR(20),
 	sex VARCHAR(5),

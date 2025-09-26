@@ -153,7 +153,8 @@ class AnimalRepository extends BaseRepository {
 			const insertQuery = `
 				INSERT INTO animal(
 			    sub_id, kind, variety, sex, age, body_type, colour, found_place, remark, picture, status, animal_shelter_id, open_date, close_date, update_date )
-			    VALUES ${valuePlaceholders};
+			    VALUES ${valuePlaceholders}
+				ON CONFLICT(sub_id) DO NOTHING;
 			`;
 			const result = await pool.query(insertQuery, values);
 			insertedRowCount += result.rowCount ?? 0;
