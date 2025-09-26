@@ -116,7 +116,7 @@ class AnimalLostController {
 
 		const { metadata, matchedAnimals } = result;
 
-		res.locals.result = new SuccessResponse('api', { metadata, matchedAnimals });
+		res.locals.result = new SuccessResponse('api', { metadata, top10Matches: matchedAnimals });
 		return next();
 	}
 }
