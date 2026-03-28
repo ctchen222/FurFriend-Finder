@@ -87,6 +87,27 @@ h1, h2, h3 {
     color: var(--primary-color);
 }
 
+/* --- Mobile nav toggle --- */
+.nav-toggle {
+    display: none;
+    flex-direction: column;
+    justify-content: space-between;
+    width: 28px;
+    height: 20px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    flex-shrink: 0;
+}
+.nav-toggle span {
+    display: block;
+    height: 2px;
+    background-color: var(--heading-color);
+    border-radius: 2px;
+    transition: transform 0.25s ease, opacity 0.25s ease;
+}
+
 /* --- Container --- */
 .container {
     max-width: 800px;
@@ -425,7 +446,34 @@ input:checked + .slider:before       { transform: translateX(26px); }
 @media (max-width: 600px) {
     body { padding: 10px; }
     .header-container { padding: 0 12px; }
-    .main-nav a { margin-left: 12px; font-size: 0.9em; }
     .container--card { padding: 24px 16px; }
     .btn-pill { padding: 12px 24px; font-size: 1em; }
+
+    /* Show hamburger, hide desktop nav */
+    .nav-toggle { display: flex; }
+    .main-nav {
+        display: none;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: rgba(255, 255, 255, 0.97);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        flex-direction: column;
+        padding: 12px 20px 20px;
+        gap: 0;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+    }
+    .main-nav.open { display: flex; }
+    .main-nav a {
+        margin-left: 0;
+        padding: 12px 0;
+        font-size: 1em;
+        border-bottom: 1px solid var(--border-color);
+    }
+    .main-nav a:last-child { border-bottom: none; }
+
+    /* Make main-header position:relative so nav dropdown positions correctly */
+    .main-header { position: relative; }
 }

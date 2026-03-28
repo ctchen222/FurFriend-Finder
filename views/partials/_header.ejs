@@ -1,7 +1,10 @@
 <header class="main-header">
     <div class="header-container">
         <a href="/" class="logo">🐾 FurFriend Finder</a>
-        <nav class="main-nav">
+        <button class="nav-toggle" id="navToggle" aria-label="切換選單" aria-expanded="false">
+            <span></span><span></span><span></span>
+        </button>
+        <nav class="main-nav" id="mainNav">
             <a href="/">首頁</a>
             <a href="/shelter-animals">收容所動物</a>
             <a href="/report-lost">協尋登記</a>
@@ -16,29 +19,39 @@
 </header>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const logoutLink = document.getElementById('logout-link');
-        if (logoutLink) {
-            logoutLink.addEventListener('click', function(event) {
-                event.preventDefault(); // Prevent the link from navigating
+document.addEventListener('DOMContentLoaded', function () {
+    // Hamburger toggle
+    const toggle = document.getElementById('navToggle');
+    const nav    = document.getElementById('mainNav');
+    if (toggle && nav) {
+        toggle.addEventListener('click', function () {
+            const open = nav.classList.toggle('open');
+            toggle.setAttribute('aria-expanded', String(open));
+        });
+        // Close when a link is clicked
+        nav.querySelectorAll('a').forEach(a => {
+            a.addEventListener('click', () => {
+                nav.classList.remove('open');
+                toggle.setAttribute('aria-expanded', 'false');
+            });
+        });
+    }
 
-                fetch('/api/auth/logout', {
-                    method: 'POST',
-                })
+    // Logout handler
+    const logoutLink = document.getElementById('logout-link');
+    if (logoutLink) {
+        logoutLink.addEventListener('click', function (event) {
+            event.preventDefault();
+            fetch('/api/auth/logout', { method: 'POST' })
                 .then(response => {
                     if (response.ok) {
-                        // Redirect to homepage after successful logout
                         window.location.href = '/';
                     } else {
-                        // Handle errors, maybe show an alert
                         alert('登出失敗，請稍後再試。');
                     }
                 })
-                .catch(error => {
-                    console.error('Logout error:', error);
-                    alert('登出時發生錯誤。');
-                });
-            });
-        }
-    });
+                .catch(() => alert('登出時發生錯誤。'));
+        });
+    }
+});
 </script>
