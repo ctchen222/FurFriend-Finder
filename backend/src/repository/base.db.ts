@@ -18,6 +18,12 @@ class BaseRepository {
 		await pool.query(queryCommit)
 	}
 
+	async rollback(): Promise<void> {
+		const queryRollback = 'ROLLBACK;'
+
+		await pool.query(queryRollback)
+	}
+
 	async findAll<T>(
 		pageSize: number = 10,
 		cursor?: string | undefined,
@@ -25,17 +31,26 @@ class BaseRepository {
 		orderBy?: string[],
 	): Promise<T[]> {
 		const orderByStr = orderBy && orderBy.length > 0 ?
-			`ORDER BY ( ${orderBy.join(", ")} ) DESC` : "ORDER BY id ASC";
+			`ORDER BY ${orderBy.join(" DESC, ")} DESC` : "ORDER BY id ASC";
+
+		const values: any[] = [];
+		let cursorClause = "";
+		if (cursor !== undefined) {
+			values.push(cursor);
+			cursorClause = `WHERE id > $${values.length}`;
+		}
+		values.push(pageSize);
+		const pageSizePlaceholder = `$${values.length}`;
 
 		const query = `
 			SELECT ${options ? options.join(", ") : "*"}
 			FROM ${this.tableName}
-			${cursor ? `WHERE id > ${cursor}` : ""}
+			${cursorClause}
 			${orderByStr}
-			LIMIT ${pageSize};
+			LIMIT ${pageSizePlaceholder};
 		`;
 
-		const result = await pool.query(query)
+		const result = await pool.query(query, values)
 		return result.rows;
 	}
 
@@ -63,10 +78,10 @@ class BaseRepository {
 			: "";
 
 		const query = `
-			SELECT ${options ? options.join(", ") : "*"} 
-			FROM ${this.tableName} 
-			WHERE ${conditionStr.join(" AND ")}
+			SELECT ${options ? options.join(", ") : "*"}
+			FROM ${this.tableName}
 			${joinStr}
+			WHERE ${conditionStr.join(" AND ")}
 			LIMIT 1
 		`;
 

@@ -12,7 +12,14 @@ const app = express();
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, '..', 'views'));
 
-app.use(cors());
+const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS
+	? process.env.CORS_ALLOWED_ORIGINS.split(',').map(o => o.trim())
+	: (process.env.APP_BASE_URL ? [process.env.APP_BASE_URL] : []);
+
+app.use(cors({
+	origin: allowedOrigins.length > 0 ? allowedOrigins : false,
+	credentials: true,
+}));
 app.use(express.json());
 app.use(bodyParser.urlencoded({ extended: true })); // 使用 urlencoded 來解析表單數據
 app.use(express.static(path.join(__dirname, './public/')));

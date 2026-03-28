@@ -74,6 +74,7 @@ class AnimalLostController {
 
 			res.locals.result = new SuccessResponse('redirect', '/profile?message=協尋案件已成功登錄');
 		} catch (error) {
+			await this.repository.rollback().catch(() => {});
 			res.locals.result = new SuccessResponse('redirect', '/profile?error=登錄失敗，請稍後再試');
 		}
 		next('router');
@@ -89,7 +90,7 @@ class AnimalLostController {
 		const result = await this.animalLostService.findMatchesAndSendMail(id);
 
 		if (result instanceof CustomError) {
-			return next();
+			return next(result);
 		}
 
 		const { metadata, lostAnimal, top10Matches } = result;
@@ -111,7 +112,7 @@ class AnimalLostController {
 		}
 		const result = await this.animalLostService.findMatches(lostAnimalForSearch);
 		if (result instanceof CustomError) {
-			return next();
+			return next(result);
 		}
 
 		const { metadata, matchedAnimals } = result;

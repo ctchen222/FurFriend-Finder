@@ -32,9 +32,9 @@ class MailService {
 		return response
 	}
 
-	sendWelcomeMail = async (mail: string) => {
+	sendWelcomeMail = async (mail: string, userName: string) => {
 		const mustacheTemp = await fs.readFile(`${appRoot}/views/mailtemplates/welcome.mt.html`, 'utf8')
-		const htmlContent = Mustache.render(mustacheTemp.toString(), {})
+		const htmlContent = Mustache.render(mustacheTemp.toString(), { userName })
 		const response = await this.mailer.sendMail({
 			from: mailConfig.sentFrom,
 			to: mail,

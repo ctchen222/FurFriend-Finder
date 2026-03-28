@@ -21,34 +21,41 @@ class GeoService {
 			},
 		};
 
-		const { data } = await this.client.geocode(geocodeRequest);
+		try {
+			const { data } = await this.client.geocode(geocodeRequest);
 
-		switch (data.status) {
-			case 'OK': {
-				const location = data.results[0].geometry.location;
-				const parsedLocation = locationSchema.parse(location);
-				return parsedLocation;
+			switch (data.status) {
+				case 'OK': {
+					const location = data.results[0].geometry.location;
+					const parsedLocation = locationSchema.parse(location);
+					return parsedLocation;
+				}
+				case 'ZERO_RESULTS':
+					return null;
+				case 'OVER_QUERY_LIMIT':
+					throw new CustomError(apiMessage.GEOCODING_RATE_LIMIT);
+				case 'REQUEST_DENIED':
+					throw new CustomError(apiMessage.INVALID_CREDENTIALS);
+				default:
+					throw new CustomError(apiMessage.GEOCODING_FAILED);
 			}
-			case 'ZERO_RESULTS':
-				return null;
-			case 'OVER_QUERY_LIMIT':
-				throw new CustomError(apiMessage.GEOCODING_RATE_LIMIT);
-			case 'REQUEST_DENIED':
-				throw new CustomError(apiMessage.INVALID_CREDENTIALS);
-			default:
-				throw new CustomError(apiMessage.GEOCODING_FAILED);
+		} catch (error) {
+			if (error instanceof CustomError) {
+				throw error;
+			}
+			throw new CustomError(apiMessage.GEOCODING_FAILED);
 		}
 	}
 
-	static calculateDistance(
+	static calculateDistanceKm(
 		origin: { lat: number; lng: number },
 		destination: { lat: number; lng: number }
-	) {
-		const distance = getDistance(
+	): number {
+		const distanceInMeters = getDistance(
 			{ latitude: origin.lat, longitude: origin.lng },
 			{ latitude: destination.lat, longitude: destination.lng }
 		);
-		return distance;
+		return parseFloat((distanceInMeters / 1000).toFixed(2));
 	}
 }
 

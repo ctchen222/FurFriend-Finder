@@ -23,16 +23,48 @@ class AnimalLostService {
 		this.geoService = new GeoService();
 	}
 
+	private geocodeAndCalculateDistances = async (
+		lostAnimalCoordinates: { lat: number; lng: number },
+		matchedAnimals: any[]
+	) => {
+		const results = await Promise.allSettled(
+			matchedAnimals.map(async (animal) => {
+				if (!animal.found_place) {
+					return { ...animal, distance: Infinity };
+				}
+				const animalCoordinates = await this.geoService.geocoding(animal.found_place);
+				if (!animalCoordinates) {
+					// Address was valid but not found by the geocoding service.
+					return { ...animal, distance: Infinity };
+				}
+				const distance = GeoService.calculateDistanceKm(lostAnimalCoordinates, animalCoordinates);
+				return { ...animal, distance };
+			})
+		);
+
+		const animalsWithDistance = results
+			.filter((result): result is PromiseFulfilledResult<any> => {
+				if (result.status === 'rejected') {
+					logger.warn(`Geocoding failed for an animal, skipping: ${result.reason}`);
+					return false;
+				}
+				return true;
+			})
+			.map((result) => result.value);
+
+		return animalsWithDistance;
+	}
+
 	findMatchesAndSendMail = async (animalId: string) => {
 		const lostAnimal = await this.repository.findById<AnimalLost>(animalId);
 
 		if (!lostAnimal) {
-			return new CustomError(apiMessage.CONTENT_NOT_FOUND);
+			throw new CustomError(apiMessage.CONTENT_NOT_FOUND);
 		}
 
 		const owner = await this.ownerRepository.findById<Owner>(lostAnimal.owner_id);
 		if (!owner) {
-			return new CustomError(apiMessage.CONTENT_NOT_FOUND);
+			throw new CustomError(apiMessage.CONTENT_NOT_FOUND);
 		}
 
 		const { name, colour, kind, sex, variety, lost_place } = normalizeMatchCriteria(
@@ -48,27 +80,14 @@ class AnimalLostService {
 		const lostAnimalCoordinates = await this.geoService.geocoding(lost_place);
 		if (!lostAnimalCoordinates) {
 			// If the primary lost location cannot be geocoded, we cannot perform a distance match.
-			return new CustomError(apiMessage.LOST_PLACE_NOT_FOUND);
+			throw new CustomError(apiMessage.LOST_PLACE_NOT_FOUND);
 		}
 
 		// Step 2: Find animals based on other criteria
 		const matchedAnimals = await this.repository.findMatchingAnimals(colour, kind, sex, variety);
 
-		// Step 3: Calculate distance for each matched animal, sort them, and take the top 5
-		const animalsWithDistance = await Promise.all(
-			matchedAnimals.map(async (animal) => {
-				if (!animal.found_place) {
-					return { ...animal, distance: Infinity };
-				}
-				const animalCoordinates = await this.geoService.geocoding(animal.found_place);
-				if (!animalCoordinates) {
-					// Address was valid but not found by the geocoding service.
-					return { ...animal, distance: Infinity };
-				}
-				const distance = GeoService.calculateDistance(lostAnimalCoordinates, animalCoordinates);
-				return { ...animal, distance: parseFloat(distance.toFixed(2)) };
-			})
-		);
+		// Step 3: Calculate distance for each matched animal using allSettled (partial failure tolerance)
+		const animalsWithDistance = await this.geocodeAndCalculateDistances(lostAnimalCoordinates, matchedAnimals);
 
 		// Sort by distance in ascending order
 		const sortedMatches = animalsWithDistance.sort((a, b) => a.distance - b.distance);
@@ -103,28 +122,15 @@ class AnimalLostService {
 		const lostAnimalCoordinates = await this.geoService.geocoding(lost_place);
 		if (!lostAnimalCoordinates) {
 			// If the primary lost location cannot be geocoded, we cannot perform a distance match.
-			return new CustomError(apiMessage.LOST_PLACE_NOT_FOUND);
+			throw new CustomError(apiMessage.LOST_PLACE_NOT_FOUND);
 		}
 
 		// Step 2: Find animals based on other criteria
 		const matchedAnimals = await this.repository.findMatchingAnimals(colour, kind, sex, variety);
 
 		// TODO: redis for Geo coding results cache
-		// Step 3: Calculate distance for each matched animal, sort them, and take the top 5
-		const animalsWithDistance = await Promise.all(
-			matchedAnimals.map(async (animal) => {
-				if (!animal.found_place) {
-					return { ...animal, distance: Infinity };
-				}
-				const animalCoordinates = await this.geoService.geocoding(animal.found_place);
-				if (!animalCoordinates) {
-					// Address was valid but not found by the geocoding service.
-					return { ...animal, distance: Infinity };
-				}
-				const distance = GeoService.calculateDistance(lostAnimalCoordinates, animalCoordinates);
-				return { ...animal, distance: parseFloat(distance.toFixed(2)) };
-			})
-		);
+		// Step 3: Calculate distance for each matched animal using allSettled (partial failure tolerance)
+		const animalsWithDistance = await this.geocodeAndCalculateDistances(lostAnimalCoordinates, matchedAnimals);
 
 		// Sort by distance in ascending order
 		const sortedMatches = animalsWithDistance.sort((a, b) => a.distance - b.distance);

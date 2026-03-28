@@ -107,7 +107,7 @@ class AnimalLostRepository extends BaseRepository {
 
 				// Map known owners
 				ownerResult.rows.forEach(row => {
-					const key = `${row.phone}_${row.email} `;
+					const key = `${row.phone}_${row.email}`;
 					// console.log('Mapping owner:', key, 'to ID:', row.id);
 					ownerMap.set(key, row.id);
 				});
@@ -121,9 +121,7 @@ class AnimalLostRepository extends BaseRepository {
 				let ownerId: number;
 				if ((animal.owner_phone && animal.owner_phone.trim() !== "") ||
 					(animal.owner_email && animal.owner_email.trim() !== "")) {
-					const ownerKey = `
-						${animal.owner_phone && animal.owner_phone.trim() !== "" ?
-							animal.owner_phone.trim() : 'Unknown'}_${animal.owner_email && animal.owner_email.trim() !== "" ? animal.owner_email.trim() : 'Unknown'} `;
+					const ownerKey = `${animal.owner_phone && animal.owner_phone.trim() !== "" ? animal.owner_phone.trim() : 'Unknown'}_${animal.owner_email && animal.owner_email.trim() !== "" ? animal.owner_email.trim() : 'Unknown'}`;
 					ownerId = ownerMap.get(ownerKey) || unknownOwnerId
 				} else {
 					ownerId = unknownOwnerId

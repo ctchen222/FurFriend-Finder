@@ -18,7 +18,10 @@ export const cronSchedule = cron.schedule(
 
 			logger.info(`[Daily Update]: \n${animalTableUpdateCount} data were updated in table Animal \n${animalLostUpdateCount} data were updated in table Animal_lost`);
 		} catch (error) {
-			logger.error('Error occurred during cron job:', error);
+			const err = error instanceof Error ? error : new Error(String(error));
+			logger.error('[CRON FAILURE] Daily animal update failed — manual intervention may be required');
+			logger.error(`[CRON FAILURE] Message: ${err.message}`);
+			logger.error(`[CRON FAILURE] Stack: ${err.stack}`);
 		}
 	},
 	{

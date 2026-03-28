@@ -25,7 +25,7 @@ const Handler = {
 		// const regex = /\d+:\d+/i
 		// const regex = /(?:\s+at )?(?:(.*?)\s+\()?(.*?):(\d+):(\d+)\)?$/
 		const stackMessage = err.stack.split('\n')[1]
-		const errorPosition = stackMessage.split('\\')[stackMessage.split('\\').length - 1]
+		const errorPosition = stackMessage.split(/[/\\]/).pop() ?? stackMessage
 
 		if (req.originalUrl.includes('/signup')) {
 			return res.redirect('/?message=signup-failed');

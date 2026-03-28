@@ -1,4 +1,4 @@
-const prettiftyDailyAnimalData = (dailyAnimalData: object[]): string => {
+const prettifyDailyAnimalData = (dailyAnimalData: object[]): string => {
     let textMsg = '';
     const numOfData = dailyAnimalData.length;
 
@@ -15,4 +15,4 @@ const prettiftyDailyAnimalData = (dailyAnimalData: object[]): string => {
     return textMsg;
 };
 
-export default prettiftyDailyAnimalData;
+export default prettifyDailyAnimalData;

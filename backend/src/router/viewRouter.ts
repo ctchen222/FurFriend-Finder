@@ -7,6 +7,13 @@ const animalLostRepository = new AnimalLostRepository();
 
 const router = express.Router();
 
+const requireAuth = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+	if (!res.locals.user) {
+		return res.redirect('/sign-in');
+	}
+	next();
+};
+
 router.get('/register', (req, res) => {
 	res.render('register', { user: res.locals.user });
 });
@@ -19,7 +26,7 @@ router.get('/', (req, res) => {
 	res.render('home', { user: res.locals.user });
 });
 
-router.get('/report-lost', (req, res) => {
+router.get('/report-lost', requireAuth, (req, res) => {
 	const animalOwner = res.locals.user ? {
 		name: res.locals.user.name,
 		email: res.locals.user.email,
@@ -30,7 +37,7 @@ router.get('/report-lost', (req, res) => {
 	});
 });
 
-router.get('/profile', async (req, res) => {
+router.get('/profile', requireAuth, async (req, res) => {
 	let lostAnimals: any[] = [];
 	if (res.locals.user && res.locals.user.email) {
 		const owner = await ownerRepository.findByEmail(res.locals.user.email);

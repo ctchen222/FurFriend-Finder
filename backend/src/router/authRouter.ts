@@ -1,6 +1,7 @@
 import express from 'express';
 import { toNodeHandler } from "better-auth/node";
 import { auth } from "../auth";
+import { catchAsync } from '../libs/catchAsync';
 
 import AuthController from '../Controller/authController';
 
@@ -9,19 +10,19 @@ const authCtrler = new AuthController();
 const router = express.Router();
 
 router.route('/signup')
-	.post(authCtrler.createUser);
+	.post(catchAsync(authCtrler.createUser));
 
 router.route('/login')
-	.post(authCtrler.loginUser);
+	.post(catchAsync(authCtrler.loginUser));
 
 router.route('/logout')
-	.post(authCtrler.logoutUser);
+	.post(catchAsync(authCtrler.logoutUser));
 
 router.route('/reset-password')
-	.post(authCtrler.resetPassword);
+	.post(catchAsync(authCtrler.resetPassword));
 
 router.route('/settings')
-	.patch(authCtrler.updateSettings);
+	.patch(catchAsync(authCtrler.updateSettings));
 
 router.all("*", toNodeHandler(auth))
 

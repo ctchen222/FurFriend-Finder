@@ -2,7 +2,7 @@ import express from 'express';
 import { Request, Response } from 'express';
 
 import SuccessResponse from '../libs/successResponse';
-import { auth } from '../middleware/auth';
+import { auth } from '../auth';
 import CustomError from '../libs/customError';
 import * as apiMessage from '../libs/message'
 import UserRepository from '../repository/user.db';
@@ -28,8 +28,7 @@ class AuthController {
 				name,
 				email,
 				password,
-				// TODO: change callbackURL to your frontend URL
-				// callbackURL: "https://example.com/callback",
+				callbackURL: process.env.EMAIL_VERIFY_CALLBACK_URL || `${process.env.APP_BASE_URL}/`,
 			},
 			asResponse: true
 		})
@@ -111,7 +110,7 @@ class AuthController {
 		const authReponse = await auth.api.requestPasswordReset({
 			body: {
 				email,
-				redirectTo: "https://example.com/reset-password",
+				redirectTo: `${process.env.APP_BASE_URL || process.env.FRONTEND_URL}/reset-password`,
 			},
 		});
 

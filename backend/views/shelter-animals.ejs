@@ -243,16 +243,33 @@
 
 								const imageUrl = animal.picture ? animal.picture : 'https://placehold.co/600x400?text=沒有圖片';
 
-								card.innerHTML = `
-									<img src="${imageUrl}" alt="${'Animal'}">
-									<div class="animal-card-content">
-										<h2>${animal.variety}</h2>
-										<p><strong>物種:</strong> ${animal.kind}</p>
-										<p><strong>性別:</strong> ${animal.sex === 'M' ? '公' : '母'}</p>
-										<p><strong>毛色:</strong> ${animal.colour}</p>
-										<!-- <p><strong>收容所:</strong> ${animal.name}</p> -->
-									</div>
-								`;
+								const img = document.createElement('img');
+								img.src = imageUrl;
+								img.alt = 'Animal';
+
+								const cardContent = document.createElement('div');
+								cardContent.className = 'animal-card-content';
+
+								const h2 = document.createElement('h2');
+								h2.textContent = animal.variety || '';
+								cardContent.appendChild(h2);
+
+								const animalFields = [
+									['物種', animal.kind],
+									['性別', animal.sex === 'M' ? '公' : '母'],
+									['毛色', animal.colour],
+								];
+								animalFields.forEach(([label, value]) => {
+									const p = document.createElement('p');
+									const strong = document.createElement('strong');
+									strong.textContent = `${label}:`;
+									p.appendChild(strong);
+									p.appendChild(document.createTextNode(` ${value}`));
+									cardContent.appendChild(p);
+								});
+
+								card.appendChild(img);
+								card.appendChild(cardContent);
 								grid.appendChild(card);
 							});
 						} else {
@@ -262,8 +279,6 @@
 						// Update cursors and button states
 						currentPrevCursor = cursors.prevCursor;
 						currentNextCursor = cursors.nextCursor;
-						console.log('Prev Cursor:', currentPrevCursor);
-						console.log('Next Cursor:', currentNextCursor);
 
 						prevButton.disabled = !currentPrevCursor;
 						nextButton.disabled = !currentNextCursor;

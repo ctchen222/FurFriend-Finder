@@ -208,18 +208,34 @@
 					result.extras.top10Matches.forEach(animal => {
 						const itemDiv = document.createElement('div');
 						itemDiv.className = 'result-item';
-						itemDiv.innerHTML = `
-                            <img src="${animal.picture || 'https://via.placeholder.com/100'}" alt="${animal.kind}">
-                            <div class="result-details">
-                                <p><strong>種類:</strong> ${animal.kind}</p>
-                                <p><strong>品種:</strong> ${animal.variety}</p>
-                                <p><strong>性別:</strong> ${animal.sex}</p>
-                                <p><strong>毛色:</strong> ${animal.colour}</p>
-                                <p><strong>走失地點:</strong> ${animal.found_place}</p>
-                                <p><strong>收容所:</strong> ${animal.name} (${animal.tel})</p>
-                                <p><strong>距離:</strong> ${animal.distance} 公里</p>
-                            </div>
-                        `;
+
+						const img = document.createElement('img');
+						img.src = animal.picture || 'https://via.placeholder.com/100';
+						img.alt = animal.kind || '';
+
+						const detailsDiv = document.createElement('div');
+						detailsDiv.className = 'result-details';
+
+						const fields = [
+							['種類', animal.kind],
+							['品種', animal.variety],
+							['性別', animal.sex],
+							['毛色', animal.colour],
+							['走失地點', animal.found_place],
+							['收容所', `${animal.name || ''} (${animal.tel || ''})`],
+							['距離', `${animal.distance} 公里`],
+						];
+						fields.forEach(([label, value]) => {
+							const p = document.createElement('p');
+							const strong = document.createElement('strong');
+							strong.textContent = `${label}:`;
+							p.appendChild(strong);
+							p.appendChild(document.createTextNode(` ${value}`));
+							detailsDiv.appendChild(p);
+						});
+
+						itemDiv.appendChild(img);
+						itemDiv.appendChild(detailsDiv);
 						matchResultsDiv.appendChild(itemDiv);
 					});
 				} else {
