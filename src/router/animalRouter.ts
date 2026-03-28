@@ -17,6 +17,9 @@ const requireAdminApiKey = (req: express.Request, res: express.Response, next: e
 router.route('/')
 	.get(catchAsync(animalCtrler.fetchList))
 
+router.route('/random')
+	.get(catchAsync(animalCtrler.fetchRandom));
+
 router.route('/:id')
 	.get(catchAsync(animalCtrler.fetchById));
 

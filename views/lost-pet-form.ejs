@@ -5,6 +5,7 @@
     <style>
         h1 { text-align: center; font-size: 2.2em; }
         .intro-text { text-align: center; margin-bottom: 32px; color: var(--text-color); }
+        #submitBtn { margin-top: 8px; }
     </style>
 </head>
 <body>
@@ -15,7 +16,7 @@
         <h1>協尋寵物資料登記</h1>
         <p class="intro-text">請盡可能詳細地填寫以下資訊，以提高配對成功率。</p>
 
-        <form action="/api/lost-animals" method="POST">
+        <form id="lostPetForm">
             <fieldset>
                 <legend>🐾 走失寵物資料</legend>
                 <div class="form-group">
@@ -28,7 +29,12 @@
                 </div>
                 <div class="form-group">
                     <label for="pet-kind">物種 <span style="color:#c00">*</span></label>
-                    <input type="text" id="pet-kind" name="animalLost[kind]" placeholder="例如: 狗, 貓" required>
+                    <select id="pet-kind" name="animalLost[kind]" required>
+                        <option value="">請選擇</option>
+                        <option value="狗">狗</option>
+                        <option value="貓">貓</option>
+                        <option value="其他">其他</option>
+                    </select>
                 </div>
                 <div class="form-group">
                     <label for="pet-variety">品種</label>
@@ -57,7 +63,8 @@
                 </div>
                 <div class="form-group">
                     <label for="pet-lost-place">走失地點 <span style="color:#c00">*</span></label>
-                    <input type="text" id="pet-lost-place" name="animalLost[lost_place]" required>
+                    <input type="text" id="pet-lost-place" name="animalLost[lost_place]" required
+                        placeholder="例如：台北市信義區">
                 </div>
             </fieldset>
 
@@ -80,8 +87,56 @@
                 </div>
             </fieldset>
 
-            <button type="submit" class="btn btn-primary btn-pill btn-block">提交協尋案件</button>
+            <button id="submitBtn" type="submit" class="btn btn-primary btn-pill btn-block">
+                提交協尋案件
+            </button>
         </form>
     </div>
+
+    <script>
+    document.getElementById('lostPetForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('submitBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span>提交中...';
+
+        // Build nested object from form field names like animalLost[kind]
+        const raw = new FormData(e.target);
+        const animalLost = {};
+        const animalOwner = {};
+        for (const [key, val] of raw.entries()) {
+            const m = key.match(/^(\w+)\[(\w+)\]$/);
+            if (!m) continue;
+            if (m[1] === 'animalLost')  animalLost[m[2]]  = val;
+            if (m[1] === 'animalOwner') animalOwner[m[2]] = val;
+        }
+
+        try {
+            const res = await fetch('/api/lost-animals', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ animalLost, animalOwner }),
+            });
+
+            if (res.redirected) {
+                window.location.href = res.url;
+                return;
+            }
+            if (res.ok) {
+                showToast('協尋案件提交成功！正在跳轉…', 'success');
+                setTimeout(() => { window.location.href = '/profile?message=report-success'; }, 1500);
+            } else {
+                const data = await res.json().catch(() => ({}));
+                showToast(data?.error?.msg || '提交失敗，請確認填寫內容後再試', 'error');
+                btn.disabled = false;
+                btn.textContent = '提交協尋案件';
+            }
+        } catch {
+            showToast('網路錯誤，請稍後再試', 'error');
+            btn.disabled = false;
+            btn.textContent = '提交協尋案件';
+        }
+    });
+    </script>
 </body>
 </html>

@@ -51,6 +51,14 @@ function handleUrlMessages(messageMap) {
     }
 }
 
+/**
+ * Map sex code to human-readable label.
+ * @param {string} s - 'M', 'F', or other
+ */
+function sexLabel(s) {
+    return s === 'M' ? '公' : s === 'F' ? '母' : s || '—';
+}
+
 // Auto-run on DOMContentLoaded for pages that include this script.
 // Pages can override by calling handleUrlMessages(customMap) themselves.
 document.addEventListener('DOMContentLoaded', () => {

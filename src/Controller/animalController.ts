@@ -72,6 +72,16 @@ class AnimalController {
 		next()
 	}
 
+	fetchRandom = async (
+		req: express.Request,
+		res: express.Response,
+		next: express.NextFunction
+	) => {
+		const animal = await this.repository.findRandomAnimal();
+		res.locals.result = new SuccessResponse('api', { animal: animal ?? null });
+		next()
+	}
+
 	updateTableAnimal = async (
 		req: express.Request,
 		res: express.Response,
