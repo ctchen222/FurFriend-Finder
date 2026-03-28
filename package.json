@@ -11,7 +11,11 @@
     "start": "npx tsc -w & nodemon dist/app.js",
     "start:prod": "npm run build && npx tsc -w && pm2 start dist/app.js",
     "test": "jest",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "test:unit": "jest --testPathPattern='src/__test__/unit'",
+    "test:integration": "jest --testPathPattern='src/__test__/integration'",
+    "test:e2e": "playwright test",
+    "test:coverage": "jest --coverage"
   },
   "keywords": [],
   "author": "",
@@ -57,6 +61,7 @@
     "@types/morgan": "^1.9.10",
     "@types/node": "^22.5.5",
     "@types/pg": "^8.15.5",
+    "@types/supertest": "^7.2.0",
     "@types/winston": "^2.4.4",
     "@typescript-eslint/eslint-plugin": "^8.2.0",
     "@typescript-eslint/parser": "^8.2.0",

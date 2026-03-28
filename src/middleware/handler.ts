@@ -15,7 +15,7 @@ const morganMiddleware = morgan(
 	{ stream }
 );
 
-const Handler = {
+export const Handler = {
 	errorHandler: (
 		err: any,
 		req: express.Request,

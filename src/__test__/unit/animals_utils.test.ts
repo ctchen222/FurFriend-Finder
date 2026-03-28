@@ -1,4 +1,4 @@
-import { normalizeMatchCriteria } from "../../libs/animal.utils";
+import { normalizeMatchCriteria, formatDate, convertMinguoToGregorian } from "../../libs/animal.utils";
 import { getMetadata } from "../../repository/utils/dataTransform";
 
 describe('getMetadata', () => {
@@ -225,3 +225,41 @@ describe('normalizeMatchCriteria', () => {
 	})
 
 })
+
+describe('formatDate', () => {
+	it('should convert "2023/01/15" to "2023-01-15"', () => {
+		expect(formatDate('2023/01/15')).toBe('2023-01-15');
+	});
+
+	it('should pad single-digit month/day: "2023/1/5" → "2023-01-05"', () => {
+		expect(formatDate('2023/1/5')).toBe('2023-01-05');
+	});
+
+	it('should throw TypeError when input has no slashes (month is undefined)', () => {
+		// No slashes: split('/') returns ['2023-01-15'], month destructs as undefined
+		// undefined.toString() throws TypeError — function doesn't guard this case
+		expect(() => formatDate('2023-01-15')).toThrow(TypeError);
+	});
+});
+
+describe('convertMinguoToGregorian', () => {
+	it('should convert "1120115" (民國 112 年 1 月 15 日) to "2023-01-15"', () => {
+		expect(convertMinguoToGregorian('1120115')).toBe('2023-01-15');
+	});
+
+	it('should return null for empty string', () => {
+		expect(convertMinguoToGregorian('')).toBeNull();
+	});
+
+	it('should return null for string shorter than 7 chars', () => {
+		expect(convertMinguoToGregorian('112011')).toBeNull();
+	});
+
+	it('should return null for invalid date "1121332" (month 13)', () => {
+		expect(convertMinguoToGregorian('1121332')).toBeNull();
+	});
+
+	it('should convert boundary "0890101" to "2000-01-01"', () => {
+		expect(convertMinguoToGregorian('0890101')).toBe('2000-01-01');
+	});
+});
