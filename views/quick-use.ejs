@@ -169,18 +169,31 @@
                 matchResultsDiv.innerHTML = matches.map((animal, i) => `
                     <div class="result-card">
                         <div class="result-rank">${i + 1}</div>
-                        <img class="result-img"
+                        <img class="result-img" style="cursor:pointer;border-radius:8px"
                              src="${animal.picture || 'https://placehold.co/180x180/f4efe8/a77b5a?text=%F0%9F%90%BE'}"
-                             alt="${animal.kind || ''}">
+                             alt="${animal.kind || ''}"
+                             data-id="${animal.id || ''}"
+                             data-animal='${JSON.stringify({ picture: animal.picture, variety: animal.variety, kind: animal.kind, sex: animal.sex, colour: animal.colour, found_place: animal.found_place }).replace(/'/g, "&#39;")}'>
                         <div class="result-details">
                             <p><strong>物種:</strong> ${animal.kind || '—'} &nbsp;|&nbsp; <strong>品種:</strong> ${animal.variety || '—'}</p>
-                            <p><strong>性別:</strong> ${animal.sex || '—'} &nbsp;|&nbsp; <strong>毛色:</strong> ${animal.colour || '—'}</p>
+                            <p><strong>性別:</strong> ${sexLabel(animal.sex)} &nbsp;|&nbsp; <strong>毛色:</strong> ${animal.colour || '—'}</p>
                             <p><strong>發現地點:</strong> ${animal.found_place || '—'}</p>
                             <p><strong>收容所:</strong> ${animal.shelter_name || animal.name || '—'}</p>
                             ${animal.distance != null ? `<span class="distance-badge">📍 ${Number(animal.distance).toFixed(1)} 公里</span>` : ''}
+                            <p style="font-size:0.8em;color:#aaa;margin-top:6px">點擊圖片查看詳情</p>
                         </div>
                     </div>
                 `).join('');
+
+                // Attach lightbox to result images
+                matchResultsDiv.querySelectorAll('.result-img[data-animal]').forEach(img => {
+                    img.addEventListener('click', () => {
+                        try {
+                            const animal = JSON.parse(img.dataset.animal);
+                            openLightbox(animal, img.dataset.id || null);
+                        } catch {}
+                    });
+                });
             }
         } catch (err) {
             showToast('比對失敗，請稍後再試', 'error');

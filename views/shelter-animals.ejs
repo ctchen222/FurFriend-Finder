@@ -182,9 +182,12 @@
 
         function renderCard(animal) {
             const imgSrc = animal.picture || 'https://placehold.co/560x380/f4efe8/a77b5a?text=%F0%9F%90%BE';
+            const safeAnimal = JSON.stringify({ picture: animal.picture, variety: animal.variety, kind: animal.kind, sex: animal.sex, colour: animal.colour }).replace(/'/g, '&#39;');
             return `
                 <div class="animal-card">
-                    <img class="animal-card-img" src="${imgSrc}" alt="${animal.variety || '動物'}">
+                    <img class="animal-card-img" style="cursor:pointer" src="${imgSrc}" alt="${animal.variety || '動物'}"
+                         data-id="${animal.id || ''}" data-animal='${safeAnimal}'
+                         onclick="openLightbox(JSON.parse(this.dataset.animal.replace(/&#39;/g,&quot;'&quot;)), this.dataset.id||null)">
                     <div class="animal-card-body">
                         <p class="animal-card-title">${animal.variety || '未知品種'}</p>
                         <p class="animal-meta">

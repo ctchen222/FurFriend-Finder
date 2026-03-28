@@ -59,6 +59,85 @@ function sexLabel(s) {
     return s === 'M' ? '公' : s === 'F' ? '母' : s || '—';
 }
 
+// ============================================================
+//  Lightbox
+// ============================================================
+
+/**
+ * Open a lightbox showing an animal's photo and, optionally, shelter details.
+ * Fetches /api/animals/:id if animalId is provided.
+ *
+ * @param {{ picture?: string, variety?: string, kind?: string, sex?: string,
+ *           colour?: string, found_place?: string }} animal - base animal data
+ * @param {string|null} [animalId] - optional id to fetch shelter contact info
+ */
+function openLightbox(animal, animalId) {
+    // Remove any existing overlay
+    const existing = document.getElementById('ff-lightbox');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'ff-lightbox';
+    overlay.className = 'lightbox-overlay';
+
+    const imgSrc = animal.picture || 'https://placehold.co/600x300/f4efe8/a77b5a?text=%F0%9F%90%BE';
+
+    overlay.innerHTML = `
+        <div class="lightbox-box">
+            <img class="lightbox-img" src="${imgSrc}" alt="${animal.variety || '動物'}">
+            <button class="lightbox-close" aria-label="關閉">✕</button>
+            <div class="lightbox-body">
+                <h3>${animal.variety || '未知品種'}</h3>
+                <p><strong>物種:</strong> ${animal.kind || '—'}</p>
+                <p><strong>性別:</strong> ${sexLabel(animal.sex)}</p>
+                <p><strong>毛色:</strong> ${animal.colour || '—'}</p>
+                ${animal.found_place ? `<p><strong>發現地點:</strong> ${animal.found_place}</p>` : ''}
+                <div class="lightbox-shelter-info" id="lb-shelter">
+                    <p style="color:#aaa;font-style:italic">載入收容所資訊...</p>
+                </div>
+            </div>
+        </div>`;
+
+    document.body.appendChild(overlay);
+    // Trigger animation
+    requestAnimationFrame(() => overlay.classList.add('open'));
+
+    // Close on background click or button
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay || e.target.classList.contains('lightbox-close')) {
+            overlay.classList.remove('open');
+            setTimeout(() => overlay.remove(), 260);
+        }
+    });
+
+    // Fetch shelter details
+    if (animalId) {
+        fetch(`/api/animals/${animalId}`)
+            .then(r => r.ok ? r.json() : Promise.reject())
+            .then(({ extras }) => {
+                const a = extras.animal;
+                const shelter = document.getElementById('lb-shelter');
+                if (!shelter) return;
+                if (a && a.shelter_name) {
+                    shelter.innerHTML = `
+                        <h4>📍 收容所資訊</h4>
+                        <p><strong>名稱:</strong> ${a.shelter_name}</p>
+                        ${a.shelter_address ? `<p><strong>地址:</strong> ${a.shelter_address}</p>` : ''}
+                        ${a.shelter_tel    ? `<p><strong>電話:</strong> <a href="tel:${a.shelter_tel}">${a.shelter_tel}</a></p>` : ''}`;
+                } else {
+                    shelter.innerHTML = '<p style="color:#aaa">無收容所資訊</p>';
+                }
+            })
+            .catch(() => {
+                const shelter = document.getElementById('lb-shelter');
+                if (shelter) shelter.innerHTML = '<p style="color:#aaa">無法載入收容所資訊</p>';
+            });
+    } else {
+        const shelter = document.getElementById('lb-shelter');
+        if (shelter) shelter.remove();
+    }
+}
+
 // Auto-run on DOMContentLoaded for pages that include this script.
 // Pages can override by calling handleUrlMessages(customMap) themselves.
 document.addEventListener('DOMContentLoaded', () => {
