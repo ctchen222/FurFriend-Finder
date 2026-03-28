@@ -1,0 +1,352 @@
+/* ============================================================
+   FurFriend Finder — Shared Stylesheet
+   ============================================================ */
+
+/* --- Design Tokens --- */
+:root {
+    --bg-color: #FEFBF6;
+    --text-color: #5D5753;
+    --heading-color: #A77B5A;
+    --primary-color: #81A6D3;
+    --primary-hover: #6a93c2;
+    --card-bg-color: #FFFFFF;
+    --shadow-color: rgba(0, 0, 0, 0.08);
+    --border-color: #EAE0D5;
+    --success-color: #4CAF50;
+    --error-color: #F44336;
+    --paw-bg: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 100 100'%3E%3Cpath d='M12.9,66.3c-3.5-3.5-5.8-8.3-5.8-13.5c0-10.5,8.5-19,19-19c5.2,0,10,2.1,13.5,5.8c3.5,3.5,5.8,8.3,5.8,13.5 c0,10.5-8.5,19-19,19C21.2,72.1,16.4,69.8,12.9,66.3z M87.1,66.3c-3.5-3.5-5.8-8.3-5.8-13.5c0-10.5,8.5-19,19-19 c5.2,0,10,2.1,13.5,5.8c3.5,3.5,5.8,8.3,5.8,13.5c0,10.5-8.5,19-19,19C95.5,72.1,90.6,69.8,87.1,66.3z M50,87.1 c-3.5-3.5-5.8-8.3-5.8-13.5c0-10.5,8.5-19,19-19c5.2,0,10,2.1,13.5,5.8c3.5,3.5,5.8,8.3,5.8,13.5c0,10.5-8.5,19-19,19 C58.3,92.9,53.5,90.6,50,87.1z M26.1,26.8c-3.5-3.5-5.8-8.3-5.8-13.5C20.3,2.8,28.8-5.7,39.3-5.7c5.2,0,10,2.1,13.5,5.8 c3.5,3.5,5.8,8.3,5.8,13.5c0,10.5-8.5,19-19,19C34.4,32.6,29.6,30.3,26.1,26.8z M73.9,26.8c-3.5-3.5-5.8-8.3-5.8-13.5 c0-10.5,8.5-19,19-19c5.2,0,10,2.1,13.5,5.8c3.5,3.5,5.8,8.3,5.8,13.5c0,10.5-8.5,19-19,19C82.2,32.6,77.4,30.3,73.9,26.8z' fill='%23F4EFE8'/%3E%3C/svg%3E");
+}
+
+/* --- Reset & Base --- */
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Nunito', 'Microsoft JhengHei', sans-serif;
+    line-height: 1.8;
+    margin: 0;
+    padding: 20px;
+    background-color: var(--bg-color);
+    background-image: var(--paw-bg);
+    background-repeat: repeat;
+    color: var(--text-color);
+}
+
+h1, h2, h3 {
+    color: var(--heading-color);
+}
+
+/* --- Header --- */
+.main-header {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    background-color: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: 0 2px 10px var(--shadow-color);
+    padding: 10px 0;
+}
+
+.header-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.logo {
+    font-weight: bold;
+    font-size: 1.4em;
+    color: var(--heading-color);
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.main-nav {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.main-nav a {
+    margin-left: 20px;
+    text-decoration: none;
+    color: var(--text-color);
+    font-weight: bold;
+    font-size: 1em;
+    transition: color 0.2s ease;
+    white-space: nowrap;
+}
+
+.main-nav a:hover {
+    color: var(--primary-color);
+}
+
+/* --- Container --- */
+.container {
+    max-width: 800px;
+    margin: 40px auto;
+}
+
+.container--wide {
+    max-width: 1200px;
+    margin: 40px auto;
+}
+
+.container--card {
+    max-width: 800px;
+    margin: 40px auto;
+    background-color: var(--card-bg-color);
+    padding: 40px;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px var(--shadow-color);
+}
+
+/* --- Card --- */
+.card {
+    background-color: var(--card-bg-color);
+    padding: 30px;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px var(--shadow-color);
+    margin-bottom: 30px;
+}
+
+.card h2 {
+    color: var(--heading-color);
+    font-size: 1.6em;
+    margin-top: 0;
+    margin-bottom: 20px;
+    border-bottom: 2px solid var(--border-color);
+    padding-bottom: 10px;
+}
+
+/* --- Buttons --- */
+.btn {
+    display: inline-block;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-family: 'Nunito', 'Microsoft JhengHei', sans-serif;
+    font-size: 1em;
+    font-weight: bold;
+    text-decoration: none;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+    background-color: var(--primary-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(129, 166, 211, 0.45);
+}
+
+.btn-primary:disabled {
+    background-color: #ccc;
+    color: #888;
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+}
+
+.btn-pill {
+    border-radius: 50px;
+    padding: 14px 36px;
+    font-size: 1.1em;
+}
+
+.btn-block {
+    display: block;
+    width: 100%;
+    text-align: center;
+}
+
+.btn-sm {
+    padding: 8px 14px;
+    font-size: 0.9em;
+    border-radius: 6px;
+}
+
+/* --- Forms --- */
+.form-group {
+    margin-bottom: 20px;
+}
+
+label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+}
+
+input,
+select,
+textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    box-sizing: border-box;
+    font-family: 'Nunito', 'Microsoft JhengHei', sans-serif;
+    font-size: 1em;
+    background-color: #fff;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(129, 166, 211, 0.25);
+}
+
+fieldset {
+    border: 2px solid var(--border-color);
+    border-radius: 15px;
+    padding: 25px;
+    margin-bottom: 30px;
+}
+
+legend {
+    padding: 0 15px;
+    font-size: 1.4em;
+    font-weight: bold;
+    color: var(--heading-color);
+}
+
+/* --- Table --- */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+th, td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+
+th {
+    background-color: #f9f6f2;
+    font-weight: bold;
+    color: var(--heading-color);
+}
+
+tbody tr:nth-child(even) { background-color: #fdfaf7; }
+tbody tr:hover           { background-color: #f5f1ec; }
+
+/* --- Toast --- */
+.toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 14px 20px;
+    border-radius: 10px;
+    color: white;
+    font-size: 1em;
+    font-weight: bold;
+    z-index: 2000;
+    max-width: 320px;
+    opacity: 0;
+    transform: translateY(-16px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    pointer-events: none;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+}
+
+.toast.show {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+.toast.success { background-color: var(--success-color); }
+.toast.error   { background-color: var(--error-color); }
+
+/* --- Toggle Switch --- */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 56px;
+    height: 30px;
+    flex-shrink: 0;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    inset: 0;
+    background-color: #ccc;
+    transition: background-color 0.3s ease;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 22px;
+    width: 22px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: transform 0.3s ease;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+}
+
+input:checked + .slider              { background-color: var(--primary-color); }
+input:focus   + .slider              { box-shadow: 0 0 0 3px rgba(129,166,211,0.3); }
+input:checked + .slider:before       { transform: translateX(26px); }
+
+.slider.round        { border-radius: 30px; }
+.slider.round:before { border-radius: 50%; }
+
+/* --- Utility --- */
+.text-center { text-align: center; }
+.mt-0  { margin-top: 0; }
+.mb-0  { margin-bottom: 0; }
+.divider {
+    border: none;
+    border-top: 1px solid var(--border-color);
+    margin: 24px 0;
+}
+
+/* --- Spinner (loading indicator) --- */
+.spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255,255,255,0.4);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    vertical-align: middle;
+    margin-right: 6px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* --- Responsive --- */
+@media (max-width: 600px) {
+    body { padding: 10px; }
+    .header-container { padding: 0 12px; }
+    .main-nav a { margin-left: 12px; font-size: 0.9em; }
+    .container--card { padding: 24px 16px; }
+    .btn-pill { padding: 12px 24px; font-size: 1em; }
+}

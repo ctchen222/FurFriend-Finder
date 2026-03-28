@@ -1,117 +1,76 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
-
 <head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>註冊 - FurFriend Finder</title>
-	<link rel="preconnect" href="https://fonts.googleapis.com">
-	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-	<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&display=swap" rel="stylesheet">
-	<style>
-		:root {
-			--bg-color: #FEFBF6;
-			--text-color: #5D5753;
-			--heading-color: #A77B5A;
-			--primary-color: #81A6D3;
-			--card-bg-color: #FFFFFF;
-			--shadow-color: rgba(0, 0, 0, 0.08);
-			--border-color: #EAE0D5;
-		}
+    <%- include('partials/_head', { title: '註冊' }) %>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            background-image: none;
+        }
 
-		body {
-			font-family: 'Nunito', 'Microsoft JhengHei', sans-serif;
-			background-color: var(--bg-color);
-			color: var(--text-color);
-			display: flex;
-			justify-content: center;
-			align-items: center;
-			min-height: 100vh;
-			margin: 0;
-		}
+        .auth-card {
+            width: 100%;
+            max-width: 420px;
+            padding: 40px;
+            background-color: var(--card-bg-color);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px var(--shadow-color);
+        }
 
-		.register-container {
-			width: 100%;
-			max-width: 400px;
-			padding: 40px;
-			background-color: var(--card-bg-color);
-			border-radius: 20px;
-			box-shadow: 0 10px 30px var(--shadow-color);
-		}
+        .auth-logo {
+            text-align: center;
+            margin-bottom: 8px;
+            font-size: 2em;
+        }
 
-		h1 {
-			color: var(--heading-color);
-			text-align: center;
-			font-size: 2em;
-			margin-bottom: 30px;
-		}
+        h1 {
+            color: var(--heading-color);
+            text-align: center;
+            font-size: 1.6em;
+            margin-top: 0;
+            margin-bottom: 28px;
+        }
 
-		.form-group {
-			margin-bottom: 20px;
-		}
-
-		label {
-			display: block;
-			margin-bottom: 8px;
-			font-weight: bold;
-		}
-
-		input {
-			width: 100%;
-			padding: 12px;
-			border: 1px solid var(--border-color);
-			border-radius: 10px;
-			box-sizing: border-box;
-			font-size: 1em;
-		}
-
-		.submit-button {
-			width: 100%;
-			padding: 12px;
-			background-color: var(--primary-color);
-			color: white;
-			border: none;
-			border-radius: 10px;
-			cursor: pointer;
-			font-size: 1.1em;
-			font-weight: bold;
-		}
-
-		.switch-link {
-			text-align: center;
-			margin-top: 20px;
-		}
-
-		.switch-link a {
-			color: var(--primary-color);
-			text-decoration: none;
-			font-weight: bold;
-		}
-	</style>
+        .switch-link {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 0.95em;
+        }
+        .switch-link a {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: bold;
+        }
+    </style>
 </head>
-
 <body>
-	<div class="register-container">
-		<h1>註冊新帳號</h1>
-		<form action="/api/auth/signup" method="POST">
-			<div class="form-group">
-				<label for="name">姓名</label>
-				<input type="text" id="name" name="name" required>
-			</div>
-			<div class="form-group">
-				<label for="email">Email</label>
-				<input type="email" id="email" name="email" required>
-			</div>
-			<div class="form-group">
-				<label for="password">密碼</label>
-				<input type="password" id="password" name="password" required>
-			</div>
-			<button type="submit" class="submit-button">註冊</button>
-		</form>
-		<div class="switch-link">
-			<p>已經有帳號了？ <a href="/login">點此登入</a></p>
-		</div>
-	</div>
+    <div id="toast" class="toast"></div>
+    <div class="auth-card">
+        <div class="auth-logo">🐾</div>
+        <h1>註冊新帳號</h1>
+        <form action="/api/auth/signup" method="POST">
+            <div class="form-group">
+                <label for="name">姓名</label>
+                <input type="text" id="name" name="name" required>
+            </div>
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" required>
+            </div>
+            <div class="form-group">
+                <label for="password">密碼</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block" style="margin-top: 8px;">註冊</button>
+        </form>
+        <div class="switch-link">
+            <p>已經有帳號了？ <a href="/login">點此登入</a></p>
+            <p><a href="/">返回首頁</a></p>
+        </div>
+    </div>
 </body>
-
 </html>

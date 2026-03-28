@@ -1,456 +1,156 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
-
 <head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>個人資料 - FurFriend Finder</title>
-	<link rel="preconnect" href="https://fonts.googleapis.com">
-	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-	<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&display=swap" rel="stylesheet">
-	<style>
-		:root {
-			--bg-color: #FEFBF6;
-			--text-color: #5D5753;
-			--heading-color: #A77B5A;
-			--primary-color: #81A6D3;
-			--card-bg-color: #FFFFFF;
-			--shadow-color: rgba(0, 0, 0, 0.08);
-			--border-color: #EAE0D5;
-		}
+    <%- include('partials/_head', { title: '個人資料' }) %>
+    <style>
+        h1 { text-align: center; font-size: 2.2em; margin-bottom: 40px; }
 
-		body {
-			font-family: 'Nunito', 'Microsoft JhengHei', sans-serif;
-			line-height: 1.8;
-			padding: 20px;
-			background-color: var(--bg-color);
-			color: var(--text-color);
-		}
+        .profile-info p { font-size: 1.1em; margin: 0 0 10px; }
+        .profile-info strong { color: var(--heading-color); margin-right: 10px; }
 
-		.container {
-			max-width: 800px;
-			margin: 40px auto;
-		}
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 1.1em;
+        }
+        .setting-item.disabled { opacity: 0.5; cursor: not-allowed; }
+        .coming-soon { font-size: 0.8em; color: #999; margin-left: 5px; }
 
-		h1 {
-			color: var(--heading-color);
-			text-align: center;
-			font-size: 2.2em;
-			margin-bottom: 40px;
-		}
-
-		.card {
-			background-color: var(--card-bg-color);
-			padding: 30px;
-			border-radius: 20px;
-			box-shadow: 0 10px 30px var(--shadow-color);
-			margin-bottom: 30px;
-		}
-
-		.card h2 {
-			color: var(--heading-color);
-			font-size: 1.6em;
-			margin-top: 0;
-			margin-bottom: 20px;
-			border-bottom: 2px solid var(--border-color);
-			padding-bottom: 10px;
-		}
-
-		.profile-info p {
-			font-size: 1.1em;
-			margin: 0 0 10px;
-		}
-
-		.profile-info strong {
-			color: var(--heading-color);
-			margin-right: 10px;
-		}
-
-		.setting-item {
-			display: flex;
-			justify-content: space-between;
-			align-items: center;
-			font-size: 1.1em;
-		}
-
-		.setting-item.disabled {
-			opacity: 0.5;
-			cursor: not-allowed;
-		}
-
-		.coming-soon {
-			font-size: 0.8em;
-			color: #999;
-			margin-left: 5px;
-		}
-
-		.divider {
-			border: none;
-			border-top: 1px solid var(--border-color);
-			margin: 25px 0;
-		}
-
-		.switch {
-			position: relative;
-			display: inline-block;
-			width: 60px;
-			height: 34px;
-		}
-
-		.switch input {
-			opacity: 0;
-			width: 0;
-			height: 0;
-		}
-
-		.slider {
-			position: absolute;
-			cursor: pointer;
-			top: 0;
-			left: 0;
-			right: 0;
-			bottom: 0;
-			background-color: #ccc;
-			-webkit-transition: .4s;
-			transition: .4s;
-		}
-
-		.slider:before {
-			position: absolute;
-			content: "";
-			height: 26px;
-			width: 26px;
-			left: 4px;
-			bottom: 4px;
-			background-color: white;
-			-webkit-transition: .4s;
-			transition: .4s;
-		}
-
-		input:checked+.slider {
-			background-color: var(--primary-color);
-		}
-
-		input:focus+.slider {
-			box-shadow: 0 0 1px var(--primary-color);
-		}
-
-		input:checked+.slider:before {
-			-webkit-transform: translateX(26px);
-			-ms-transform: translateX(26px);
-			transform: translateX(26px);
-		}
-
-		.slider.round {
-			border-radius: 34px;
-		}
-
-		.slider.round:before {
-			border-radius: 50%;
-		}
-
-		.save-status {
-			margin-top: 15px;
-			font-style: italic;
-			color: var(--primary-color);
-			text-align: right;
-			height: 1em;
-		}
-
-		/* Header Styles */
-		.main-header {
-			position: sticky;
-			top: 0;
-			z-index: 1000;
-			background-color: rgba(255, 255, 255, 0.85);
-			backdrop-filter: blur(10px);
-			box-shadow: 0 2px 10px var(--shadow-color);
-			padding: 10px 0;
-		}
-
-		.header-container {
-			max-width: 800px;
-			margin: 0 auto;
-			padding: 0 20px;
-			display: flex;
-			justify-content: space-between;
-			align-items: center;
-		}
-
-		.logo {
-			font-weight: bold;
-			font-size: 1.4em;
-			color: var(--heading-color);
-			text-decoration: none;
-		}
-
-		.main-nav a {
-			margin-left: 25px;
-			text-decoration: none;
-			color: var(--text-color);
-			font-weight: bold;
-			font-size: 1.1em;
-			transition: color 0.2s ease;
-		}
-
-		.main-nav a:hover {
-			color: var(--primary-color);
-		}
-
-		table {
-			width: 100%;
-			border-collapse: collapse;
-			margin-top: 20px;
-		}
-
-		th,
-		td {
-			padding: 12px 15px;
-			text-align: left;
-			border-bottom: 1px solid var(--border-color);
-		}
-
-		th {
-			background-color: #f9f6f2;
-			font-weight: bold;
-			color: var(--heading-color);
-		}
-
-		tbody tr:nth-child(even) {
-			background-color: #fdfaf7;
-		}
-
-		tbody tr:hover {
-			background-color: #f5f1ec;
-		}
-
-		.match-button {
-			background-color: var(--primary-color);
-			color: white;
-			border: none;
-			padding: 8px 12px;
-			border-radius: 5px;
-			cursor: pointer;
-			font-size: 0.9em;
-			transition: background-color 0.2s ease;
-		}
-
-		.match-button:hover {
-			background-color: #6b8dbf;
-		}
-
-		.match-status {
-			font-size: 0.9em;
-			margin-left: 10px;
-		}
-
-		.toast {
-			position: fixed;
-			top: 20px;
-			right: 20px;
-			padding: 15px 20px;
-			border-radius: 5px;
-			box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-			opacity: 0;
-			transition: opacity 0.3s, transform 0.3s;
-			transform: translateY(-20px);
-			z-index: 1001;
-		}
-
-		.toast.show {
-			opacity: 1;
-			transform: translateY(0);
-		}
-
-		.toast.success {
-			background-color: #28a745;
-			color: white;
-		}
-
-		.toast.error {
-			background-color: #dc3545;
-			color: white;
-		}
-	</style>
+        .save-status {
+            margin-top: 12px;
+            font-style: italic;
+            color: var(--primary-color);
+            text-align: right;
+            min-height: 1.2em;
+            font-size: 0.95em;
+        }
+    </style>
 </head>
-
 <body>
-	<%- include('partials/_header') %>
-		<div class="container">
-			<h1>個人資料</h1>
+    <%- include('partials/_header') %>
+    <div id="toast" class="toast"></div>
 
-			<div class="card">
-				<h2>👤 您的資訊</h2>
-				<div class="profile-info">
-					<p><strong>姓名:</strong>
-						<%= user.name %>
-					</p>
-					<p><strong>Email:</strong>
-						<%= user.email %>
-					</p>
-				</div>
-			</div>
+    <div class="container">
+        <h1>個人資料</h1>
 
-			<div class="card">
-				<h2>⚙️ 通知設定</h2>
-				<div class="setting-item">
-					<label for="mail-notification">開啟遺失動物郵件通知</label>
-					<label class="switch">
-						<input type="checkbox" id="mail-notification" <%=user.isLostAnimalMailEnabled ? 'checked' : ''
-							%>>
-						<span class="slider round"></span>
-					</label>
-				</div>
-				<p id="save-status" class="save-status"></p>
-				<hr class="divider">
-				<div class="setting-item disabled">
-					<label for="sms-notification">
-						開啟手機簡訊通知
-						<span class="coming-soon">(即將推出)</span>
-					</label>
-					<label class="switch">
-						<input type="checkbox" id="sms-notification" disabled>
-						<span class="slider round"></span>
-					</label>
-				</div>
-			</div>
+        <div class="card">
+            <h2>👤 您的資訊</h2>
+            <div class="profile-info">
+                <p><strong>姓名:</strong> <%= user.name %></p>
+                <p><strong>Email:</strong> <%= user.email %></p>
+            </div>
+        </div>
 
-			<div class="card">
-				<h2>🐾 我協尋的寵物</h2>
-				<% if (lostAnimals && lostAnimals.length> 0) { %>
-					<table>
-						<thead>
-							<tr>
-								<th>寵物名字</th>
-								<th>物種</th>
-								<th>性別</th>
-								<th>走失時間</th>
-								<th>走失地點</th>
-								<th>操作</th>
-							</tr>
-						</thead>
-						<tbody>
-							<% lostAnimals.forEach(animal=> { %>
-								<tr>
-									<td>
-										<%= animal.name %>
-									</td>
-									<td>
-										<%= animal.kind %>
-									</td>
-									<td>
-										<%= animal.sex %>
-									</td>
-									<td>
-										<%= new Date(animal.lost_time).toLocaleDateString() %>
-									</td>
-									<td>
-										<%= animal.lost_place %>
-									</td>
-									<td><button class="match-button" data-id="<%= animal.id %>">發送配對通知</button></td>
-								</tr>
-								<% }); %>
-						</tbody>
-					</table>
-					<% } else { %>
-						<p>您目前沒有登記任何協尋案件。</p>
-						<% } %>
-			</div>
+        <div class="card">
+            <h2>⚙️ 通知設定</h2>
+            <div class="setting-item">
+                <label for="mail-notification">開啟遺失動物郵件通知</label>
+                <label class="switch">
+                    <input type="checkbox" id="mail-notification" <%= user.isLostAnimalMailEnabled ? 'checked' : '' %>>
+                    <span class="slider round"></span>
+                </label>
+            </div>
+            <p id="save-status" class="save-status"></p>
+            <hr class="divider">
+            <div class="setting-item disabled">
+                <label for="sms-notification">
+                    開啟手機簡訊通知
+                    <span class="coming-soon">(即將推出)</span>
+                </label>
+                <label class="switch">
+                    <input type="checkbox" id="sms-notification" disabled>
+                    <span class="slider round"></span>
+                </label>
+            </div>
+        </div>
 
-		</div>
+        <div class="card">
+            <h2>🐾 我協尋的寵物</h2>
+            <% if (lostAnimals && lostAnimals.length > 0) { %>
+            <table>
+                <thead>
+                    <tr>
+                        <th>寵物名字</th>
+                        <th>物種</th>
+                        <th>性別</th>
+                        <th>走失時間</th>
+                        <th>走失地點</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% lostAnimals.forEach(animal => { %>
+                    <tr>
+                        <td><%= animal.name %></td>
+                        <td><%= animal.kind %></td>
+                        <td><%= animal.sex %></td>
+                        <td><%= new Date(animal.lost_time).toLocaleDateString() %></td>
+                        <td><%= animal.lost_place %></td>
+                        <td>
+                            <button class="btn btn-sm btn-primary match-btn" data-id="<%= animal.id %>">
+                                發送配對通知
+                            </button>
+                        </td>
+                    </tr>
+                    <% }); %>
+                </tbody>
+            </table>
+            <% } else { %>
+            <p>您目前沒有登記任何協尋案件。<a href="/report-lost">立即登記</a></p>
+            <% } %>
+        </div>
+    </div>
 
-		<script>
-			document.addEventListener('DOMContentLoaded', () => {
-				const toggle = document.getElementById('mail-notification');
-				const status = document.getElementById('save-status');
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // Toggle mail notification setting
+        const toggle = document.getElementById('mail-notification');
+        const status = document.getElementById('save-status');
+        toggle.addEventListener('change', async (event) => {
+            const isEnabled = event.target.checked;
+            status.textContent = '儲存中...';
+            try {
+                const res = await fetch('/api/auth/settings', {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ isLostAnimalMailEnabled: isEnabled }),
+                });
+                if (!res.ok) throw new Error();
+                status.textContent = '✓ 已儲存';
+            } catch {
+                status.textContent = '儲存失敗，請重試';
+                event.target.checked = !isEnabled;
+            }
+            setTimeout(() => { status.textContent = ''; }, 2000);
+        });
 
-				toggle.addEventListener('change', async (event) => {
-					const isEnabled = event.target.checked;
-					status.textContent = '儲存中...';
-
-					try {
-						const response = await fetch('/api/auth/settings', {
-							method: 'PATCH',
-							headers: {
-								'Content-Type': 'application/json'
-							},
-							body: JSON.stringify({isLostAnimalMailEnabled: isEnabled})
-						});
-
-						if (!response.ok) {
-							throw new Error('儲存失敗');
-						}
-
-						status.textContent = '✓ 已儲存';
-					} catch (error) {
-						status.textContent = '儲存失敗，請重試';
-						// Revert the toggle on error
-						event.target.checked = !isEnabled;
-					}
-
-					setTimeout(() => {
-						status.textContent = '';
-					}, 2000);
-				});
-
-				const matchButtons = document.querySelectorAll('.match-button');
-				matchButtons.forEach(button => {
-					button.addEventListener('click', async (event) => {
-						const animalId = event.target.dataset.id;
-						const statusSpan = document.createElement('span');
-						statusSpan.className = 'match-status';
-						event.target.parentNode.appendChild(statusSpan);
-
-						statusSpan.textContent = '發送中...';
-
-						try {
-							const response = await fetch(`/api/lost-animals/match/${animalId}`, {
-								method: 'GET'
-							});
-
-							if (!response.ok) {
-								throw new Error('發送失敗');
-							}
-
-							const result = await response.json();
-							if (result.message === 'No matching animals found') {
-								statusSpan.textContent = '沒有找到配對';
-							} else {
-								statusSpan.textContent = '✓ 已發送';
-							}
-						} catch (error) {
-							statusSpan.textContent = '發送失敗';
-						}
-
-						setTimeout(() => {
-							statusSpan.remove();
-						}, 3000);
-					});
-				});
-
-				const urlParams = new URLSearchParams(window.location.search);
-				const message = urlParams.get('message');
-				const error = urlParams.get('error');
-				const toast = document.getElementById('toast');
-
-				if (message) {
-					toast.textContent = decodeURIComponent(message);
-					toast.classList.add('show', 'success');
-					setTimeout(() => {
-						toast.classList.remove('show', 'success');
-					}, 3000);
-				}
-
-				if (error) {
-					toast.textContent = decodeURIComponent(error);
-					toast.classList.add('show', 'error');
-					setTimeout(() => {
-						toast.classList.remove('show', 'error');
-					}, 3000);
-				}
-			});
-		</script>
-	<div id="toast" class="toast"></div>
+        // Match buttons with loading state
+        document.querySelectorAll('.match-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const id = btn.dataset.id;
+                const original = btn.textContent;
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner"></span>發送中...';
+                try {
+                    const res = await fetch(`/api/lost-animals/match/${id}`);
+                    if (!res.ok) throw new Error();
+                    const result = await res.json();
+                    const found = result.extras?.top10Matches?.length > 0;
+                    showToast(found ? '✓ 配對通知已發送！' : '目前沒有找到符合的動物', found ? 'success' : 'error');
+                    btn.textContent = found ? '✓ 已發送' : '無配對';
+                } catch {
+                    showToast('發送失敗，請稍後再試', 'error');
+                    btn.textContent = original;
+                    btn.disabled = false;
+                }
+                setTimeout(() => {
+                    btn.textContent = original;
+                    btn.disabled = false;
+                }, 3000);
+            });
+        });
+    });
+    </script>
 </body>
-
 </html>

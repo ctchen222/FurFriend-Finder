@@ -1,231 +1,87 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
-
 <head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>協尋登記 - FurFriend Finder</title>
-	<link rel="preconnect" href="https://fonts.googleapis.com">
-	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-	<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&display=swap" rel="stylesheet">
-	<style>
-		:root {
-			--bg-color: #FEFBF6;
-			--text-color: #5D5753;
-			--heading-color: #A77B5A;
-			--primary-color: #81A6D3;
-			--card-bg-color: #FFFFFF;
-			--shadow-color: rgba(0, 0, 0, 0.08);
-			--border-color: #EAE0D5;
-		}
-
-		body {
-			font-family: 'Nunito', 'Microsoft JhengHei', sans-serif;
-			line-height: 1.8;
-			padding: 20px;
-			background-color: var(--bg-color);
-			color: var(--text-color);
-		}
-
-		.container {
-			max-width: 800px;
-			margin: 40px auto;
-			background-color: var(--card-bg-color);
-			padding: 40px;
-			border-radius: 20px;
-			box-shadow: 0 10px 30px var(--shadow-color);
-		}
-
-		h1 {
-			color: var(--heading-color);
-			text-align: center;
-			font-size: 2.2em;
-		}
-
-		.intro-text {
-			text-align: center;
-			margin-bottom: 40px;
-		}
-
-		form>fieldset {
-			border: 2px solid var(--border-color);
-			border-radius: 15px;
-			padding: 25px;
-			margin-bottom: 30px;
-		}
-
-		form>fieldset>legend {
-			padding: 0 15px;
-			font-size: 1.5em;
-			font-weight: bold;
-			color: var(--heading-color);
-		}
-
-		.form-group {
-			margin-bottom: 20px;
-		}
-
-		label {
-			display: block;
-			margin-bottom: 8px;
-			font-weight: bold;
-			font-size: 1.1em;
-		}
-
-		input,
-		select,
-		textarea {
-			width: 100%;
-			padding: 12px;
-			border: 1px solid var(--border-color);
-			border-radius: 10px;
-			box-sizing: border-box;
-			font-family: 'Nunito', sans-serif;
-			font-size: 1em;
-			transition: border-color 0.2s ease, box-shadow 0.2s ease;
-		}
-
-		input:focus,
-		select:focus,
-		textarea:focus {
-			outline: none;
-			border-color: var(--primary-color);
-			box-shadow: 0 0 0 3px rgba(129, 166, 211, 0.3);
-		}
-
-		.submit-button {
-			display: block;
-			width: 100%;
-			padding: 15px 35px;
-			background-color: var(--primary-color);
-			color: white;
-			border: none;
-			border-radius: 50px;
-			cursor: pointer;
-			text-decoration: none;
-			font-size: 1.2em;
-			font-weight: bold;
-			transition: transform 0.2s ease, box-shadow 0.2s ease;
-		}
-
-		.submit-button:hover {
-			transform: translateY(-3px);
-			box-shadow: 0 6px 15px rgba(129, 166, 211, 0.5);
-		}
-
-		/* Header Styles */
-		.main-header {
-			position: sticky;
-			top: 0;
-			z-index: 1000;
-			background-color: rgba(255, 255, 255, 0.85);
-			backdrop-filter: blur(10px);
-			box-shadow: 0 2px 10px var(--shadow-color);
-			padding: 10px 0;
-		}
-
-		.header-container {
-			max-width: 800px;
-			margin: 0 auto;
-			padding: 0 20px;
-			display: flex;
-			justify-content: space-between;
-			align-items: center;
-		}
-
-		.logo {
-			font-weight: bold;
-			font-size: 1.4em;
-			color: var(--heading-color);
-			text-decoration: none;
-		}
-
-		.main-nav a {
-			margin-left: 25px;
-			text-decoration: none;
-			color: var(--text-color);
-			font-weight: bold;
-			font-size: 1.1em;
-			transition: color 0.2s ease;
-		}
-
-		.main-nav a:hover {
-			color: var(--primary-color);
-		}
-	</style>
+    <%- include('partials/_head', { title: '協尋登記' }) %>
+    <style>
+        h1 { text-align: center; font-size: 2.2em; }
+        .intro-text { text-align: center; margin-bottom: 32px; color: var(--text-color); }
+    </style>
 </head>
-
 <body>
-	<%- include('partials/_header') %>
-		<div class="container">
-			<h1>協尋寵物資料登記</h1>
-			<p class="intro-text">請盡可能詳細地填寫以下資訊，以提高配對成功率。</p>
+    <%- include('partials/_header') %>
+    <div id="toast" class="toast"></div>
 
-			<form action="/api/lost-animals" method="POST">
-				<fieldset>
-					<legend>🐾 走失寵物資料</legend>
-					<div class="form-group">
-						<label for="pet-name">寵物名字</label>
-						<input type="text" id="pet-name" name="animalLost[name]">
-					</div>
-					<div class="form-group">
-						<label for="pet-lost-time">走失時間</label>
-						<input type="date" id="pet-lost-time" name="animalLost[lost_time]">
-					</div>
-					<div class="form-group">
-						<label for="pet-kind">物種</label>
-						<input type="text" id="pet-kind" name="animalLost[kind]" placeholder="例如: 狗, 貓" required>
-					</div>
-					<div class="form-group">
-						<label for="pet-variety">品種</label>
-						<input type="text" id="pet-variety" name="animalLost[variety]" placeholder="例如: 米克斯, 貴賓">
-					</div>
-					<div class="form-group">
-						<label for="pet-sex">性別</label>
-						<select id="pet-sex" name="animalLost[sex]">
-							<option value="M">公</option>
-							<option value="F">母</option>
-						</select>
-					</div>
-					<div class="form-group">
-						<label for="pet-colour">毛色</label>
-						<input type="text" id="pet-colour" name="animalLost[colour]" placeholder="例如: 虎斑, 橘色, 黑白">
-					</div>
-					<div class="form-group">
-						<label for="pet-outlook">外觀</label>
-						<textarea id="pet-outlook" name="animalLost[outlook]" rows="2"
-							placeholder="例如: 親人、膽小、左耳有剪耳"></textarea>
-					</div>
-					<div class="form-group">
-						<label for="pet-feature">特徵</label>
-						<textarea id="pet-feature" name="animalLost[feature]" rows="2"
-							placeholder="例如: 尾巴是麒麟尾、項圈是藍色的"></textarea>
-					</div>
-					<div class="form-group">
-						<label for="pet-lost-place">走失地點</label>
-						<input type="text" id="pet-lost-place" name="animalLost[lost_place]" required>
-					</div>
-				</fieldset>
+    <div class="container--card">
+        <h1>協尋寵物資料登記</h1>
+        <p class="intro-text">請盡可能詳細地填寫以下資訊，以提高配對成功率。</p>
 
-				<fieldset>
-					<legend>👤 飼主聯絡資訊</legend>
-					<div class="form-group">
-						<label for="owner-name">您的姓名</label>
-						<input type="text" id="owner-name" name="animalOwner[name]" value="<%= animalOwner.name || '' %>" required>
-					</div>
-					<div class="form-group">
-						<label for="owner-email">Email</label>
-						<input type="email" id="owner-email" name="animalOwner[email]" value="<%= animalOwner.email || '' %>" required>
-					</div>
-					<div class="form-group">
-						<label for="owner-phone">手機</label>
-						<input type="tel" id="owner-phone" name="animalOwner[phone]" value="<%= animalOwner.phone || '' %>">
-					</div>
-				</fieldset>
+        <form action="/api/lost-animals" method="POST">
+            <fieldset>
+                <legend>🐾 走失寵物資料</legend>
+                <div class="form-group">
+                    <label for="pet-name">寵物名字</label>
+                    <input type="text" id="pet-name" name="animalLost[name]">
+                </div>
+                <div class="form-group">
+                    <label for="pet-lost-time">走失時間</label>
+                    <input type="date" id="pet-lost-time" name="animalLost[lost_time]">
+                </div>
+                <div class="form-group">
+                    <label for="pet-kind">物種 <span style="color:#c00">*</span></label>
+                    <input type="text" id="pet-kind" name="animalLost[kind]" placeholder="例如: 狗, 貓" required>
+                </div>
+                <div class="form-group">
+                    <label for="pet-variety">品種</label>
+                    <input type="text" id="pet-variety" name="animalLost[variety]" placeholder="例如: 米克斯, 貴賓">
+                </div>
+                <div class="form-group">
+                    <label for="pet-sex">性別</label>
+                    <select id="pet-sex" name="animalLost[sex]">
+                        <option value="M">公</option>
+                        <option value="F">母</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="pet-colour">毛色</label>
+                    <input type="text" id="pet-colour" name="animalLost[colour]" placeholder="例如: 虎斑, 橘色, 黑白">
+                </div>
+                <div class="form-group">
+                    <label for="pet-outlook">外觀</label>
+                    <textarea id="pet-outlook" name="animalLost[outlook]" rows="2"
+                        placeholder="例如: 親人、膽小、左耳有剪耳"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="pet-feature">特徵</label>
+                    <textarea id="pet-feature" name="animalLost[feature]" rows="2"
+                        placeholder="例如: 尾巴是麒麟尾、項圈是藍色的"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="pet-lost-place">走失地點 <span style="color:#c00">*</span></label>
+                    <input type="text" id="pet-lost-place" name="animalLost[lost_place]" required>
+                </div>
+            </fieldset>
 
-				<button type="submit" class="submit-button">提交協尋案件</button>
-			</form>
-		</div>
+            <fieldset>
+                <legend>👤 飼主聯絡資訊</legend>
+                <div class="form-group">
+                    <label for="owner-name">您的姓名 <span style="color:#c00">*</span></label>
+                    <input type="text" id="owner-name" name="animalOwner[name]"
+                        value="<%= animalOwner.name || '' %>" required>
+                </div>
+                <div class="form-group">
+                    <label for="owner-email">Email <span style="color:#c00">*</span></label>
+                    <input type="email" id="owner-email" name="animalOwner[email]"
+                        value="<%= animalOwner.email || '' %>" required>
+                </div>
+                <div class="form-group">
+                    <label for="owner-phone">手機</label>
+                    <input type="tel" id="owner-phone" name="animalOwner[phone]"
+                        value="<%= animalOwner.phone || '' %>">
+                </div>
+            </fieldset>
+
+            <button type="submit" class="btn btn-primary btn-pill btn-block">提交協尋案件</button>
+        </form>
+    </div>
 </body>
-
 </html>

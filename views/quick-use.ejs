@@ -1,253 +1,194 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
-
 <head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>快速使用 - FurFriend Finder</title>
-	<link rel="preconnect" href="https://fonts.googleapis.com">
-	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-	<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&display=swap" rel="stylesheet">
-	<style>
-		:root {
-			--bg-color: #FEFBF6;
-			--text-color: #5D5753;
-			--heading-color: #A77B5A;
-			--primary-color: #81A6D3;
-			--card-bg-color: #FFFFFF;
-			--shadow-color: rgba(0, 0, 0, 0.08);
-			--border-color: #EAE0D5;
-		}
+    <%- include('partials/_head', { title: '快速使用' }) %>
+    <style>
+        h1 { text-align: center; font-size: 2.2em; margin-bottom: 8px; }
+        .page-subtitle {
+            text-align: center;
+            margin-bottom: 32px;
+            color: var(--text-color);
+        }
 
-		body {
-			font-family: 'Nunito', 'Microsoft JhengHei', sans-serif;
-			background-color: var(--bg-color);
-			color: var(--text-color);
-			margin: 0;
-			padding: 20px;
-		}
+        .results-section {
+            margin-top: 36px;
+            border-top: 1px solid var(--border-color);
+            padding-top: 24px;
+        }
+        .results-section h2 { font-size: 1.4em; }
 
-		.container {
-			max-width: 800px;
-			margin: 40px auto;
-			background-color: var(--card-bg-color);
-			padding: 40px;
-			border-radius: 20px;
-			box-shadow: 0 10px 30px var(--shadow-color);
-		}
+        .result-card {
+            display: flex;
+            gap: 16px;
+            align-items: flex-start;
+            background-color: #f9f7f4;
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 16px;
+            margin-bottom: 14px;
+            transition: box-shadow 0.2s ease;
+        }
+        .result-card:hover { box-shadow: 0 4px 16px var(--shadow-color); }
 
-		h1 {
-			color: var(--heading-color);
-			text-align: center;
-			font-size: 2.5em;
-			margin-bottom: 30px;
-		}
+        .result-rank {
+            flex-shrink: 0;
+            width: 32px;
+            height: 32px;
+            background-color: var(--primary-color);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
 
-		.form-group {
-			margin-bottom: 20px;
-		}
+        .result-img {
+            flex-shrink: 0;
+            width: 90px;
+            height: 90px;
+            object-fit: cover;
+            border-radius: 10px;
+        }
 
-		label {
-			display: block;
-			margin-bottom: 8px;
-			font-weight: bold;
-		}
+        .result-details { flex: 1; min-width: 0; }
+        .result-details p { margin: 3px 0; font-size: 0.9em; line-height: 1.5; }
+        .result-details strong { color: var(--heading-color); }
 
-		input,
-		select {
-			width: 100%;
-			padding: 12px;
-			border: 1px solid var(--border-color);
-			border-radius: 10px;
-			box-sizing: border-box;
-			font-size: 1em;
-		}
+        .distance-badge {
+            display: inline-block;
+            padding: 2px 10px;
+            background-color: rgba(129, 166, 211, 0.15);
+            border-radius: 20px;
+            font-size: 0.82em;
+            color: var(--primary-color);
+            font-weight: bold;
+            margin-top: 6px;
+        }
 
-		button {
-			width: 100%;
-			padding: 12px;
-			background-color: var(--primary-color);
-			color: white;
-			border: none;
-			border-radius: 10px;
-			cursor: pointer;
-			font-size: 1.1em;
-			font-weight: bold;
-			margin-top: 20px;
-		}
+        .cta-section {
+            text-align: center;
+            margin-top: 36px;
+            padding-top: 24px;
+            border-top: 1px solid var(--border-color);
+            color: var(--text-color);
+        }
+        .cta-section a { color: var(--primary-color); text-decoration: none; font-weight: bold; }
 
-		.results-section {
-			margin-top: 40px;
-			border-top: 1px solid var(--border-color);
-			padding-top: 20px;
-		}
+        .empty-results {
+            text-align: center;
+            padding: 30px;
+            color: #aaa;
+        }
 
-		.result-item {
-			background-color: #F9F9F9;
-			border: 1px solid #E0E0E0;
-			border-radius: 10px;
-			padding: 15px;
-			margin-bottom: 15px;
-			display: flex;
-			align-items: center;
-		}
-
-		.result-item img {
-			width: 100px;
-			height: 100px;
-			object-fit: cover;
-			border-radius: 8px;
-			margin-right: 15px;
-		}
-
-		.result-details {
-			flex-grow: 1;
-		}
-
-		.result-details p {
-			margin: 5px 0;
-		}
-
-		.cta-section {
-			text-align: center;
-			margin-top: 40px;
-			padding-top: 20px;
-			border-top: 1px solid var(--border-color);
-		}
-
-		.cta-section a {
-			color: var(--primary-color);
-			text-decoration: none;
-			font-weight: bold;
-		}
-	</style>
+        #submitBtn { margin-top: 8px; }
+    </style>
 </head>
-
 <body>
-	<div class="container">
-		<h1>快速尋找走失毛孩</h1>
-		<p>輸入毛孩資訊，快速比對潛在的收容所資料。</p>
+    <%- include('partials/_header') %>
+    <div id="toast" class="toast"></div>
 
-		<form id="quickMatchForm">
-			<div class="form-group">
-				<label for="name">毛孩名稱 (選填)</label>
-				<input type="text" id="name" name="name">
-			</div>
-			<div class="form-group">
-				<label for="kind">種類</label>
-				<select id="kind" name="kind" required>
-					<option value="">請選擇</option>
-					<option value="狗">狗</option>
-					<option value="貓">貓</option>
-					<option value="其他">其他</option>
-				</select>
-			</div>
-			<div class="form-group">
-				<label for="variety">品種 (選填)</label>
-				<input type="text" id="variety" name="variety">
-			</div>
-			<div class="form-group">
-				<label for="sex">性別</label>
-				<select id="sex" name="sex" required>
-					<option value="">請選擇</option>
-					<option value="M">公</option>
-					<option value="F">母</option>
-					<option value="UNKNOWN">不確定</option>
-				</select>
-			</div>
-			<div class="form-group">
-				<label for="colour">毛色 (選填)</label>
-				<input type="text" id="colour" name="colour">
-			</div>
-			<div class="form-group">
-				<label for="lost_place">走失地點 (縣市區)</label>
-				<input type="text" id="lost_place" name="lost_place" placeholder="例如：新北市中和區" required>
-			</div>
-			<button type="submit">開始比對</button>
-		</form>
+    <div class="container--card">
+        <h1>快速尋找走失毛孩</h1>
+        <p class="page-subtitle">輸入毛孩資訊，快速比對潛在的收容所資料。</p>
 
-		<div class="results-section">
-			<h2>比對結果</h2>
-			<div id="matchResults"></div>
-			<p id="noResultsMessage" style="display: none;">沒有找到符合條件的毛孩。</p>
-		</div>
+        <form id="quickMatchForm">
+            <div class="form-group">
+                <label for="kind">種類 <span style="color:#c00">*</span></label>
+                <select id="kind" name="kind" required>
+                    <option value="">請選擇</option>
+                    <option value="狗">狗</option>
+                    <option value="貓">貓</option>
+                    <option value="其他">其他</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="variety">品種 <small style="font-weight:normal;color:#999">(選填)</small></label>
+                <input type="text" id="variety" name="variety" placeholder="例如：米克斯、貴賓">
+            </div>
+            <div class="form-group">
+                <label for="sex">性別</label>
+                <select id="sex" name="sex">
+                    <option value="">不確定</option>
+                    <option value="M">公</option>
+                    <option value="F">母</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="colour">毛色 <small style="font-weight:normal;color:#999">(選填)</small></label>
+                <input type="text" id="colour" name="colour" placeholder="例如：黑白、橘色">
+            </div>
+            <div class="form-group">
+                <label for="lost_place">走失地點 <span style="color:#c00">*</span></label>
+                <input type="text" id="lost_place" name="lost_place" placeholder="例如：新北市中和區" required>
+            </div>
+            <button id="submitBtn" type="submit" class="btn btn-primary btn-block">
+                開始比對
+            </button>
+        </form>
 
-		<div class="cta-section">
-			<p>想要每天收到更多比對資訊？</p>
-			<p><a href="/register">立即註冊帳號</a></p>
-		</div>
-	</div>
+        <div class="results-section" id="resultsSection" style="display:none">
+            <h2>比對結果</h2>
+            <div id="matchResults"></div>
+        </div>
 
-	<script>
-		document.getElementById('quickMatchForm').addEventListener('submit', async function (event) {
-			event.preventDefault();
+        <div class="cta-section">
+            <p>想要每天收到更多比對資訊？</p>
+            <a href="/register">立即免費註冊</a> · <a href="/login">已有帳號，登入</a>
+        </div>
+    </div>
 
-			const form = event.target;
-			const formData = new FormData(form);
-			const data = {};
-			formData.forEach((value, key) => {
-				data[key] = value;
-			});
+    <script>
+    document.getElementById('quickMatchForm').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const btn = document.getElementById('submitBtn');
+        const resultsSection = document.getElementById('resultsSection');
+        const matchResultsDiv = document.getElementById('matchResults');
 
-			try {
-				const response = await fetch('/api/lost-animals/quick-match', {
-					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json'
-					},
-					body: JSON.stringify(data)
-				});
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span>比對中...';
 
-				const result = await response.json();
-				const matchResultsDiv = document.getElementById('matchResults');
-				const noResultsMessage = document.getElementById('noResultsMessage');
-				matchResultsDiv.innerHTML = ''; // Clear previous results
+        const data = Object.fromEntries(new FormData(event.target));
 
-				if (result.extras.top10Matches && result.extras.top10Matches.length > 0) {
-					noResultsMessage.style.display = 'none';
-					result.extras.top10Matches.forEach(animal => {
-						const itemDiv = document.createElement('div');
-						itemDiv.className = 'result-item';
+        try {
+            const res = await fetch('/api/lost-animals/quick-match', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data),
+            });
+            const result = await res.json();
+            const matches = result.extras?.top10Matches || [];
 
-						const img = document.createElement('img');
-						img.src = animal.picture || 'https://via.placeholder.com/100';
-						img.alt = animal.kind || '';
+            resultsSection.style.display = 'block';
+            resultsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
-						const detailsDiv = document.createElement('div');
-						detailsDiv.className = 'result-details';
-
-						const fields = [
-							['種類', animal.kind],
-							['品種', animal.variety],
-							['性別', animal.sex],
-							['毛色', animal.colour],
-							['走失地點', animal.found_place],
-							['收容所', `${animal.name || ''} (${animal.tel || ''})`],
-							['距離', `${animal.distance} 公里`],
-						];
-						fields.forEach(([label, value]) => {
-							const p = document.createElement('p');
-							const strong = document.createElement('strong');
-							strong.textContent = `${label}:`;
-							p.appendChild(strong);
-							p.appendChild(document.createTextNode(` ${value}`));
-							detailsDiv.appendChild(p);
-						});
-
-						itemDiv.appendChild(img);
-						itemDiv.appendChild(detailsDiv);
-						matchResultsDiv.appendChild(itemDiv);
-					});
-				} else {
-					noResultsMessage.style.display = 'block';
-				}
-
-			} catch (error) {
-				console.error('Error:', error);
-				document.getElementById('matchResults').innerHTML = '<p>比對失敗，請稍後再試。</p>';
-			}
-		});
-	</script>
+            if (matches.length === 0) {
+                matchResultsDiv.innerHTML = '<p class="empty-results">😔 沒有找到符合條件的毛孩，請嘗試放寬搜尋條件。</p>';
+            } else {
+                matchResultsDiv.innerHTML = matches.map((animal, i) => `
+                    <div class="result-card">
+                        <div class="result-rank">${i + 1}</div>
+                        <img class="result-img"
+                             src="${animal.picture || 'https://placehold.co/180x180/f4efe8/a77b5a?text=%F0%9F%90%BE'}"
+                             alt="${animal.kind || ''}">
+                        <div class="result-details">
+                            <p><strong>物種:</strong> ${animal.kind || '—'} &nbsp;|&nbsp; <strong>品種:</strong> ${animal.variety || '—'}</p>
+                            <p><strong>性別:</strong> ${animal.sex || '—'} &nbsp;|&nbsp; <strong>毛色:</strong> ${animal.colour || '—'}</p>
+                            <p><strong>發現地點:</strong> ${animal.found_place || '—'}</p>
+                            <p><strong>收容所:</strong> ${animal.shelter_name || animal.name || '—'}</p>
+                            ${animal.distance != null ? `<span class="distance-badge">📍 ${Number(animal.distance).toFixed(1)} 公里</span>` : ''}
+                        </div>
+                    </div>
+                `).join('');
+            }
+        } catch (err) {
+            showToast('比對失敗，請稍後再試', 'error');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = '開始比對';
+        }
+    });
+    </script>
 </body>
-
 </html>
