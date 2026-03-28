@@ -10,8 +10,17 @@ node_modules
 frontend
 command.txt
 dbSetup.sql
-docker*
 nginx*
 
-backend/dist/
-backend/tmp/
+dist/
+tmp/
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
+
+# Docs for development
+./docs/issues/*
