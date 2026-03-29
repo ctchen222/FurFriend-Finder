@@ -2,19 +2,13 @@
 <html lang="zh-TW">
 <head>
     <%- include('partials/_head', { title: '協尋登記' }) %>
-    <style>
-        h1 { text-align: center; font-size: 2.2em; }
-        .intro-text { text-align: center; margin-bottom: 32px; color: var(--text-color); }
-        #submitBtn { margin-top: 8px; }
-    </style>
 </head>
 <body>
     <%- include('partials/_header') %>
-    <div id="toast" class="toast"></div>
 
     <div class="container--card">
-        <h1>協尋寵物資料登記</h1>
-        <p class="intro-text">請盡可能詳細地填寫以下資訊，以提高配對成功率。</p>
+        <h1 class="page-title">協尋寵物資料登記</h1>
+        <p class="page-subtitle">請盡可能詳細地填寫以下資訊，以提高配對成功率。</p>
 
         <form id="lostPetForm">
             <fieldset>
@@ -28,7 +22,7 @@
                     <input type="date" id="pet-lost-time" name="animalLost[lost_time]">
                 </div>
                 <div class="form-group">
-                    <label for="pet-kind">物種 <span style="color:#c00">*</span></label>
+                    <label for="pet-kind">物種 <span class="required-mark">*</span></label>
                     <select id="pet-kind" name="animalLost[kind]" required>
                         <option value="">請選擇</option>
                         <option value="狗">狗</option>
@@ -62,7 +56,7 @@
                         placeholder="例如: 尾巴是麒麟尾、項圈是藍色的"></textarea>
                 </div>
                 <div class="form-group">
-                    <label for="pet-lost-place">走失地點 <span style="color:#c00">*</span></label>
+                    <label for="pet-lost-place">走失地點 <span class="required-mark">*</span></label>
                     <input type="text" id="pet-lost-place" name="animalLost[lost_place]" required
                         placeholder="例如：台北市信義區">
                 </div>
@@ -71,12 +65,12 @@
             <fieldset>
                 <legend>👤 飼主聯絡資訊</legend>
                 <div class="form-group">
-                    <label for="owner-name">您的姓名 <span style="color:#c00">*</span></label>
+                    <label for="owner-name">您的姓名 <span class="required-mark">*</span></label>
                     <input type="text" id="owner-name" name="animalOwner[name]"
                         value="<%= animalOwner.name || '' %>" required>
                 </div>
                 <div class="form-group">
-                    <label for="owner-email">Email <span style="color:#c00">*</span></label>
+                    <label for="owner-email">Email <span class="required-mark">*</span></label>
                     <input type="email" id="owner-email" name="animalOwner[email]"
                         value="<%= animalOwner.email || '' %>" required>
                 </div>
@@ -87,7 +81,7 @@
                 </div>
             </fieldset>
 
-            <button id="submitBtn" type="submit" class="btn btn-primary btn-pill btn-block">
+            <button id="submitBtn" type="submit" class="btn btn-primary btn-pill btn-block btn-submit">
                 提交協尋案件
             </button>
         </form>
@@ -97,8 +91,7 @@
     document.getElementById('lostPetForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const btn = document.getElementById('submitBtn');
-        btn.disabled = true;
-        btn.innerHTML = '<span class="spinner"></span>提交中...';
+        setButtonLoading(btn, '提交中...');
 
         // Build nested object from form field names like animalLost[kind]
         const raw = new FormData(e.target);
@@ -128,15 +121,14 @@
             } else {
                 const data = await res.json().catch(() => ({}));
                 showToast(data?.error?.msg || '提交失敗，請確認填寫內容後再試', 'error');
-                btn.disabled = false;
-                btn.textContent = '提交協尋案件';
+                resetButton(btn, '提交協尋案件');
             }
         } catch {
             showToast('網路錯誤，請稍後再試', 'error');
-            btn.disabled = false;
-            btn.textContent = '提交協尋案件';
+            resetButton(btn, '提交協尋案件');
         }
     });
     </script>
+    <%- include('partials/_footer') %>
 </body>
 </html>

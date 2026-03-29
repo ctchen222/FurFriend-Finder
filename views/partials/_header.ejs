@@ -7,6 +7,7 @@
         <nav class="main-nav" id="mainNav">
             <a href="/">首頁</a>
             <a href="/shelter-animals">收容所動物</a>
+            <a href="/quick-use">快速比對</a>
             <a href="/report-lost">協尋登記</a>
             <% if (user) { %>
                 <a href="/profile">個人資料</a>
@@ -17,10 +18,10 @@
         </nav>
     </div>
 </header>
+<div id="toast" class="toast"></div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    // Mark active nav link based on current path
     const currentPath = window.location.pathname;
     document.querySelectorAll('.main-nav a').forEach(function(link) {
         const href = link.getAttribute('href');
@@ -29,7 +30,6 @@ document.addEventListener('DOMContentLoaded', function () {
         if (isActive) link.classList.add('active');
     });
 
-    // Hamburger toggle
     const toggle = document.getElementById('navToggle');
     const nav    = document.getElementById('mainNav');
     if (toggle && nav) {
@@ -37,15 +37,12 @@ document.addEventListener('DOMContentLoaded', function () {
             const open = nav.classList.toggle('open');
             toggle.setAttribute('aria-expanded', String(open));
         });
-        // Close when a link is clicked
         nav.querySelectorAll('a').forEach(a => {
             a.addEventListener('click', () => {
                 nav.classList.remove('open');
                 toggle.setAttribute('aria-expanded', 'false');
             });
         });
-
-        // Close when clicking outside the header
         document.addEventListener('click', (e) => {
             const header = toggle.closest('.main-header');
             if (header && !header.contains(e.target)) {
@@ -55,7 +52,6 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // Logout handler
     const logoutLink = document.getElementById('logout-link');
     if (logoutLink) {
         logoutLink.addEventListener('click', function (event) {
@@ -65,10 +61,10 @@ document.addEventListener('DOMContentLoaded', function () {
                     if (response.ok) {
                         window.location.href = '/';
                     } else {
-                        alert('登出失敗，請稍後再試。');
+                        showToast('登出失敗，請稍後再試。', 'error');
                     }
                 })
-                .catch(() => alert('登出時發生錯誤。'));
+                .catch(() => showToast('登出時發生錯誤。', 'error'));
         });
     }
 });
