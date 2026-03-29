@@ -53,7 +53,12 @@ export const Handler = {
 		res: express.Response,
 		next: express.NextFunction
 	) => {
-		res.status(404).send('Path not found')
+		// API requests get JSON; page requests get the 404 view
+		if (req.accepts('html') && !req.path.startsWith('/api/')) {
+			res.status(404).render('404', { user: res.locals.user ?? null });
+		} else {
+			res.status(404).send({ success: false, error: { code: 404, msg: 'Path not found' } });
+		}
 	},
 	completeHandler: (
 		req: express.Request,

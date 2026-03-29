@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <%- include('partials/_head', { title: '找不到頁面' }) %>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .error-card {
+            text-align: center;
+            max-width: 480px;
+            width: 100%;
+            padding: 48px 40px;
+            background-color: var(--card-bg-color);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px var(--shadow-color);
+        }
+        .error-emoji { font-size: 4em; line-height: 1; margin-bottom: 16px; }
+        .error-code {
+            font-size: 5em;
+            font-weight: bold;
+            color: var(--border-color);
+            line-height: 1;
+            margin: 0 0 8px;
+        }
+        h1 {
+            color: var(--heading-color);
+            font-size: 1.4em;
+            margin: 0 0 12px;
+        }
+        p { color: var(--text-color); margin: 0 0 28px; }
+        .link-group { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    </style>
+</head>
+<body>
+    <div class="error-card">
+        <div class="error-emoji">🐾</div>
+        <p class="error-code">404</p>
+        <h1>找不到這個頁面</h1>
+        <p>這隻毛孩走丟了！您要找的頁面不存在或已被移除。</p>
+        <div class="link-group">
+            <a href="/" class="btn btn-primary">回到首頁</a>
+            <a href="/shelter-animals" class="btn btn-primary" style="background:#a77b5a">瀏覽收容動物</a>
+        </div>
+    </div>
+</body>
+</html>

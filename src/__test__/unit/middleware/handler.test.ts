@@ -25,7 +25,12 @@ function makeMockRes() {
 }
 
 function makeMockReq(url = '/api/animals'): Partial<Request> {
-  return { originalUrl: url, method: 'GET' };
+  return {
+    originalUrl: url,
+    path: url,
+    method: 'GET',
+    accepts: jest.fn().mockReturnValue(false), // default: not an HTML request
+  };
 }
 
 describe('Handler.completeHandler', () => {
@@ -123,13 +128,27 @@ describe('Handler.errorHandler', () => {
 });
 
 describe('Handler.notFoundHandler', () => {
-  it('should send 404 with "Path not found"', () => {
-    const req = makeMockReq('/no-such-path');
+  it('should send JSON 404 for API paths', () => {
+    const req = makeMockReq('/api/no-such-path');
     const res = makeMockRes();
     const next = jest.fn();
 
     Handler.notFoundHandler(req as Request, res, next);
     expect(res.status).toHaveBeenCalledWith(404);
-    expect(res.send).toHaveBeenCalledWith('Path not found');
+    expect(res.send).toHaveBeenCalledWith(
+      expect.objectContaining({ success: false })
+    );
+  });
+
+  it('should send JSON 404 for non-HTML requests to page paths', () => {
+    const req = makeMockReq('/no-such-page'); // accepts('html') returns false
+    const res = makeMockRes();
+    const next = jest.fn();
+
+    Handler.notFoundHandler(req as Request, res, next);
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(res.send).toHaveBeenCalledWith(
+      expect.objectContaining({ success: false })
+    );
   });
 });
