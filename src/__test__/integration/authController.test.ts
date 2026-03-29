@@ -103,7 +103,7 @@ describe('AuthController Integration Tests', () => {
 			expect([200, 302]).toContain(res.status);
 		});
 
-		it('should redirect to /login?error=... when credentials invalid', async () => {
+		it('should redirect to /login?message=login-failed when credentials invalid', async () => {
 			mockSignInEmail = jest.fn().mockResolvedValue(
 				makeAuthResponse(401, { message: '帳號或密碼錯誤' })
 			);
@@ -121,7 +121,7 @@ describe('AuthController Integration Tests', () => {
 				.post('/api/auth/login')
 				.send({ email: 'test@example.com' }); // missing password
 
-			// errorHandler redirects /login errors to /?message=login-failed
+			// errorHandler redirects /login errors to /login?message=login-failed
 			expect([302, 200]).toContain(res.status);
 		});
 	});
