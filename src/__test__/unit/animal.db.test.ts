@@ -162,5 +162,60 @@ describe('AnimalRepository', () => {
 			expect(queries.some(q => q.includes('INSERT INTO animal'))).toBe(true);
 			expect(queries.some(q => q.includes('COMMIT'))).toBe(true);
 		});
+
+		it('should upsert mutable fields and not overwrite immutable fields on duplicate sub_id', async () => {
+			(pool.query as jest.Mock).mockImplementation((query: string) => {
+				if (query.includes('INSERT INTO animal')) {
+					return Promise.resolve({ rowCount: 1 });
+				}
+				return Promise.resolve({ rows: [], rowCount: 0 });
+			});
+
+			const animals: Partial<Animal>[] = [
+				{
+					subid: 'sub_dup_001',
+					kind: '貓',
+					variety: '波斯貓',
+					sex: 'F',
+					age: 'YOUNG',
+					bodytype: 'SMALL',
+					colour: '白',
+					found_place: '高雄市',
+					remark: '已被領養',
+					picture: 'http://example.com/adopted.jpg',
+					status: 'ADOPTED',
+					animal_shelter_id: 2,
+					shelter_name: '高雄動物收容所',
+					shelter_address: '高雄市三民區',
+					shelter_tel: '07-12345678',
+					opendate: '2024-02-01',
+					closedate: '2024-03-15',
+					updatedate: '2024/03/15',
+				},
+			];
+
+			await animalRepository.bulkInsertAnimals(animals as Animal[]);
+
+			const animalInsertQuery = (pool.query as jest.Mock).mock.calls
+				.map(c => c[0] as string)
+				.find(q => q.includes('INSERT INTO animal('));
+
+			// Should use ON CONFLICT upsert (not DO NOTHING)
+			expect(animalInsertQuery).toContain('ON CONFLICT(sub_id) DO UPDATE SET');
+
+			// Mutable fields should be updated when a duplicate sub_id is found
+			expect(animalInsertQuery).toContain('status      = EXCLUDED.status');
+			expect(animalInsertQuery).toContain('close_date  = EXCLUDED.close_date');
+			expect(animalInsertQuery).toContain('update_date = EXCLUDED.update_date');
+			expect(animalInsertQuery).toContain('picture     = EXCLUDED.picture');
+			expect(animalInsertQuery).toContain('remark      = EXCLUDED.remark');
+
+			// Immutable fields (biological characteristics) should NOT appear in the UPDATE SET clause
+			const updateSetSection = animalInsertQuery!.split('DO UPDATE SET')[1];
+			expect(updateSetSection).not.toContain('kind');
+			expect(updateSetSection).not.toContain('variety');
+			expect(updateSetSection).not.toContain('sex');
+			expect(updateSetSection).not.toContain('open_date');
+		});
 	});
 });
