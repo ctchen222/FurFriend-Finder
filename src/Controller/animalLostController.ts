@@ -72,10 +72,10 @@ class AnimalLostController {
 
 			await this.repository.commit()
 
-			res.locals.result = new SuccessResponse('redirect', '/profile?message=協尋案件已成功登錄');
+			res.locals.result = new SuccessResponse('redirect', '/profile?message=report-success');
 		} catch (error) {
 			await this.repository.rollback().catch(() => {});
-			res.locals.result = new SuccessResponse('redirect', '/profile?error=登錄失敗，請稍後再試');
+			res.locals.result = new SuccessResponse('redirect', '/profile?message=report-failed');
 		}
 		next('router');
 	};

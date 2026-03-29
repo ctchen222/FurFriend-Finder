@@ -30,6 +30,7 @@ const DEFAULT_MESSAGE_MAP = {
     'signup-failed':  '註冊失敗，請檢查您輸入的資料。',
     'login-failed':   '登入失敗，請確認您的信箱與密碼。',
     'report-success': '協尋案件提交成功！',
+    'report-failed':  '協尋案件提交失敗，請稍後再試。',
     'settings-saved': '設定已儲存。',
 };
 
