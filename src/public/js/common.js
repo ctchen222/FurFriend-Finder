@@ -64,12 +64,13 @@ function sexLabel(s) {
 // ============================================================
 
 /**
- * Open a lightbox showing an animal's photo and, optionally, shelter details.
- * Fetches /api/animals/:id if animalId is provided.
+ * Open a lightbox showing an animal's photo and shelter details.
  *
- * @param {{ picture?: string, variety?: string, kind?: string, sex?: string,
- *           colour?: string, found_place?: string }} animal - base animal data
- * @param {string|null} [animalId] - optional id to fetch shelter contact info
+ * @param {{ picture?, variety?, kind?, sex?, colour?, found_place?,
+ *           shelter_name?, shelter_address?, shelter_tel?,
+ *           name?, address?, tel? }} animal - animal data (shelter fields optional)
+ * @param {string|null} [animalId] - if provided AND no shelter_name in animal,
+ *   fetches /api/animals/:id for shelter details
  */
 function openLightbox(animal, animalId) {
     // Remove any existing overlay
@@ -110,31 +111,42 @@ function openLightbox(animal, animalId) {
         }
     });
 
-    // Fetch shelter details
-    if (animalId) {
+    // Shelter info: use embedded data if available, else fetch by id
+    const shelterEl = document.getElementById('lb-shelter');
+    // Support both aliased (shelter_name) and raw JOIN (name) field names
+    const embeddedName    = animal.shelter_name || animal.name;
+    const embeddedAddress = animal.shelter_address || animal.address;
+    const embeddedTel     = animal.shelter_tel || animal.tel;
+
+    function renderShelter(name, address, tel) {
+        if (!shelterEl) return;
+        if (name) {
+            shelterEl.innerHTML = `
+                <h4>📍 收容所資訊</h4>
+                <p><strong>名稱:</strong> ${name}</p>
+                ${address ? `<p><strong>地址:</strong> ${address}</p>` : ''}
+                ${tel     ? `<p><strong>電話:</strong> <a href="tel:${tel}">${tel}</a></p>` : ''}`;
+        } else {
+            shelterEl.innerHTML = '<p style="color:#aaa">無收容所資訊</p>';
+        }
+    }
+
+    if (embeddedName) {
+        // Shelter info already present in the animal object — render immediately
+        renderShelter(embeddedName, embeddedAddress, embeddedTel);
+    } else if (animalId) {
+        // Fetch from API only when we don't already have the data
         fetch(`/api/animals/${animalId}`)
             .then(r => r.ok ? r.json() : Promise.reject())
             .then(({ extras }) => {
-                const a = extras.animal;
-                const shelter = document.getElementById('lb-shelter');
-                if (!shelter) return;
-                if (a && a.shelter_name) {
-                    shelter.innerHTML = `
-                        <h4>📍 收容所資訊</h4>
-                        <p><strong>名稱:</strong> ${a.shelter_name}</p>
-                        ${a.shelter_address ? `<p><strong>地址:</strong> ${a.shelter_address}</p>` : ''}
-                        ${a.shelter_tel    ? `<p><strong>電話:</strong> <a href="tel:${a.shelter_tel}">${a.shelter_tel}</a></p>` : ''}`;
-                } else {
-                    shelter.innerHTML = '<p style="color:#aaa">無收容所資訊</p>';
-                }
+                const a = extras.animal || {};
+                renderShelter(a.shelter_name, a.shelter_address, a.shelter_tel);
             })
             .catch(() => {
-                const shelter = document.getElementById('lb-shelter');
-                if (shelter) shelter.innerHTML = '<p style="color:#aaa">無法載入收容所資訊</p>';
+                if (shelterEl) shelterEl.innerHTML = '<p style="color:#aaa">無法載入收容所資訊</p>';
             });
     } else {
-        const shelter = document.getElementById('lb-shelter');
-        if (shelter) shelter.remove();
+        if (shelterEl) shelterEl.remove();
     }
 }
 
