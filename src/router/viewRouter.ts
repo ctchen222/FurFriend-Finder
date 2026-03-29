@@ -9,7 +9,8 @@ const router = express.Router();
 
 const requireAuth = (req: express.Request, res: express.Response, next: express.NextFunction) => {
 	if (!res.locals.user) {
-		return res.redirect('/sign-in');
+		const returnTo = encodeURIComponent(req.originalUrl);
+		return res.redirect(`/login?returnTo=${returnTo}`);
 	}
 	next();
 };

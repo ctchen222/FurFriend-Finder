@@ -52,7 +52,7 @@
     <div class="auth-card">
         <div class="auth-logo">🐾</div>
         <h1>登入 FurFriend Finder</h1>
-        <form action="/api/auth/login" method="POST">
+        <form id="loginForm" action="/api/auth/login" method="POST">
             <div class="form-group">
                 <label for="email">Email</label>
                 <input type="email" id="email" name="email" required>
@@ -72,11 +72,26 @@
     <script>
     document.addEventListener('DOMContentLoaded', () => {
         const urlParams = new URLSearchParams(window.location.search);
-        const error = urlParams.get('error');
+        const error    = urlParams.get('error');
+        const returnTo = urlParams.get('returnTo');
+
         if (error) {
             showToast(decodeURIComponent(error), 'error');
-            window.history.replaceState({}, document.title, window.location.pathname);
         }
+
+        // Patch form action to include returnTo so authController can redirect back
+        if (returnTo) {
+            const form = document.getElementById('loginForm');
+            if (form) {
+                const input = document.createElement('input');
+                input.type  = 'hidden';
+                input.name  = 'returnTo';
+                input.value = decodeURIComponent(returnTo);
+                form.appendChild(input);
+            }
+        }
+
+        window.history.replaceState({}, document.title, window.location.pathname);
     });
     </script>
 </body>

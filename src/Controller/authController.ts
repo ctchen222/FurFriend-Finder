@@ -49,7 +49,7 @@ class AuthController {
 		res: Response,
 		next: express.NextFunction
 	): Promise<void> => {
-		const { email, password } = req.body
+		const { email, password, returnTo } = req.body
 		if (!email || !password) {
 			throw new CustomError(apiMessage.BODY_NOT_COMPLETE);
 		}
@@ -75,7 +75,8 @@ class AuthController {
 					res.setHeader('Set-Cookie', cookies);
 				}
 
-				res.locals.result = new SuccessResponse("redirect", "/?message=login-success");
+				const dest = (returnTo && returnTo.startsWith('/')) ? returnTo : '/?message=login-success';
+				res.locals.result = new SuccessResponse("redirect", dest);
 			}
 		} catch (error) {
 			res.locals.result = new SuccessResponse("redirect", "/login?error=登入失敗，請檢查您的帳號密碼");
