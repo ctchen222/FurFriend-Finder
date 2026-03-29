@@ -20,6 +20,15 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    // Mark active nav link based on current path
+    const currentPath = window.location.pathname;
+    document.querySelectorAll('.main-nav a').forEach(function(link) {
+        const href = link.getAttribute('href');
+        if (!href || href === '#') return;
+        const isActive = href === '/' ? currentPath === '/' : currentPath.startsWith(href);
+        if (isActive) link.classList.add('active');
+    });
+
     // Hamburger toggle
     const toggle = document.getElementById('navToggle');
     const nav    = document.getElementById('mainNav');

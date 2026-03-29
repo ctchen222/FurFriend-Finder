@@ -83,8 +83,30 @@ h1, h2, h3 {
     white-space: nowrap;
 }
 
-.main-nav a:hover {
+.main-nav a:hover,
+.main-nav a.active {
     color: var(--primary-color);
+}
+
+.main-nav a.active {
+    font-weight: bold;
+    position: relative;
+}
+
+.main-nav a.active::after {
+    content: '';
+    position: absolute;
+    bottom: -4px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background-color: var(--primary-color);
+    border-radius: 2px;
+}
+
+@media (max-width: 600px) {
+    .main-nav a.active::after { display: none; }
+    .main-nav a.active { border-left: 3px solid var(--primary-color); padding-left: 12px; }
 }
 
 /* --- Focus visible (keyboard accessibility) --- */
