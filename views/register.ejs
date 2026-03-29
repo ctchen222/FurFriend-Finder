@@ -49,6 +49,12 @@
 </head>
 <body>
     <div id="toast" class="toast"></div>
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        handleUrlMessages();
+        window.history.replaceState({}, document.title, window.location.pathname);
+    });
+    </script>
     <div class="auth-card">
         <div class="auth-logo">🐾</div>
         <h1>註冊新帳號</h1>

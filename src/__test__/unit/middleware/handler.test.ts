@@ -82,7 +82,7 @@ describe('Handler.errorHandler', () => {
     const err = new CustomError(ANIMAL_NOT_EXISTS);
 
     Handler.errorHandler(err, req as Request, res, next);
-    expect(res.redirect).toHaveBeenCalledWith('/?message=signup-failed');
+    expect(res.redirect).toHaveBeenCalledWith('/register?message=signup-failed');
   });
 
   it('should redirect to /?message=login-failed on login routes', () => {
@@ -92,7 +92,7 @@ describe('Handler.errorHandler', () => {
     const err = new CustomError(ANIMAL_NOT_EXISTS);
 
     Handler.errorHandler(err, req as Request, res, next);
-    expect(res.redirect).toHaveBeenCalledWith('/?message=login-failed');
+    expect(res.redirect).toHaveBeenCalledWith('/login?message=login-failed');
   });
 
   it('should send CustomError response with correct httpCode and code', () => {

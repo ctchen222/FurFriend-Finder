@@ -28,10 +28,10 @@ export const Handler = {
 		const errorPosition = stackMessage.split(/[/\\]/).pop() ?? stackMessage
 
 		if (req.originalUrl.includes('/signup')) {
-			return res.redirect('/?message=signup-failed');
+			return res.redirect('/register?message=signup-failed');
 		}
 		if (req.originalUrl.includes('/login')) {
-			return res.redirect('/?message=login-failed');
+			return res.redirect('/login?message=login-failed');
 		}
 
 		if (!(err instanceof CustomError)) {
