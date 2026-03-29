@@ -36,9 +36,14 @@ class AnimalLostRepository extends BaseRepository {
 
 		const whereClause = filters.length ? "WHERE " + filters.join(" AND ") : "";
 		const query = `
-			SELECT * FROM animal
+			SELECT
+				animal.*,
+				animal_shelter.name  AS shelter_name,
+				animal_shelter.address AS shelter_address,
+				animal_shelter.tel   AS shelter_tel
+			FROM animal
 			INNER JOIN animal_shelter
-			ON animal.animal_shelter_id = animal_shelter.id
+				ON animal.animal_shelter_id = animal_shelter.id
 			${whereClause};
 		`;
 
