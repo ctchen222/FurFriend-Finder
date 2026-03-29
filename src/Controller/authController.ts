@@ -64,9 +64,7 @@ class AuthController {
 			});
 
 			if (authResponse.status !== 200) {
-				const errorData = await authResponse.json();
-				const errorMessage = errorData.message || '登入失敗，請檢查您的帳號密碼';
-				res.locals.result = new SuccessResponse("redirect", `/login?error=${encodeURIComponent(errorMessage)}`);
+				res.locals.result = new SuccessResponse("redirect", "/login?message=login-failed");
 			} else {
 				// Forward cookies from the auth response to the client
 				const cookies = authResponse.headers.getSetCookie();
@@ -79,7 +77,7 @@ class AuthController {
 				res.locals.result = new SuccessResponse("redirect", dest);
 			}
 		} catch (error) {
-			res.locals.result = new SuccessResponse("redirect", "/login?error=登入失敗，請檢查您的帳號密碼");
+			res.locals.result = new SuccessResponse("redirect", "/login?message=login-failed");
 		}
 		next('router')
 	}

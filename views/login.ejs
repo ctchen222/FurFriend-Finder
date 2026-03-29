@@ -72,14 +72,15 @@
     <script>
     document.addEventListener('DOMContentLoaded', () => {
         const urlParams = new URLSearchParams(window.location.search);
-        const error    = urlParams.get('error');
+        const message  = urlParams.get('message');
         const returnTo = urlParams.get('returnTo');
 
-        if (error) {
-            showToast(decodeURIComponent(error), 'error');
+        // Show toast for message keys (e.g. login-failed) or legacy ?error= params
+        if (message) {
+            handleUrlMessages();
         }
 
-        // Patch form action to include returnTo so authController can redirect back
+        // Patch form to carry returnTo back to authController
         if (returnTo) {
             const form = document.getElementById('loginForm');
             if (form) {
