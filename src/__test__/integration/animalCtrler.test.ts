@@ -12,9 +12,10 @@ let mockUpdateTableAnimalLosts: jest.Mock;
 jest.mock('../../repository/animal.db', () =>
 	jest.fn().mockImplementation(() => ({
 		findAll: (...args: any[]) => mockFindAll(...args),
+		findAllWithShelter: (...args: any[]) => mockFindAll(...args),
 		findAnimalShelterById: (...args: any[]) => mockFindAnimalShelterById(...args),
 		findAnimalsByCity: (...args: any[]) => mockFindAnimalsByCity(...args),
-		findAllWithShelter: jest.fn().mockResolvedValue([]),
+		findRandomAnimal: jest.fn().mockResolvedValue(null),
 	}))
 );
 jest.mock('../../repository/animalLost.db', () =>

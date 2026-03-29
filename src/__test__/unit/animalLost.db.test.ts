@@ -35,8 +35,11 @@ describe('AnimalLostRepository', () => {
 
 			expect(mockQuery).toHaveBeenCalledTimes(1);
 			const [query, values] = mockQuery.mock.calls[0];
-			expect(query).toContain('SELECT * FROM animal');
+			expect(query).toContain('FROM animal');
 			expect(query).toContain('INNER JOIN animal_shelter');
+			expect(query).toContain('shelter_name');
+			expect(query).toContain('shelter_address');
+			expect(query).toContain('shelter_tel');
 			expect(query).not.toContain('WHERE');
 			expect(values).toEqual([]);
 			expect(result).toEqual(mockAnimals);
