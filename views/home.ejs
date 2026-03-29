@@ -176,7 +176,17 @@
 
     document.addEventListener('DOMContentLoaded', () => {
         loadFeatured();
-        setInterval(loadFeatured, 10000); // rotate every 10s
+        let timer = setInterval(loadFeatured, 10000);
+
+        // Pause rotation when tab is hidden; resume when visible again
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                clearInterval(timer);
+            } else {
+                loadFeatured();
+                timer = setInterval(loadFeatured, 10000);
+            }
+        });
     });
     </script>
 </body>

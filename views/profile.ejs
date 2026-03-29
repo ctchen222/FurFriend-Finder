@@ -100,7 +100,7 @@
                             <td><%= animal.name || '—' %></td>
                             <td><%= animal.kind %> / <%= animal.variety || '—' %></td>
                             <td><%= animal.sex === 'M' ? '公' : '母' %> / <%= animal.colour || '—' %></td>
-                            <td><%= new Date(animal.lost_time).toLocaleDateString('zh-TW') %></td>
+                            <td><%= animal.lost_time ? new Date(animal.lost_time).toLocaleDateString('zh-TW') : '—' %></td>
                             <td><%= animal.lost_place %></td>
                             <td>
                                 <span class="status-badge pending" data-id="<%= animal.id %>-status">待配對</span>
@@ -171,18 +171,22 @@
                         badge.textContent = '已通知';
                         badge.className = 'status-badge notified';
                         sessionStorage.setItem(`matched_${id}`, '1');
+                        btn.textContent = '✓ 已發送';
+                        btn.style.background = 'var(--success-color)';
+                        // Don't reset — user can see the result persists
+                    } else {
+                        btn.textContent = '無配對';
+                        btn.disabled = false;
+                        setTimeout(() => {
+                            btn.textContent = original;
+                        }, 3000);
                     }
-                    btn.textContent = found ? '✓ 已發送' : '無配對';
                 } catch {
                     showToast('發送失敗，請稍後再試', 'error');
                     btn.textContent = original;
                     btn.disabled = false;
                     return;
                 }
-                setTimeout(() => {
-                    btn.textContent = original;
-                    btn.disabled = false;
-                }, 3000);
             });
         });
     });
