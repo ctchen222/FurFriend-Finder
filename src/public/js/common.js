@@ -104,13 +104,24 @@ function openLightbox(animal, animalId) {
     // Trigger animation
     requestAnimationFrame(() => overlay.classList.add('open'));
 
-    // Close on background click or button
+    function closeLightbox() {
+        overlay.classList.remove('open');
+        document.removeEventListener('keydown', handleKey);
+        setTimeout(() => overlay.remove(), 260);
+    }
+
+    // Close on background click or close button
     overlay.addEventListener('click', (e) => {
         if (e.target === overlay || e.target.classList.contains('lightbox-close')) {
-            overlay.classList.remove('open');
-            setTimeout(() => overlay.remove(), 260);
+            closeLightbox();
         }
     });
+
+    // Close on Escape key (WCAG 2.1 accessibility requirement)
+    function handleKey(e) {
+        if (e.key === 'Escape') closeLightbox();
+    }
+    document.addEventListener('keydown', handleKey);
 
     // Shelter info: use embedded data if available, else fetch by id
     const shelterEl = document.getElementById('lb-shelter');

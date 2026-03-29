@@ -35,6 +35,15 @@ document.addEventListener('DOMContentLoaded', function () {
                 toggle.setAttribute('aria-expanded', 'false');
             });
         });
+
+        // Close when clicking outside the header
+        document.addEventListener('click', (e) => {
+            const header = toggle.closest('.main-header');
+            if (header && !header.contains(e.target)) {
+                nav.classList.remove('open');
+                toggle.setAttribute('aria-expanded', 'false');
+            }
+        });
     }
 
     // Logout handler

@@ -87,6 +87,13 @@ h1, h2, h3 {
     color: var(--primary-color);
 }
 
+/* --- Focus visible (keyboard accessibility) --- */
+:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 3px;
+    border-radius: 4px;
+}
+
 /* --- Mobile nav toggle --- */
 .nav-toggle {
     display: none;
