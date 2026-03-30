@@ -60,7 +60,7 @@ export interface AnimalWithDistance extends Animal {
 	distance: number;
 }
 export interface MatchResult {
-	metadata: { total: number };
+	metadata: Record<string, number>;
 	top10Matches: AnimalWithDistance[];
 	allCandidates: AnimalCandidate[];
 }
@@ -155,6 +155,16 @@ export interface MatchCriteria {
 	sex: string | undefined;
 	variety: string;
 	lost_place: string;
+}
+
+// Raw input before normalization — all fields optional, normalizeMatchCriteria handles defaults
+export interface MatchInput {
+	name?: string;
+	colour?: string;
+	sex?: string;
+	kind?: string;
+	variety?: string;
+	lost_place?: string;
 }
 
 export const QuickMatchSchema = z.object({
