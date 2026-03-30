@@ -7,6 +7,9 @@ import { getMetadata } from "../repository/utils/dataTransform";
 import logger from "../config/logger";
 
 const GEOCODING_BATCH_LIMIT = 200;
+// Shelters farther than this distance (km) from the lost_place are excluded from results.
+// A pet lost in Taipei is unlikely to be found in Kaohsiung (300+ km away).
+const PROXIMITY_LIMIT_KM = 150;
 
 class MatchingService {
 	private geoService: GeoService;
@@ -43,45 +46,48 @@ class MatchingService {
 		lostAnimalCoordinates: { lat: number; lng: number },
 		candidates: AnimalCandidate[]
 	): Promise<AnimalWithDistance[]> => {
-		// Deduplicate: same found_place is only geocoded once (N candidates → U unique addresses).
-		const uniquePlaces = [...new Set(
-			candidates.map(a => a.found_place).filter((p): p is string => !!p)
+		// Use shelter_address for distance — this is where the owner needs to go to retrieve their pet.
+		// Deduplication is highly effective here: ~30 unique shelter addresses across all of Taiwan.
+		const uniqueShelterAddresses = [...new Set(
+			candidates.map(a => a.shelter_address).filter((p): p is string => !!p)
 		)];
 
-		const placeCoords = new Map<string, { lat: number; lng: number } | null>();
-		const failedPlaces = new Set<string>();
+		const shelterCoords = new Map<string, { lat: number; lng: number } | null>();
+		const failedShelters = new Set<string>();
 
 		await Promise.all(
-			uniquePlaces.map((place) =>
-				this.geoService.geocoding(place)
-					.then(coords => placeCoords.set(place, coords))
+			uniqueShelterAddresses.map((address) =>
+				this.geoService.geocoding(address)
+					.then(coords => shelterCoords.set(address, coords))
 					.catch(err => {
-						logger.warn(`Geocoding failed for place "${place}", skipping affected animals: ${err}`);
-						failedPlaces.add(place);
+						logger.warn(`Geocoding failed for shelter "${address}", skipping affected animals: ${err}`);
+						failedShelters.add(address);
 					})
 			)
 		);
 
 		const animalsWithDistance: AnimalWithDistance[] = [];
 		for (const animal of candidates) {
-			if (!animal.found_place) {
+			if (!animal.shelter_address) {
 				animalsWithDistance.push({ ...animal, distance: Infinity });
 				continue;
 			}
-			if (failedPlaces.has(animal.found_place)) {
+			if (failedShelters.has(animal.shelter_address)) {
 				// API error — drop animal to avoid showing unreachable candidates
 				continue;
 			}
-			const coords = placeCoords.get(animal.found_place);
+			const coords = shelterCoords.get(animal.shelter_address);
 			if (!coords) {
 				// ZERO_RESULTS — keep but rank last
 				animalsWithDistance.push({ ...animal, distance: Infinity });
 				continue;
 			}
-			animalsWithDistance.push({
-				...animal,
-				distance: GeoService.calculateDistanceKm(lostAnimalCoordinates, coords),
-			});
+			const distance = GeoService.calculateDistanceKm(lostAnimalCoordinates, coords);
+			if (distance > PROXIMITY_LIMIT_KM) {
+				// Shelter is too far from the lost location — exclude to avoid irrelevant results
+				continue;
+			}
+			animalsWithDistance.push({ ...animal, distance });
 		}
 
 		return animalsWithDistance;
