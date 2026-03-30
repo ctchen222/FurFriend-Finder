@@ -6,6 +6,13 @@
  * Show a toast notification.
  * Requires a <div id="toast" class="toast"></div> in the DOM.
  */
+function escapeHtml(str) {
+    if (str == null) return '';
+    return String(str)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 function showToast(message, type = 'success', duration = 3000) {
     const toast = document.getElementById('toast');
     if (!toast) return;
@@ -56,6 +63,17 @@ function handleUrlMessages(messageMap) {
  * Map sex code to human-readable label.
  * @param {string} s - 'M', 'F', or other
  */
+function setButtonLoading(btn, loadingText) {
+    btn.disabled = true;
+    btn._originalText = btn._originalText || btn.textContent;
+    btn.innerHTML = `<span class="spinner"></span>${escapeHtml(loadingText)}`;
+}
+
+function resetButton(btn, text) {
+    btn.disabled = false;
+    btn.textContent = text || btn._originalText || '';
+}
+
 function sexLabel(s) {
     return s === 'M' ? '公' : s === 'F' ? '母' : s || '—';
 }
@@ -81,33 +99,44 @@ function openLightbox(animal, animalId) {
     const overlay = document.createElement('div');
     overlay.id = 'ff-lightbox';
     overlay.className = 'lightbox-overlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-label', animal.variety || '動物詳情');
+
+    const previousFocus = document.activeElement;
 
     const imgSrc = animal.picture || 'https://placehold.co/600x300/f4efe8/a77b5a?text=%F0%9F%90%BE';
 
     overlay.innerHTML = `
         <div class="lightbox-box">
-            <img class="lightbox-img" src="${imgSrc}" alt="${animal.variety || '動物'}">
+            <img class="lightbox-img" src="${escapeHtml(imgSrc)}" alt="${escapeHtml(animal.variety || '動物')}">
             <button class="lightbox-close" aria-label="關閉">✕</button>
             <div class="lightbox-body">
-                <h3>${animal.variety || '未知品種'}</h3>
-                <p><strong>物種:</strong> ${animal.kind || '—'}</p>
+                <h3>${escapeHtml(animal.variety || '未知品種')}</h3>
+                <p><strong>物種:</strong> ${escapeHtml(animal.kind || '—')}</p>
                 <p><strong>性別:</strong> ${sexLabel(animal.sex)}</p>
-                <p><strong>毛色:</strong> ${animal.colour || '—'}</p>
-                ${animal.found_place ? `<p><strong>發現地點:</strong> ${animal.found_place}</p>` : ''}
+                <p><strong>毛色:</strong> ${escapeHtml(animal.colour || '—')}</p>
+                ${animal.found_place ? `<p><strong>發現地點:</strong> ${escapeHtml(animal.found_place)}</p>` : ''}
                 <div class="lightbox-shelter-info" id="lb-shelter">
-                    <p style="color:#aaa;font-style:italic">載入收容所資訊...</p>
+                    <p class="text-muted-italic">載入收容所資訊...</p>
                 </div>
             </div>
         </div>`;
 
     document.body.appendChild(overlay);
-    // Trigger animation
-    requestAnimationFrame(() => overlay.classList.add('open'));
+    requestAnimationFrame(() => {
+        overlay.classList.add('open');
+        const closeBtn = overlay.querySelector('.lightbox-close');
+        if (closeBtn) closeBtn.focus();
+    });
 
     function closeLightbox() {
         overlay.classList.remove('open');
         document.removeEventListener('keydown', handleKey);
-        setTimeout(() => overlay.remove(), 260);
+        setTimeout(() => {
+            overlay.remove();
+            if (previousFocus) previousFocus.focus();
+        }, 260);
     }
 
     // Close on background click or close button
@@ -135,11 +164,11 @@ function openLightbox(animal, animalId) {
         if (name) {
             shelterEl.innerHTML = `
                 <h4>📍 收容所資訊</h4>
-                <p><strong>名稱:</strong> ${name}</p>
-                ${address ? `<p><strong>地址:</strong> ${address}</p>` : ''}
-                ${tel     ? `<p><strong>電話:</strong> <a href="tel:${tel}">${tel}</a></p>` : ''}`;
+                <p><strong>名稱:</strong> ${escapeHtml(name)}</p>
+                ${address ? `<p><strong>地址:</strong> ${escapeHtml(address)}</p>` : ''}
+                ${tel     ? `<p><strong>電話:</strong> <a href="tel:${escapeHtml(tel)}">${escapeHtml(tel)}</a></p>` : ''}`;
         } else {
-            shelterEl.innerHTML = '<p style="color:#aaa">無收容所資訊</p>';
+            shelterEl.innerHTML = '<p class="text-muted">無收容所資訊</p>';
         }
     }
 
@@ -155,7 +184,7 @@ function openLightbox(animal, animalId) {
                 renderShelter(a.shelter_name, a.shelter_address, a.shelter_tel);
             })
             .catch(() => {
-                if (shelterEl) shelterEl.innerHTML = '<p style="color:#aaa">無法載入收容所資訊</p>';
+                if (shelterEl) shelterEl.innerHTML = '<p class="text-muted">無法載入收容所資訊</p>';
             });
     } else {
         if (shelterEl) shelterEl.remove();

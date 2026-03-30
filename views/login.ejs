@@ -2,52 +2,8 @@
 <html lang="zh-TW">
 <head>
     <%- include('partials/_head', { title: '登入' }) %>
-    <style>
-        body {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            padding: 20px;
-            background-image: none;
-        }
-
-        .auth-card {
-            width: 100%;
-            max-width: 420px;
-            padding: 40px;
-            background-color: var(--card-bg-color);
-            border-radius: 20px;
-            box-shadow: 0 10px 30px var(--shadow-color);
-        }
-
-        .auth-logo {
-            text-align: center;
-            margin-bottom: 8px;
-            font-size: 2em;
-        }
-
-        h1 {
-            color: var(--heading-color);
-            text-align: center;
-            font-size: 1.6em;
-            margin-top: 0;
-            margin-bottom: 28px;
-        }
-
-        .switch-link {
-            text-align: center;
-            margin-top: 20px;
-            font-size: 0.95em;
-        }
-        .switch-link a {
-            color: var(--primary-color);
-            text-decoration: none;
-            font-weight: bold;
-        }
-    </style>
 </head>
-<body>
+<body class="auth-layout">
     <div id="toast" class="toast"></div>
     <div class="auth-card">
         <div class="auth-logo">🐾</div>
@@ -61,7 +17,7 @@
                 <label for="password">密碼</label>
                 <input type="password" id="password" name="password" required>
             </div>
-            <button type="submit" class="btn btn-primary btn-block" style="margin-top: 8px;">登入</button>
+            <button type="submit" class="btn btn-primary btn-block btn-submit">登入</button>
         </form>
         <div class="switch-link">
             <p>沒有帳號？ <a href="/register">點此註冊</a></p>
@@ -71,16 +27,9 @@
 
     <script>
     document.addEventListener('DOMContentLoaded', () => {
-        const urlParams = new URLSearchParams(window.location.search);
-        const message  = urlParams.get('message');
-        const returnTo = urlParams.get('returnTo');
-
-        // Show toast for message keys (e.g. login-failed) or legacy ?error= params
-        if (message) {
-            handleUrlMessages();
-        }
-
-        // Patch form to carry returnTo back to authController
+        // common.js auto-calls handleUrlMessages() — no need to repeat here.
+        // Only handle returnTo which is login-page-specific.
+        const returnTo = new URLSearchParams(window.location.search).get('returnTo');
         if (returnTo) {
             const form = document.getElementById('loginForm');
             if (form) {
@@ -91,8 +40,6 @@
                 form.appendChild(input);
             }
         }
-
-        window.history.replaceState({}, document.title, window.location.pathname);
     });
     </script>
 </body>

@@ -2,100 +2,17 @@
 <html lang="zh-TW">
 <head>
     <%- include('partials/_head', { title: '快速使用' }) %>
-    <style>
-        h1 { text-align: center; font-size: 2.2em; margin-bottom: 8px; }
-        .page-subtitle {
-            text-align: center;
-            margin-bottom: 32px;
-            color: var(--text-color);
-        }
-
-        .results-section {
-            margin-top: 36px;
-            border-top: 1px solid var(--border-color);
-            padding-top: 24px;
-        }
-        .results-section h2 { font-size: 1.4em; }
-
-        .result-card {
-            display: flex;
-            gap: 16px;
-            align-items: flex-start;
-            background-color: #f9f7f4;
-            border: 1px solid var(--border-color);
-            border-radius: 14px;
-            padding: 16px;
-            margin-bottom: 14px;
-            transition: box-shadow 0.2s ease;
-        }
-        .result-card:hover { box-shadow: 0 4px 16px var(--shadow-color); }
-
-        .result-rank {
-            flex-shrink: 0;
-            width: 32px;
-            height: 32px;
-            background-color: var(--primary-color);
-            color: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 0.9em;
-        }
-
-        .result-img {
-            flex-shrink: 0;
-            width: 90px;
-            height: 90px;
-            object-fit: cover;
-            border-radius: 10px;
-        }
-
-        .result-details { flex: 1; min-width: 0; }
-        .result-details p { margin: 3px 0; font-size: 0.9em; line-height: 1.5; }
-        .result-details strong { color: var(--heading-color); }
-
-        .distance-badge {
-            display: inline-block;
-            padding: 2px 10px;
-            background-color: rgba(129, 166, 211, 0.15);
-            border-radius: 20px;
-            font-size: 0.82em;
-            color: var(--primary-color);
-            font-weight: bold;
-            margin-top: 6px;
-        }
-
-        .cta-section {
-            text-align: center;
-            margin-top: 36px;
-            padding-top: 24px;
-            border-top: 1px solid var(--border-color);
-            color: var(--text-color);
-        }
-        .cta-section a { color: var(--primary-color); text-decoration: none; font-weight: bold; }
-
-        .empty-results {
-            text-align: center;
-            padding: 30px;
-            color: #aaa;
-        }
-
-        #submitBtn { margin-top: 8px; }
-    </style>
 </head>
 <body>
     <%- include('partials/_header') %>
-    <div id="toast" class="toast"></div>
 
     <div class="container--card">
-        <h1>快速尋找走失毛孩</h1>
+        <h1 class="page-title">快速尋找走失毛孩</h1>
         <p class="page-subtitle">輸入毛孩資訊，快速比對潛在的收容所資料。</p>
 
         <form id="quickMatchForm">
             <div class="form-group">
-                <label for="kind">種類 <span style="color:#c00">*</span></label>
+                <label for="kind">種類 <span class="required-mark">*</span></label>
                 <select id="kind" name="kind" required>
                     <option value="">請選擇</option>
                     <option value="狗">狗</option>
@@ -104,7 +21,7 @@
                 </select>
             </div>
             <div class="form-group">
-                <label for="variety">品種 <small style="font-weight:normal;color:#999">(選填)</small></label>
+                <label for="variety">品種 <small class="hint">(選填)</small></label>
                 <input type="text" id="variety" name="variety" placeholder="例如：米克斯、貴賓">
             </div>
             <div class="form-group">
@@ -116,19 +33,19 @@
                 </select>
             </div>
             <div class="form-group">
-                <label for="colour">毛色 <small style="font-weight:normal;color:#999">(選填)</small></label>
+                <label for="colour">毛色 <small class="hint">(選填)</small></label>
                 <input type="text" id="colour" name="colour" placeholder="例如：黑白、橘色">
             </div>
             <div class="form-group">
-                <label for="lost_place">走失地點 <span style="color:#c00">*</span></label>
+                <label for="lost_place">走失地點 <span class="required-mark">*</span></label>
                 <input type="text" id="lost_place" name="lost_place" placeholder="例如：新北市中和區" required>
             </div>
-            <button id="submitBtn" type="submit" class="btn btn-primary btn-block">
+            <button id="submitBtn" type="submit" class="btn btn-primary btn-block btn-submit">
                 開始比對
             </button>
         </form>
 
-        <div class="results-section" id="resultsSection" style="display:none">
+        <div class="results-section" id="resultsSection" hidden>
             <h2>比對結果</h2>
             <div id="matchResults"></div>
         </div>
@@ -146,8 +63,7 @@
         const resultsSection = document.getElementById('resultsSection');
         const matchResultsDiv = document.getElementById('matchResults');
 
-        btn.disabled = true;
-        btn.innerHTML = '<span class="spinner"></span>比對中...';
+        setButtonLoading(btn, '比對中...');
 
         const data = Object.fromEntries(new FormData(event.target));
 
@@ -160,25 +76,25 @@
             const result = await res.json();
             const matches = result.extras?.top10Matches || [];
 
-            resultsSection.style.display = 'block';
+            resultsSection.removeAttribute('hidden');
             resultsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
             if (matches.length === 0) {
-                matchResultsDiv.innerHTML = '<p class="empty-results">😔 沒有找到符合條件的毛孩，請嘗試放寬搜尋條件。</p>';
+                matchResultsDiv.innerHTML = '<p class="empty-state">😔 沒有找到符合條件的毛孩，請嘗試放寬搜尋條件。</p>';
             } else {
                 matchResultsDiv.innerHTML = matches.map((animal, i) => `
                     <div class="result-card">
                         <div class="result-rank">${i + 1}</div>
-                        <img class="result-img" style="cursor:pointer;border-radius:8px"
-                             src="${animal.picture || 'https://placehold.co/180x180/f4efe8/a77b5a?text=%F0%9F%90%BE'}"
-                             alt="${animal.kind || ''}">
+                        <img class="result-img clickable"
+                             src="${escapeHtml(animal.picture || 'https://placehold.co/180x180/f4efe8/a77b5a?text=%F0%9F%90%BE')}"
+                             alt="${escapeHtml(animal.kind || '')}">
                         <div class="result-details">
-                            <p><strong>物種:</strong> ${animal.kind || '—'} &nbsp;|&nbsp; <strong>品種:</strong> ${animal.variety || '—'}</p>
-                            <p><strong>性別:</strong> ${sexLabel(animal.sex)} &nbsp;|&nbsp; <strong>毛色:</strong> ${animal.colour || '—'}</p>
-                            <p><strong>發現地點:</strong> ${animal.found_place || '—'}</p>
-                            <p><strong>收容所:</strong> ${animal.shelter_name || animal.name || '—'}</p>
-                            ${animal.distance != null ? `<span class="distance-badge">📍 ${Number(animal.distance).toFixed(1)} 公里</span>` : ''}
-                            <p style="font-size:0.8em;color:#aaa;margin-top:6px">點擊圖片查看詳情</p>
+                            <p><strong>物種:</strong> ${escapeHtml(animal.kind || '—')} &nbsp;|&nbsp; <strong>品種:</strong> ${escapeHtml(animal.variety || '—')}</p>
+                            <p><strong>性別:</strong> ${sexLabel(animal.sex)} &nbsp;|&nbsp; <strong>毛色:</strong> ${escapeHtml(animal.colour || '—')}</p>
+                            <p><strong>發現地點:</strong> ${escapeHtml(animal.found_place || '—')}</p>
+                            <p><strong>收容所:</strong> ${escapeHtml(animal.shelter_name || animal.name || '—')}</p>
+                            ${animal.distance != null ? `<span class="badge distance-badge">📍 ${Number(animal.distance).toFixed(1)} 公里</span>` : ''}
+                            <p class="result-hint">點擊圖片查看詳情</p>
                         </div>
                     </div>
                 `).join('');
@@ -194,10 +110,10 @@
         } catch (err) {
             showToast('比對失敗，請稍後再試', 'error');
         } finally {
-            btn.disabled = false;
-            btn.textContent = '開始比對';
+            resetButton(btn, '開始比對');
         }
     });
     </script>
+    <%- include('partials/_footer') %>
 </body>
 </html>
