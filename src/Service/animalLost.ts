@@ -1,5 +1,5 @@
 import AnimalLostRepository from "../repository/animalLost.db";
-import { AnimalLost, AnimalLostData, AnimalLostResponseSchema, MatchCriteria, QuickMatchRequest } from "../libs/zod/animals";
+import { AnimalCandidate, AnimalLost, AnimalLostData, AnimalLostResponseSchema, AnimalWithDistance, MatchCriteria, QuickMatchRequest } from "../libs/zod/animals";
 import GeoService from "./geo";
 import MailService from "./mail";
 import * as apiMessage from '../libs/message'
@@ -27,8 +27,8 @@ class AnimalLostService {
 
 	private geocodeAndCalculateDistances = async (
 		lostAnimalCoordinates: { lat: number; lng: number },
-		candidates: any[]
-	) => {
+		candidates: AnimalCandidate[]
+	): Promise<AnimalWithDistance[]> => {
 		// Deduplicate: same found_place is only geocoded once (N candidates → U unique addresses).
 		const uniquePlaces = [...new Set(
 			candidates.map(a => a.found_place).filter((p): p is string => !!p)
@@ -48,7 +48,7 @@ class AnimalLostService {
 			)
 		);
 
-		const animalsWithDistance: any[] = [];
+		const animalsWithDistance: AnimalWithDistance[] = [];
 		for (const animal of candidates) {
 			if (!animal.found_place) {
 				animalsWithDistance.push({ ...animal, distance: Infinity });

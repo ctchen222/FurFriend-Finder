@@ -54,6 +54,16 @@ const AnimalSchema = z.object({
 	shelter_tel: z.string().trim().optional(),
 });
 export type Animal = z.infer<typeof AnimalSchema>;
+// AnimalCandidate = animal row joined with shelter; same shape as Animal but named for intent.
+export type AnimalCandidate = Animal;
+export interface AnimalWithDistance extends Animal {
+	distance: number;
+}
+export interface MatchResult {
+	metadata: { total: number };
+	top10Matches: AnimalWithDistance[];
+	allCandidates: AnimalCandidate[];
+}
 
 export const AnimalShelterSchema = z.object({
 	id: z.number().optional(),

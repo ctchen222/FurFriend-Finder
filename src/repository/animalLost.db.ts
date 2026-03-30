@@ -1,7 +1,9 @@
 import { pool } from "../db";
 import { formatDate } from "../libs/animal.utils";
-import { Animal, AnimalLostData } from "../libs/zod/animals";
+import { AnimalCandidate, AnimalLostData } from "../libs/zod/animals";
 import BaseRepository from "./base.db";
+
+const OPEN_STATUS_FILTER = "status = 'OPEN'";
 
 class AnimalLostRepository extends BaseRepository {
 
@@ -10,12 +12,12 @@ class AnimalLostRepository extends BaseRepository {
 	}
 
 	async findMatchingAnimals(colour?: string[], kind?: string, sex?: string, variety?: string) {
-		const filters: string[] = [];
+		const filters: string[] = [OPEN_STATUS_FILTER];
 		const values: any[] = [];
 
-		if (colour) {
-			const colorFilters = colour.map((_, index) => {
-				values.push(`%${colour[index]}%`);
+		if (colour && colour.length > 0) {
+			const colorFilters = colour.map((c) => {
+				values.push(`%${c}%`);
 				return `colour LIKE $${values.length}`;
 			});
 			filters.push(`(${colorFilters.join(" OR ")})`);
@@ -34,7 +36,7 @@ class AnimalLostRepository extends BaseRepository {
 			values.push("%" + variety + "%");
 		}
 
-		const whereClause = filters.length ? "WHERE " + filters.join(" AND ") : "";
+		const whereClause = "WHERE " + filters.join(" AND ");
 		const query = `
 			SELECT
 				animal.*,
@@ -47,7 +49,7 @@ class AnimalLostRepository extends BaseRepository {
 			${whereClause};
 		`;
 
-		const { rows } = await pool.query<Animal>(query, values);
+		const { rows } = await pool.query<AnimalCandidate>(query, values);
 		return rows;
 	}
 
