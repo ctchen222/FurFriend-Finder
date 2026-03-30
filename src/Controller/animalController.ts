@@ -14,10 +14,14 @@ class AnimalController {
 	repository: AnimalRepository
 	service: AnimalLostService
 	animalService: AnimalService
-	constructor() {
-		this.repository = new AnimalRepository();
-		this.service = new AnimalLostService();
-		this.animalService = new AnimalService();
+	constructor(deps?: {
+		repository?: AnimalRepository;
+		service?: AnimalLostService;
+		animalService?: AnimalService;
+	}) {
+		this.repository = deps?.repository ?? new AnimalRepository();
+		this.service = deps?.service ?? new AnimalLostService();
+		this.animalService = deps?.animalService ?? new AnimalService();
 	}
 
 	fetchList = async (

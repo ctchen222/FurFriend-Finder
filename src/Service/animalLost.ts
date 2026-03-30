@@ -18,11 +18,16 @@ class AnimalLostService {
 	private repository: AnimalLostRepository
 	private ownerRepository: OwnerRepository
 	private geoService: GeoService;
-	constructor() {
-		this.mailService = new MailService()
-		this.repository = new AnimalLostRepository()
-		this.ownerRepository = new OwnerRepository()
-		this.geoService = new GeoService();
+	constructor(deps?: {
+		mailService?: MailService;
+		repository?: AnimalLostRepository;
+		ownerRepository?: OwnerRepository;
+		geoService?: GeoService;
+	}) {
+		this.mailService = deps?.mailService ?? new MailService()
+		this.repository = deps?.repository ?? new AnimalLostRepository()
+		this.ownerRepository = deps?.ownerRepository ?? new OwnerRepository()
+		this.geoService = deps?.geoService ?? new GeoService();
 	}
 
 	private geocodeAndCalculateDistances = async (
