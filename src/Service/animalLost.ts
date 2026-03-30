@@ -1,5 +1,5 @@
 import AnimalLostRepository from "../repository/animalLost.db";
-import { AnimalLost, AnimalLostData, AnimalLostResponseSchema, MatchInput, QuickMatchRequest } from "../libs/zod/animals";
+import { AnimalLost, MatchInput, QuickMatchRequest } from "../libs/zod/animals";
 import MailService from "./mail";
 import MatchingService from "./matching";
 import * as apiMessage from '../libs/message';
@@ -7,7 +7,6 @@ import CustomError from "../libs/customError";
 import logger from "../config/logger";
 import OwnerRepository from "../repository/owner.db";
 import { Owner } from "../libs/zod/owner";
-import axios from "axios";
 
 class AnimalLostService {
 	private mailService: MailService;
@@ -61,37 +60,6 @@ class AnimalLostService {
 	findMatches = async (lostAnimal: QuickMatchRequest) => {
 		const { metadata, top10Matches } = await this.matchingService.performMatch(lostAnimal);
 		return { metadata, matchedAnimals: top10Matches };
-	}
-
-	updateTableAnimalLosts = async () => {
-		const response = await axios.get(
-			'https://data.moa.gov.tw/Service/OpenData/TransService.aspx?UnitId=IFJomqVzyB0i',
-		);
-		const parseResult = AnimalLostResponseSchema.safeParse(response.data);
-
-		if (!parseResult.success) {
-			throw new Error("Invalid data format received from the API");
-		}
-
-		const lostAnimals: AnimalLostData[] = parseResult.data.map((item) => ({
-			chipid: item.晶片號碼,
-			name: item.寵物名,
-			kind: item.寵物別,
-			sex: item.性別,
-			variety: item.品種,
-			colour: item.毛色,
-			outlook: item.外觀,
-			feature: item.特徵,
-			lost_time: item.遺失時間,
-			lost_place: item.遺失地點,
-			owner_name: item.飼主姓名,
-			owner_phone: item.連絡電話,
-			owner_email: item.EMail,
-			picture: item.PICTURE,
-		}));
-
-		const insertedRowCount = await this.repository.bulkInsertAnimalLosts(lostAnimals);
-		return insertedRowCount;
 	}
 }
 

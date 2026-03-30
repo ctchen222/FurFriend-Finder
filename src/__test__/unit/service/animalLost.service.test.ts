@@ -2,7 +2,6 @@ import AnimalLostService from '../../../Service/animalLost';
 import * as apiMessage from '../../../libs/message';
 
 // Side-effect modules that cannot be constructor-injected
-jest.mock('axios');
 jest.mock('../../../config/mail', () => ({
   default: { sentFrom: 'test@furfinder.com' },
   __esModule: true,
@@ -20,9 +19,6 @@ jest.mock('../../../config/logger', () => ({
   default: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), http: jest.fn() },
   matchLogger: { http: jest.fn() },
 }));
-
-import axios from 'axios';
-const mockedAxios = axios as jest.Mocked<typeof axios>;
 
 function buildMockAnimalLost(overrides = {}) {
   return {
@@ -63,18 +59,15 @@ describe('AnimalLostService', () => {
   let mockOwnerFindById: jest.Mock;
   let mockSendMatchedMail: jest.Mock;
   let mockPerformMatch: jest.Mock;
-  let mockBulkInsert: jest.Mock;
 
   beforeEach(() => {
     mockFindById = jest.fn();
     mockOwnerFindById = jest.fn();
     mockSendMatchedMail = jest.fn().mockResolvedValue({});
     mockPerformMatch = jest.fn().mockResolvedValue(buildMockMatchResult());
-    mockBulkInsert = jest.fn();
 
     const mockRepo = {
       findById: mockFindById,
-      bulkInsertAnimalLosts: mockBulkInsert,
       findAll: jest.fn(),
       findOne: jest.fn(),
       create: jest.fn(),
@@ -172,37 +165,4 @@ describe('AnimalLostService', () => {
     });
   });
 
-  describe('updateTableAnimalLosts', () => {
-    it('should fetch from MOA API, parse and bulk insert lost animals', async () => {
-      mockBulkInsert.mockResolvedValue(3);
-
-      const mockApiData = [
-        {
-          晶片號碼: 'CHIP001',
-          寵物名: '小黑',
-          寵物別: '狗',
-          性別: '公',
-          品種: '拉布拉多',
-          毛色: '黑色',
-          遺失地點: '台北市大安區',
-        },
-      ];
-      mockedAxios.get.mockResolvedValue({ data: mockApiData });
-
-      const count = await service.updateTableAnimalLosts();
-
-      expect(mockBulkInsert).toHaveBeenCalledWith(
-        expect.arrayContaining([
-          expect.objectContaining({ chipid: 'CHIP001', kind: '狗', lost_place: '台北市大安區' }),
-        ])
-      );
-      expect(count).toBe(3);
-    });
-
-    it('should throw Error when API data fails Zod validation', async () => {
-      mockedAxios.get.mockResolvedValue({ data: 'not an array' });
-
-      await expect(service.updateTableAnimalLosts()).rejects.toThrow('Invalid data format');
-    });
-  });
 });
