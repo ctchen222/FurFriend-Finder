@@ -4,7 +4,7 @@ import * as apiMessage from '../libs/message'
 import AnimalLostRepository from "../repository/animalLost.db";
 import CustomError from '../libs/customError';
 import SuccessResponse from '../libs/successResponse';
-import { AnimalLost, AnimalLostRequestSchema, AnimalOwner, AnimalOwnerSchema } from '../libs/zod/animals';
+import { AnimalLost, AnimalLostRequestSchema, AnimalOwner, AnimalOwnerSchema, QuickMatchSchema } from '../libs/zod/animals';
 import OwnerRepository from '../repository/owner.db';
 import AnimalLostService from '../Service/animalLost';
 import AnimalHelper from './helper/animalHelper';
@@ -89,10 +89,6 @@ class AnimalLostController {
 
 		const result = await this.animalLostService.findMatchesAndSendMail(id);
 
-		if (result instanceof CustomError) {
-			return next(result);
-		}
-
 		const { metadata, lostAnimal, top10Matches } = result;
 
 		res.locals.result = new SuccessResponse('api', { metadata, lostAnimal, top10Matches });
@@ -100,20 +96,12 @@ class AnimalLostController {
 	}
 
 	quickMatch = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
-		const { name, colour, kind, sex, variety, lost_place } = req.body
+		const parseResult = QuickMatchSchema.safeParse(req.body);
+		if (!parseResult.success) {
+			throw new CustomError(apiMessage.VALIDATION_ERROR);
+		}
 
-		const lostAnimalForSearch = {
-			name,
-			colour,
-			sex,
-			kind,
-			variety,
-			lost_place
-		}
-		const result = await this.animalLostService.findMatches(lostAnimalForSearch);
-		if (result instanceof CustomError) {
-			return next(result);
-		}
+		const result = await this.animalLostService.findMatches(parseResult.data);
 
 		const { metadata, matchedAnimals } = result;
 
