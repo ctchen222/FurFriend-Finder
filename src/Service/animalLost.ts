@@ -1,5 +1,5 @@
 import AnimalLostRepository from "../repository/animalLost.db";
-import { AnimalLost, AnimalLostData, AnimalLostResponseSchema } from "../libs/zod/animals";
+import { AnimalCandidate, AnimalLost, AnimalLostData, AnimalLostResponseSchema, AnimalWithDistance, MatchCriteria, QuickMatchRequest } from "../libs/zod/animals";
 import GeoService from "./geo";
 import MailService from "./mail";
 import * as apiMessage from '../libs/message'
@@ -10,6 +10,8 @@ import logger from "../config/logger";
 import OwnerRepository from "../repository/owner.db";
 import { Owner } from "../libs/zod/owner";
 import axios from "axios";
+
+const GEOCODING_BATCH_LIMIT = 200;
 
 class AnimalLostService {
 	private mailService: MailService
@@ -25,39 +27,81 @@ class AnimalLostService {
 
 	private geocodeAndCalculateDistances = async (
 		lostAnimalCoordinates: { lat: number; lng: number },
-		matchedAnimals: any[]
-	) => {
-		const results = await Promise.allSettled(
-			matchedAnimals.map(async (animal) => {
-				if (!animal.found_place) {
-					return { ...animal, distance: Infinity };
-				}
-				const animalCoordinates = await this.geoService.geocoding(animal.found_place);
-				if (!animalCoordinates) {
-					// Address was valid but not found by the geocoding service.
-					return { ...animal, distance: Infinity };
-				}
-				const distance = GeoService.calculateDistanceKm(lostAnimalCoordinates, animalCoordinates);
-				return { ...animal, distance };
-			})
+		candidates: AnimalCandidate[]
+	): Promise<AnimalWithDistance[]> => {
+		// Deduplicate: same found_place is only geocoded once (N candidates → U unique addresses).
+		const uniquePlaces = [...new Set(
+			candidates.map(a => a.found_place).filter((p): p is string => !!p)
+		)];
+
+		const placeCoords = new Map<string, { lat: number; lng: number } | null>();
+		const failedPlaces = new Set<string>();
+
+		await Promise.all(
+			uniquePlaces.map((place) =>
+				this.geoService.geocoding(place)
+					.then(coords => placeCoords.set(place, coords))
+					.catch(err => {
+						logger.warn(`Geocoding failed for place "${place}", skipping affected animals: ${err}`);
+						failedPlaces.add(place);
+					})
+			)
 		);
 
-		const animalsWithDistance = results
-			.filter((result): result is PromiseFulfilledResult<any> => {
-				if (result.status === 'rejected') {
-					logger.warn(`Geocoding failed for an animal, skipping: ${result.reason}`);
-					return false;
-				}
-				return true;
-			})
-			.map((result) => result.value);
+		const animalsWithDistance: AnimalWithDistance[] = [];
+		for (const animal of candidates) {
+			if (!animal.found_place) {
+				animalsWithDistance.push({ ...animal, distance: Infinity });
+				continue;
+			}
+			if (failedPlaces.has(animal.found_place)) {
+				// API error — drop animal to avoid showing unreachable candidates
+				continue;
+			}
+			const coords = placeCoords.get(animal.found_place);
+			if (!coords) {
+				// ZERO_RESULTS — keep but rank last
+				animalsWithDistance.push({ ...animal, distance: Infinity });
+				continue;
+			}
+			animalsWithDistance.push({
+				...animal,
+				distance: GeoService.calculateDistanceKm(lostAnimalCoordinates, coords),
+			});
+		}
 
 		return animalsWithDistance;
 	}
 
+	private performMatch = async (criteria: MatchCriteria) => {
+		const { colour, kind, sex, variety, lost_place } = criteria;
+
+		const lostAnimalCoordinates = await this.geoService.geocoding(lost_place);
+		if (!lostAnimalCoordinates) {
+			throw new CustomError(apiMessage.LOST_PLACE_NOT_FOUND);
+		}
+
+		const allCandidates = await this.repository.findMatchingAnimals(colour, kind, sex, variety);
+
+		const candidates = allCandidates.slice(0, GEOCODING_BATCH_LIMIT);
+		// Guard against unbounded geocoding batches that would exhaust API quota.
+		if (allCandidates.length > GEOCODING_BATCH_LIMIT) {
+			logger.warn(`Candidate count ${allCandidates.length} exceeds geocoding limit ${GEOCODING_BATCH_LIMIT}; truncated to ${candidates.length}.`);
+		}
+
+		const animalsWithDistance = await this.geocodeAndCalculateDistances(lostAnimalCoordinates, candidates);
+
+		const sortedMatches = animalsWithDistance.sort((a, b) => a.distance - b.distance);
+		const top10Matches = sortedMatches.slice(0, 10);
+		// metadata.total reflects the original DB result count (pre-truncation),
+		// so the UI can show "N potential matches found" even when only top-10 are returned.
+		const metadata = getMetadata(allCandidates);
+
+		return { metadata, top10Matches, allCandidates };
+	}
+
 	findMatchesAndSendMail = async (animalId: string) => {
 		const lostAnimal = await this.repository.findById<AnimalLost>(animalId);
-
 		if (!lostAnimal) {
 			throw new CustomError(apiMessage.CONTENT_NOT_FOUND);
 		}
@@ -67,7 +111,7 @@ class AnimalLostService {
 			throw new CustomError(apiMessage.CONTENT_NOT_FOUND);
 		}
 
-		const { name, colour, kind, sex, variety, lost_place } = normalizeMatchCriteria(
+		const { colour, kind, sex, variety, lost_place } = normalizeMatchCriteria(
 			lostAnimal.name,
 			lostAnimal.colour,
 			lostAnimal.sex,
@@ -76,41 +120,19 @@ class AnimalLostService {
 			lostAnimal.lost_place
 		);
 
-		// Step 1: Geocode the lost animal's location
-		const lostAnimalCoordinates = await this.geoService.geocoding(lost_place);
-		if (!lostAnimalCoordinates) {
-			// If the primary lost location cannot be geocoded, we cannot perform a distance match.
-			throw new CustomError(apiMessage.LOST_PLACE_NOT_FOUND);
-		}
-
-		// Step 2: Find animals based on other criteria
-		const matchedAnimals = await this.repository.findMatchingAnimals(colour, kind, sex, variety);
-
-		// Step 3: Calculate distance for each matched animal using allSettled (partial failure tolerance)
-		const animalsWithDistance = await this.geocodeAndCalculateDistances(lostAnimalCoordinates, matchedAnimals);
-
-		// Sort by distance in ascending order
-		const sortedMatches = animalsWithDistance.sort((a, b) => a.distance - b.distance);
-
-		const top10Matches = sortedMatches.slice(0, 10);
-
-		const metadata = getMetadata(matchedAnimals);
+		const { metadata, top10Matches, allCandidates } = await this.performMatch({ colour, kind, sex, variety, lost_place });
 
 		if (top10Matches.length > 0 && owner.email) {
 			await this.mailService.sendMatchedMail(owner.email, owner.name, top10Matches);
 			logger.info(`Sent matched mail to ${owner.email} for lost animal ID ${animalId}.`);
 		}
 
-		logger.info(`Found ${matchedAnimals.length} potential matches for lost animal ID ${animalId}. Returning top ${top10Matches.length} closest matches.`);
-		return {
-			metadata,
-			lostAnimal,
-			top10Matches
-		}
+		logger.info(`Found ${allCandidates.length} potential matches for lost animal ID ${animalId}. Returning top ${top10Matches.length} closest matches.`);
+		return { metadata, lostAnimal, top10Matches };
 	}
 
-	findMatches = async (lostAnimal: any) => {
-		const { name, colour, kind, sex, variety, lost_place } = normalizeMatchCriteria(
+	findMatches = async (lostAnimal: QuickMatchRequest) => {
+		const { colour, kind, sex, variety, lost_place } = normalizeMatchCriteria(
 			lostAnimal.name,
 			lostAnimal.colour,
 			lostAnimal.sex,
@@ -118,31 +140,10 @@ class AnimalLostService {
 			lostAnimal.variety,
 			lostAnimal.lost_place
 		);
-		// Step 1: Geocode the lost animal's location
-		const lostAnimalCoordinates = await this.geoService.geocoding(lost_place);
-		if (!lostAnimalCoordinates) {
-			// If the primary lost location cannot be geocoded, we cannot perform a distance match.
-			throw new CustomError(apiMessage.LOST_PLACE_NOT_FOUND);
-		}
 
-		// Step 2: Find animals based on other criteria
-		const matchedAnimals = await this.repository.findMatchingAnimals(colour, kind, sex, variety);
+		const { metadata, top10Matches } = await this.performMatch({ colour, kind, sex, variety, lost_place });
 
-		// TODO: redis for Geo coding results cache
-		// Step 3: Calculate distance for each matched animal using allSettled (partial failure tolerance)
-		const animalsWithDistance = await this.geocodeAndCalculateDistances(lostAnimalCoordinates, matchedAnimals);
-
-		// Sort by distance in ascending order
-		const sortedMatches = animalsWithDistance.sort((a, b) => a.distance - b.distance);
-
-		const top10Matches = sortedMatches.slice(0, 10);
-
-		const metadata = getMetadata(matchedAnimals);
-
-		return {
-			metadata,
-			matchedAnimals: top10Matches
-		}
+		return { metadata, matchedAnimals: top10Matches };
 	}
 
 	updateTableAnimalLosts = async () => {

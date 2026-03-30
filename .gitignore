@@ -24,3 +24,9 @@ tmp/
 
 # Docs for development
 ./docs/issues/*
+
+# coverage
+./coverage
+
+# Git worktrees
+.worktrees/
