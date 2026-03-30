@@ -1,5 +1,25 @@
 import { AnimalColourSchema, AnimalLost } from "./zod/animals";
 
+/**
+ * Normalizes raw user-submitted lost animal criteria into a canonical form
+ * suitable for matching against the shelter animal database.
+ *
+ * Each field is sanitized as follows:
+ * - `name`: trimmed of surrounding whitespace; defaults to empty string if absent
+ * - `colour`: validated against `AnimalColourSchema`; returns `undefined` if the value is not a recognized colour code
+ * - `sex`: converts Chinese gender characters ('公' → 'M', '母' → 'F'); other values are passed through unchanged
+ * - `kind`: strips a trailing '犬' suffix (e.g. '米格魯犬' → '米格魯') and trims whitespace
+ * - `variety`: same trailing-'犬' strip and trim as `kind`
+ * - `lost_place`: trimmed of surrounding whitespace; defaults to empty string if absent
+ *
+ * @param name - Pet name as entered by the owner
+ * @param colour - Coat colour string (e.g. '黑色', 'BRINDLE')
+ * @param sex - Sex string in Chinese or raw form ('公', '母', or other)
+ * @param kind - Animal kind/species string, possibly with trailing '犬'
+ * @param variety - Breed/variety string, possibly with trailing '犬'
+ * @param lost_place - Location description where the animal was lost
+ * @returns An object with all fields normalized and ready for query matching
+ */
 function normalizeMatchCriteria(
 	name: string | undefined,
 	colour: string | undefined,

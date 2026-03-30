@@ -1,0 +1,27 @@
+# Prevent Claude from reading large or irrelevant files
+# Reduces unnecessary token consumption by 50-80%
+
+# Dependencies and build artifacts
+node_modules/
+dist/
+package-lock.json
+*.lock
+
+# Test coverage reports
+coverage/
+
+# Git worktrees
+.claude/worktrees/
+.worktrees/
+
+# Images and static assets
+images/
+
+# Playwright test output
+test-results/
+playwright-report/
+blob-report/
+
+# Environment config (may contain secrets)
+.env
+.env.*
