@@ -1,0 +1,66 @@
+name: Claude Implement (Phase 2)
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  implement:
+    # Only trigger when repo owner types exactly "approved" on an issue
+    if: |
+      github.event.comment.body == 'approved' &&
+      github.event.comment.user.login == 'ctchen' &&
+      github.event.issue.pull_request == null
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compute branch name
+        id: branch
+        run: |
+          ISSUE_NUMBER="${{ github.event.issue.number }}"
+          SLUG=$(echo "${{ github.event.issue.title }}" \
+            | tr '[:upper:]' '[:lower:]' \
+            | sed 's/[^a-z0-9]/-/g' \
+            | sed 's/--*/-/g' \
+            | sed 's/^-\|-$//g' \
+            | cut -c1-40)
+          echo "name=feature/${ISSUE_NUMBER}-${SLUG}" >> $GITHUB_OUTPUT
+          echo "issue_number=${ISSUE_NUMBER}" >> $GITHUB_OUTPUT
+
+      - name: Fetch Phase 1 plan comment
+        id: plan
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Find the last comment starting with "## Implementation Plan"
+          PLAN=$(gh issue view ${{ steps.branch.outputs.issue_number }} \
+            --repo ${{ github.repository }} \
+            --json comments \
+            --jq '[.comments[] | select(.body | startswith("## Implementation Plan"))] | last | .body // ""')
+          echo "content<<EOF" >> $GITHUB_OUTPUT
+          echo "$PLAN" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Implement approved plan
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ steps.branch.outputs.name }}
+          claude_args: "--max-turns 2 --model claude-haiku-4-5-20251001"
+          prompt: |
+            Implement the following approved plan exactly as described.
+            Do NOT deviate from the plan. Do NOT add unrequested features or refactor
+            unrelated code. Modify at most 3 files.
+
+            ${{ steps.plan.outputs.content != '' && format('Approved plan:{0}{1}', '\n', steps.plan.outputs.content) || format('No plan comment found. Use the issue description as your guide:{0}Title: {1}{0}Body:{0}{2}', '\n', github.event.issue.title, github.event.issue.body) }}
+
+            After implementing, open a pull request targeting main:
+            - Title: ${{ github.event.issue.title }}
+            - Body must reference: Closes #${{ steps.branch.outputs.issue_number }}

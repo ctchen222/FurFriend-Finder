@@ -291,16 +291,18 @@ ANTHROPIC_API_KEY  ← 從 console.anthropic.com 取得
 
 - [x] `.claudeignore` 建立
 - [x] `CLAUDE.md` 建立
-- [x] `scripts/minion.sh` 建立
-- [ ] 用第一個真實任務測試跑通
+- [x] `scripts/minion.sh` 建立（含 Plan → Approve → Implement 流程）
+- [x] 用第一個真實任務測試跑通（183 tests passed, 0 retries）
 
-**驗收：** `scripts/minion.sh` 成功建立 PR，內容正確
+**驗收：** `scripts/minion.sh` 成功建立 PR，內容正確 ✅
 
 ### 階段二：GitHub Actions（本地通過後）
 
 - [ ] 申請 `console.anthropic.com` API Key
-- [ ] 建立 `claude-plan.yml`
-- [ ] 建立 `claude-implement.yml`
+- [ ] 將 `feature/ai-minion-workflow` merge 進 main
+- [ ] 在 GitHub repo 建立 `claude-plan` label
+- [ ] 建立 `claude-plan.yml`（Phase 1：出計劃）
+- [ ] 建立 `claude-implement.yml`（Phase 2：實作，含讀取 Phase 1 計劃留言）
 - [ ] 測試端到端流程（Issue → 計劃留言 → approved → PR）
 
 **驗收：** 從開 Issue 到 PR 全程不需要手動介入
@@ -313,8 +315,50 @@ ANTHROPIC_API_KEY  ← 從 console.anthropic.com 取得
 
 ---
 
+## 9. Billing 可觀測性
+
+### 如何看每次 PR 的 token 用量
+
+**方法 1：GitHub Actions log（即時）**
+
+每次 `claude-code-action` 執行完，Actions log 裡會顯示本次使用的 input/output tokens。
+位置：`Actions` tab → 選對應的 workflow run → 展開 `Run Claude Code` 步驟。
+
+**方法 2：Anthropic Console dashboard（彙總）**
+
+前往 `console.anthropic.com` → `Usage`，可以看到：
+- 每日 / 每月 token 用量
+- 按 API key 分類的用量（建議為 CI 建立獨立的 API key，方便追蹤）
+- 費用明細
+
+**方法 3：PR body 記錄（被動追蹤）**
+
+`claude-implement.yml` 可以在 PR body 加入 token 統計，但 `claude-code-action` 目前不直接輸出 token 數；需要自行在 workflow 中解析 log 或改用 API 直接呼叫。
+
+### 設定費用警告上限
+
+1. 前往 `console.anthropic.com` → `Billing` → `Usage limits`
+2. 設定 `Monthly spend limit`（超過後 API 呼叫會被拒絕，CI 會失敗但不會繼續扣費）
+3. 設定 `Email alert threshold`（例如達到上限的 80% 時發通知）
+
+### 建議的費用控制設定
+
+```yaml
+# claude-implement.yml 中
+claude_args: "--max-turns 2 --model claude-haiku-4-5-20251001"
+```
+
+| 場景 | 模型 | 估算費用/次 |
+|------|------|------------|
+| 加測試、補文件 | Haiku | $0.01–$0.03 |
+| 修 bug、小功能 | Haiku | $0.02–$0.05 |
+| 跨多檔案重構 | Sonnet | $0.10–$0.35 |
+
+---
+
 ## 參考資料
 
 - [Stripe Minions 架構分析](./stripe-minions-analysis.md)
 - [Claude Code GitHub Actions 官方文件](https://code.claude.com/docs/en/github-actions)
+- [Anthropic Console（用量與費用）](https://console.anthropic.com)
 - [Anthropic Console（API Key 管理）](https://console.anthropic.com)
