@@ -9,6 +9,7 @@
 # Options:
 #   MODEL=claude-haiku-4-5-20251001 ./scripts/minion.sh "task"  # budget mode
 #   DRY_RUN=1 ./scripts/minion.sh "task"                        # print plan only
+#   SKIP_PLAN=1 ./scripts/minion.sh "task"                      # skip plan approval (for scripting)
 # =============================================================================
 set -euo pipefail
 
@@ -20,18 +21,21 @@ MODEL="${MODEL:-claude-sonnet-4-6}"
 MAX_RETRIES=2
 BRANCH="minion/$(date +%Y%m%d-%H%M%S)"
 DRY_RUN="${DRY_RUN:-0}"
+SKIP_PLAN="${SKIP_PLAN:-0}"
 
 # Color output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
+CYAN='\033[0;36m'
 NC='\033[0m'
 
 log_info()    { echo -e "${BLUE}[MINION]${NC} $1"; }
 log_success() { echo -e "${GREEN}[MINION]${NC} $1"; }
 log_warn()    { echo -e "${YELLOW}[MINION]${NC} $1"; }
 log_error()   { echo -e "${RED}[MINION]${NC} $1"; }
+log_plan()    { echo -e "${CYAN}[PLAN]${NC} $1"; }
 
 # ──────────────────────────────────────────────
 # Step 0: Pre-flight checks
@@ -74,12 +78,51 @@ if ! git rev-parse --git-dir > /dev/null 2>&1; then
 fi
 
 # ──────────────────────────────────────────────
-# Step 1: Deterministic — create isolated branch
+# Step 1: Agentic — Claude outputs plan (no file changes)
 # ──────────────────────────────────────────────
 log_info "Task   : $TASK"
 log_info "Model  : $MODEL"
 log_info "Branch : $BRANCH"
 
+if [ "$DRY_RUN" = "1" ]; then
+  log_warn "[DRY RUN] Skipping plan generation."
+elif [ "$SKIP_PLAN" = "1" ]; then
+  log_warn "[SKIP_PLAN] Skipping plan approval step."
+else
+  echo ""
+  log_plan "────────────────────────────────────────────"
+  log_plan "Generating implementation plan (read-only)..."
+  log_plan "────────────────────────────────────────────"
+  echo ""
+
+  claude --print \
+    --model "$MODEL" \
+    --max-turns 2 \
+    --dangerously-skip-permissions \
+    "Analyze this task and output ONLY a numbered implementation plan. Do NOT make any file changes.
+List:
+1. Files you need to READ to understand context
+2. Files you will MODIFY and what specific changes
+3. Estimated line count change
+4. Any risks or edge cases
+
+Task: $TASK"
+
+  echo ""
+  log_plan "────────────────────────────────────────────"
+  echo ""
+  read -r -p "$(echo -e "${CYAN}[PLAN]${NC} Proceed with implementation? (y/N) ")" CONFIRM
+  echo ""
+
+  if [ "$CONFIRM" != "y" ] && [ "$CONFIRM" != "Y" ]; then
+    log_warn "Aborted by user. No branch created, no changes made."
+    exit 0
+  fi
+fi
+
+# ──────────────────────────────────────────────
+# Step 2: Deterministic — create isolated branch
+# ──────────────────────────────────────────────
 if [ "$DRY_RUN" = "1" ]; then
   log_warn "[DRY RUN] Skipping branch creation."
 else
@@ -87,7 +130,7 @@ else
 fi
 
 # ──────────────────────────────────────────────
-# Step 2: Agentic — Claude executes the task
+# Step 3: Agentic — Claude executes the task
 # ──────────────────────────────────────────────
 log_info "Claude is working on the task..."
 
@@ -102,7 +145,7 @@ else
 fi
 
 # ──────────────────────────────────────────────
-# Step 3: Deterministic — build check
+# Step 4: Deterministic — build check
 # ──────────────────────────────────────────────
 log_info "Running build check..."
 
@@ -118,7 +161,7 @@ else
 fi
 
 # ──────────────────────────────────────────────
-# Step 4: Feedback loop — max MAX_RETRIES attempts
+# Step 5: Feedback loop — max MAX_RETRIES attempts
 # ──────────────────────────────────────────────
 RETRIES=0
 TEST_PASSED=0
@@ -151,7 +194,7 @@ while [ $RETRIES -le $MAX_RETRIES ]; do
 done
 
 # ──────────────────────────────────────────────
-# Step 5: Outcome
+# Step 6: Outcome
 # ──────────────────────────────────────────────
 if [ "$TEST_PASSED" != "1" ]; then
   log_error "Exceeded max retries ($MAX_RETRIES). Human intervention required."
@@ -168,7 +211,7 @@ if [ "$TEST_PASSED" != "1" ]; then
 fi
 
 # ──────────────────────────────────────────────
-# Step 6: Deterministic — commit + open PR
+# Step 7: Deterministic — commit + open PR
 # ──────────────────────────────────────────────
 if [ "$DRY_RUN" != "1" ]; then
   log_info "Committing changes..."
