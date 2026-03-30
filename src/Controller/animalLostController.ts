@@ -15,10 +15,14 @@ class AnimalLostController {
 	private animalLostService: AnimalLostService
 	private ownerRepository: OwnerRepository
 
-	constructor() {
-		this.repository = new AnimalLostRepository();
-		this.animalLostService = new AnimalLostService();
-		this.ownerRepository = new OwnerRepository();
+	constructor(deps?: {
+		repository?: AnimalLostRepository;
+		animalLostService?: AnimalLostService;
+		ownerRepository?: OwnerRepository;
+	}) {
+		this.repository = deps?.repository ?? new AnimalLostRepository();
+		this.animalLostService = deps?.animalLostService ?? new AnimalLostService();
+		this.ownerRepository = deps?.ownerRepository ?? new OwnerRepository();
 	}
 
 	fetchList = async (
