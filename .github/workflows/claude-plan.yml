@@ -1,0 +1,47 @@
+name: Claude Plan (Phase 1)
+
+on:
+  issues:
+    types: [labeled]
+
+jobs:
+  plan:
+    if: github.event.label.name == 'claude-plan'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate implementation plan
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          claude_args: "--max-turns 3 --model claude-haiku-4-5-20251001"
+          prompt: |
+            Read this GitHub issue and output ONLY an implementation plan as a comment.
+            Do NOT make any file changes. Do NOT write any code.
+
+            Your plan comment MUST start with the heading "## Implementation Plan" exactly
+            (this heading is used by the implementation workflow to find this comment).
+
+            Structure your plan as:
+            ## Implementation Plan
+
+            **Files to read for context:**
+            - list files
+
+            **Files to modify:**
+            - `path/to/file.ts` — describe the specific change
+
+            **Estimated change:** X lines added / Y lines modified
+
+            **Risks / edge cases:**
+            - list any concerns
+
+            Issue title: ${{ github.event.issue.title }}
+            Issue body:
+            ${{ github.event.issue.body }}
