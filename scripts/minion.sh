@@ -19,7 +19,9 @@ set -euo pipefail
 TASK="${1:-}"
 MODEL="${MODEL:-claude-sonnet-4-6}"
 MAX_RETRIES=2
-BRANCH="minion/$(date +%Y%m%d-%H%M%S)"
+# Generate slug from task description: lowercase, special chars → dash, trim to 40 chars
+SLUG=$(echo "$TASK" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/--*/-/g' | sed 's/^-\|-$//g' | cut -c1-40)
+BRANCH="minion/$(date +%Y%m%d)-${SLUG}"
 DRY_RUN="${DRY_RUN:-0}"
 SKIP_PLAN="${SKIP_PLAN:-0}"
 

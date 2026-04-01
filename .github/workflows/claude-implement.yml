@@ -30,7 +30,8 @@ jobs:
             | sed 's/--*/-/g' \
             | sed 's/^-\|-$//g' \
             | cut -c1-40)
-          echo "name=feature/${ISSUE_NUMBER}-${SLUG}" >> $GITHUB_OUTPUT
+          DATE=$(date +%Y%m%d)
+          echo "name=minion/${DATE}-${SLUG}" >> $GITHUB_OUTPUT
           echo "issue_number=${ISSUE_NUMBER}" >> $GITHUB_OUTPUT
 
       - name: Fetch Phase 1 plan comment
