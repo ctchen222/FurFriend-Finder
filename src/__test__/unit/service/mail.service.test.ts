@@ -2,7 +2,14 @@ import MailService from '../../../Service/mail';
 
 // Mock config/mail before any import that triggers the constructor
 jest.mock('../../../config/mail', () => ({
-  default: { sentFrom: 'test@furfinder.com' },
+  default: {
+    smtpHost: 'smtp.test.local',
+    smtpPort: 2525,
+    smtpSecure: true,
+    smtpUser: 'smtp-user',
+    smtpPassword: 'smtp-password',
+    sentFrom: 'test@furfinder.com',
+  },
   __esModule: true,
 }));
 
@@ -29,6 +36,18 @@ describe('MailService', () => {
     mockSendMail = jest.fn().mockResolvedValue({ messageId: 'test-id' });
     (nodemailer.createTransport as jest.Mock).mockReturnValue({ sendMail: mockSendMail });
     service = new MailService();
+  });
+
+  it('should create transporter from mailConfig with secure SMTP settings', () => {
+    expect(nodemailer.createTransport).toHaveBeenCalledWith({
+      host: 'smtp.test.local',
+      port: 2525,
+      secure: true,
+      auth: {
+        user: 'smtp-user',
+        pass: 'smtp-password',
+      },
+    });
   });
 
   describe('sendTestMail', () => {

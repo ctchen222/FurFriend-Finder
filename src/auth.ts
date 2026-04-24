@@ -1,7 +1,8 @@
 import { betterAuth } from "better-auth";
 import MailService from "./Service/mail";
 import { pool } from "./db";
-import mailConfig from "./config/mail"; // Import mailConfig
+
+const mailService = new MailService();
 
 export const auth = betterAuth({
 	database: pool,
@@ -11,8 +12,7 @@ export const auth = betterAuth({
 	},
 	emailVerification: {
 		sendVerificationEmail: async ({ user, url, token }, request) => {
-			await new MailService().mailer.sendMail({
-				from: mailConfig.sentFrom,
+			await mailService.sendMail({
 				to: user.email,
 				subject: "Verify your email address",
 				text: `Click the link to verify your email: ${url}`,
@@ -24,8 +24,7 @@ export const auth = betterAuth({
 		autoSignIn: false,
 		requireEmailVerification: true,
 		sendResetPassword: async ({ user, url, token }, request) => {
-			await new MailService().mailer.sendMail({
-				from: mailConfig.sentFrom, // Use mailConfig.sentFrom
+			await mailService.sendMail({
 				to: user.email,
 				subject: "Reset your password",
 				text: `Click the link to reset your password: ${url}`,
