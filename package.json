@@ -16,7 +16,8 @@
     "test:unit": "jest --testPathPattern='src/__test__/unit'",
     "test:integration": "jest --testPathPattern='src/__test__/integration'",
     "test:e2e": "playwright test",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "smtp:smoke": "tsx src/scripts/mailgun-smoke-test.ts"
   },
   "keywords": [],
   "author": "",

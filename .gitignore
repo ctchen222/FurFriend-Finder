@@ -26,7 +26,10 @@ tmp/
 ./docs/issues/*
 
 # coverage
-./coverage
+coverage
 
 # Git worktrees
 .worktrees/
+
+# nvmrc
+.nvmrc
