@@ -1,0 +1,48 @@
+schema: spec-driven
+
+context: |
+  Project: FurFriend Finder, a Taiwan-focused stray animal adoption and lost-pet matching platform.
+  Domain:
+    - Users browse shelter animals from Taiwan public open data.
+    - Owners can register lost pets and receive nearby shelter-animal matches.
+    - LINE Bot users can draw random shelter animal recommendations.
+  Tech stack:
+    - Node.js, Express, TypeScript
+    - Server-rendered EJS views and vanilla JavaScript in src/public/js/common.js
+    - PostgreSQL via pg repositories
+    - better-auth for email/password sessions
+    - Zod for input and external API validation
+    - Nodemailer with Mailgun SMTP for email
+    - Google Maps Geocoding API and geolib for location matching
+    - Jest, Supertest, and Playwright for tests
+  Architecture conventions:
+    - HTTP routes live in src/router.
+    - Controllers live in src/Controller and delegate business rules to services.
+    - Services live in src/Service.
+    - Database access lives in src/repository.
+    - Reusable validation schemas live in src/libs/zod.
+    - EJS pages live in views; shared partials live in views/partials.
+  Product constraints:
+    - Preserve Taiwan city/county and shelter data semantics.
+    - Avoid adding side effects to matching logic unless the spec explicitly requires notifications.
+    - Any flow that sends email must respect user notification preferences.
+    - Admin-only operations must stay protected by ADMIN_API_KEY or stronger authentication.
+
+rules:
+  proposal:
+    - State the user-facing problem before implementation details.
+    - Include non-goals when changing matching, notification, auth, or data-sync behavior.
+    - List affected routes, services, repositories, views, and tests.
+  specs:
+    - Use SHALL language for normative behavior.
+    - Include at least one Scenario for every Requirement.
+    - Keep capability names stable and kebab-case.
+    - Call out authentication, authorization, validation, and external-service failure behavior.
+  design:
+    - Prefer existing Express controller -> service -> repository flow.
+    - Describe data flow and side effects explicitly.
+    - Identify database migration and rollback needs when schema changes.
+  tasks:
+    - Split implementation into verifiable chunks.
+    - Include unit or integration tests for changed service, repository, or controller behavior.
+    - Include Playwright checks when user-visible page behavior changes.
