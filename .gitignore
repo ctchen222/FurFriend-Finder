@@ -33,3 +33,12 @@ coverage
 
 # nvmrc
 .nvmrc
+
+# Runtime logs
+logs/
+
+# Local plans (Claude internal)
+plans/
+
+# OTel collector config (use .conf instead)
+observability/otel-collector-config.yaml
