@@ -1,7 +1,7 @@
 import cron from 'node-cron';
 import AnimalService from '../Service/animal';
 import AnimalSyncService from '../Service/animalSync';
-import { logger } from 'better-auth';
+import logger from '../config/logger';
 
 const animalService = new AnimalService()
 const animalSyncService = new AnimalSyncService()

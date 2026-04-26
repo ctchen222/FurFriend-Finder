@@ -3,6 +3,7 @@ import fs from 'fs-extra'
 import nodemailer from 'nodemailer'
 import Mustache from 'mustache'
 import mailConfig from '../config/mail'
+import { emailCounter } from '../config/metrics'
 
 const appRoot = path.resolve(__dirname, "../../")
 
@@ -21,10 +22,17 @@ class MailService {
 	}
 
 	sendMail = async (options: Parameters<nodemailer.Transporter['sendMail']>[0]) => {
-		return this.mailer.sendMail({
-			from: mailConfig.sentFrom,
-			...options,
-		})
+		try {
+			const result = await this.mailer.sendMail({
+				from: mailConfig.sentFrom,
+				...options,
+			});
+			emailCounter.add(1, { status: 'sent' });
+			return result;
+		} catch (err) {
+			emailCounter.add(1, { status: 'failed' });
+			throw err;
+		}
 	}
 
 	sendTestMail = async (mail: string) => {
