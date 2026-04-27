@@ -1,0 +1,167 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find:*)",
+      "Bash(wc:*)",
+      "Bash(grep:*)",
+      "Bash(xargs:*)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:davila7.github.io)",
+      "WebFetch(domain:aitmpl.com)",
+      "WebFetch(domain:docs.aitmpl.com)",
+      "WebSearch",
+      "WebFetch(domain:medium.com)",
+      "WebFetch(domain:dev.to)",
+      "Bash(openspec list:*)",
+      "Bash(cat:*)",
+      "WebFetch(domain:app.clickup.com)",
+      "Skill(superpowers:brainstorming)",
+      "WebFetch(domain:node.testcontainers.org)",
+      "WebFetch(domain:deepwiki.com)",
+      "Bash(pnpm test:*)",
+      "WebFetch(domain:www.blocktempo.com)",
+      "WebFetch(domain:www.shareuhack.com)",
+      "WebFetch(domain:venturebeat.com)",
+      "mcp__plugin_telegram_telegram__reply",
+      "WebFetch(domain:claudefa.st)",
+      "WebFetch(domain:www.eesel.ai)",
+      "Bash(curl -s \"https://api.github.com/repos/openclaw/openclaw/contents/src\")",
+      "Bash(python3 -c \"import json,sys; items=json.load\\(sys.stdin\\); [print\\(i[''''type''''], i[''''name'''']\\) for i in items]\")",
+      "Bash(curl -s \"https://api.github.com/repos/openclaw/openclaw/contents/src/channels\")",
+      "Bash(curl -s \"https://api.github.com/repos/openclaw/openclaw/contents/src/gateway\")",
+      "Bash(curl -s \"https://api.github.com/repos/openclaw/openclaw/contents/src/agents\")",
+      "Bash(curl -s \"https://api.github.com/repos/openclaw/openclaw/contents/src/agents/mcp-stdio.ts\")",
+      "Bash(python3 -c \"import json,sys,base64; d=json.load\\(sys.stdin\\); print\\(base64.b64decode\\(d[''''content'''']\\).decode\\(''''utf-8''''\\)\\)\")",
+      "Bash(curl -s \"https://api.github.com/repos/openclaw/openclaw/contents/src/agents/pi-bundle-mcp-tools.ts\")",
+      "Bash(curl -s \"https://api.github.com/repos/openclaw/openclaw/contents/src/gateway/protocol\")",
+      "Bash(curl -s \"https://api.github.com/repos/openclaw/openclaw/contents/src/gateway/protocol/index.ts\")",
+      "Bash(curl -s \"https://api.github.com/repos/openclaw/openclaw/contents/src/gateway/protocol/schema.ts\")",
+      "Bash(curl -s \"https://api.github.com/repos/openclaw/openclaw/contents/src/gateway/server.impl.ts\")",
+      "Bash(curl -s \"https://api.github.com/repos/openclaw/openclaw/contents/src/channels/registry.ts\")",
+      "Bash(curl -s \"https://api.github.com/repos/openclaw/openclaw/contents/src/channels/plugins\")",
+      "Bash(curl -s \"https://api.github.com/repos/openclaw/openclaw/contents/src/channels/plugins/index.ts\")",
+      "Bash(curl -s \"https://api.github.com/repos/openclaw/openclaw/contents/src/channels/plugins/types.ts\")",
+      "Bash(curl -s \"https://api.github.com/repos/openclaw/openclaw/contents/src/channels/plugins/bundled.ts\")",
+      "Bash(curl -s \"https://api.github.com/repos/openclaw/openclaw/contents/extensions\")",
+      "Bash(curl -s \"https://api.github.com/repos/openclaw/openclaw/contents/extensions/telegram\")",
+      "Bash(curl -s \"https://api.github.com/repos/openclaw/openclaw/contents/extensions/telegram/index.ts\")",
+      "Bash(curl -s \"https://api.github.com/repos/openclaw/openclaw/contents/extensions/telegram/src\")",
+      "Bash(curl -s \"https://api.github.com/repos/openclaw/openclaw/contents/extensions/telegram/src/channel.ts\")",
+      "Bash(curl -s \"https://api.github.com/repos/openclaw/openclaw/contents/src/agents/openclaw-tools.ts\")",
+      "Bash(curl -s \"https://api.github.com/repos/openclaw/openclaw/contents/src/agents/pi-embedded-runner.ts\")",
+      "Bash(curl -s \"https://api.github.com/repos/openclaw/openclaw/contents/src/agents/pi-embedded.ts\")",
+      "Bash(curl -s \"https://api.github.com/repos/openclaw/openclaw/contents/src/agents/pi-embedded-runner\")",
+      "Bash(curl -s \"https://api.github.com/repos/openclaw/openclaw/contents/package.json\")",
+      "Bash(python3 -c \"import json,sys,base64; d=json.load\\(sys.stdin\\); raw=base64.b64decode\\(d[''''content'''']\\).decode\\(''''utf-8''''\\); pkg=json.loads\\(raw\\); deps=pkg.get\\(''''dependencies'''',{}\\); [print\\(k,v\\) for k,v in sorted\\(deps.items\\(\\)\\)]\")",
+      "Bash(curl -s \"https://api.github.com/repos/openclaw/openclaw/contents/src/acp\")",
+      "Bash(curl -s \"https://api.github.com/repos/openclaw/openclaw/contents/src/agents/acp-spawn.ts\")",
+      "Bash(curl -s \"https://api.github.com/repos/openclaw/openclaw/contents/src/plugins\")",
+      "Bash(curl -s \"https://api.github.com/repos/openclaw/openclaw/contents/src/plugin-sdk\")",
+      "Bash(curl -s \"https://api.github.com/repos/openclaw/openclaw/contents/src/agents/cli-backends.ts\")",
+      "Bash(curl -s \"https://api.github.com/repos/openclaw/openclaw/contents/src/agents/pi-embedded-runner/run/attempt.ts\")",
+      "Bash(curl -s \"https://api.github.com/repos/openclaw/openclaw/contents/src/gateway/server-methods.ts\")",
+      "Bash(curl -s \"https://api.github.com/repos/openclaw/openclaw/contents/src/acp/client.ts\")",
+      "Bash(curl -s \"https://api.github.com/repos/openclaw/openclaw/contents/src/gateway/protocol/schema/protocol-schemas.ts\")",
+      "WebFetch(domain:pasqualepillitteri.it)",
+      "Skill(update-config)",
+      "Bash(ls -t ~/.claude/projects/-Users-ctchen-Development-tricuss-tricuss-mvp/*.jsonl)",
+      "Bash(gh api:*)",
+      "Bash(cd:*)",
+      "Bash(git fetch:*)",
+      "mcp__plugin_telegram_telegram__reply",
+      "Skill(update-config)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d.get\\(''''scripts'''', {}\\), indent=2\\)\\)\"jk)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d.get\\(''''scripts'''', {}\\), indent=2\\)\\)\")",
+      "WebFetch(domain:api.github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:airflow.apache.org)",
+      "Bash(npx tsc:*)",
+      "Bash(git commit:*)",
+      "Bash(git mv:*)",
+      "Bash(git add:*)",
+      "Bash(npm install:*)",
+      "Bash(./node_modules/.bin/tsc --noEmit)",
+      "WebFetch(domain:blog.bytebytego.com)",
+      "Bash(./node_modules/.bin/jest --testPathPattern='setup' --listTests)",
+      "Bash(./node_modules/.bin/jest src/__test__/unit/animals_utils.test.ts)",
+      "Bash(./node_modules/.bin/jest src/__test__/unit/service/geo.service.test.ts --no-coverage)",
+      "Bash(./node_modules/.bin/jest src/__test__/unit/base.db.test.ts --no-coverage)",
+      "Bash(node:*)",
+      "Bash(./node_modules/.bin/jest src/__test__/unit/animalLost.db.test.ts --no-coverage)",
+      "Bash(./node_modules/.bin/jest src/__test__/unit/animals_utils.test.ts --no-coverage)",
+      "Bash(./node_modules/.bin/jest src/__test__/unit/owner.db.test.ts --no-coverage)",
+      "Bash(./node_modules/.bin/jest --testPathPattern='src/__test__/unit' --no-coverage)",
+      "Bash(npm run:*)",
+      "Bash(npx jest:*)",
+      "Bash(git push:*)",
+      "Bash(npm test:*)",
+      "Skill(ralph-loop:ralph-loop)",
+      "Bash(/Users/ctchen/.claude/plugins/marketplaces/claude-plugins-official/plugins/ralph-loop/scripts/setup-ralph-loop.sh:*)",
+      "Bash(/Users/ctchen/.claude/plugins/cache/claude-plugins-official/ralph-loop/unknown/scripts/setup-ralph-loop.sh:*)",
+      "WebFetch(domain:www.petfinder.com)",
+      "WebFetch(domain:www.pawboost.com)",
+      "WebFetch(domain:animal.moa.gov.tw)",
+      "WebFetch(domain:www.tcapo.gov.tw)",
+      "WebFetch(domain:www.adoptapet.com)",
+      "WebFetch(domain:findingrover.com)",
+      "WebFetch(domain:petcolove.org)",
+      "WebFetch(domain:www.tcapo.gov.taipei)",
+      "WebFetch(domain:colorlib.com)",
+      "WebFetch(domain:wepet.tw)",
+      "WebFetch(domain:www.subframe.com)",
+      "WebFetch(domain:www.underconsideration.com)",
+      "WebFetch(domain:www.zigpoll.com)",
+      "WebFetch(domain:workingnotworking.com)",
+      "WebFetch(domain:99designs.com)",
+      "WebFetch(domain:www.cyberoptik.net)",
+      "WebFetch(domain:www.thundertech.com)",
+      "WebFetch(domain:morweb.org)",
+      "WebFetch(domain:ceur-ws.org)",
+      "WebFetch(domain:www.eleken.co)",
+      "WebFetch(domain:simular.co)",
+      "WebFetch(domain:slrncl.com)",
+      "Bash(./node_modules/.bin/jest src/__test__/unit/animal.db.test.ts --no-coverage 2>&1)",
+      "WebFetch(domain:docs.anthropic.com)",
+      "Bash(git:*)"
+    ]
+  },
+  "hooks": {
+    "Notification": [
+      {
+        "matcher": "idle_prompt",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if command -v osascript >/dev/null 2>&1; then osascript -e 'display notification \"Tricuss MVP Awaiting your input\" with title \"Claude Code\" sound name \"Ping\"'; elif command -v notify-send >/dev/null 2>&1; then notify-send -u normal 'Claude Code' 'Awaiting your input'; fi"
+          }
+        ]
+      },
+      {
+        "matcher": "permission_prompt",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if command -v osascript >/dev/null 2>&1; then osascript -e 'display notification \"Tricuss MVP Permission needed\" with title \"Claude Code\" sound name \"Ping\"'; elif command -v notify-send >/dev/null 2>&1; then notify-send -u normal 'Claude Code' 'Permission needed'; fi"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if command -v osascript >/dev/null 2>&1; then osascript -e 'display notification \"Tricuss MVP Task completed\" with title \"Claude Code\" sound name \"Glass\"'; elif command -v notify-send >/dev/null 2>&1; then notify-send -u normal 'Claude Code' 'Task completed'; fi"
+          }
+        ]
+      }
+    ]
+  },
+  "enabledPlugins": {
+    "ralph-loop@claude-plugins-official": true,
+    "superpowers@claude-plugins-official": true
+  },
+  "outputStyle": "Explanatory",
+  "spinnerTipsEnabled": true
+}
