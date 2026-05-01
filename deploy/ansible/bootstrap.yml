@@ -1,0 +1,120 @@
+---
+# FurFriend-Finder VPS Bootstrap Playbook
+#
+# Usage:
+#   1. Copy deploy/ansible/inventory.ini.example to deploy/ansible/inventory.ini
+#      and fill in your VPS IP and SSH key path.
+#   2. ansible-playbook -i deploy/ansible/inventory.ini deploy/ansible/bootstrap.yml
+#
+# Re-running is safe — all tasks are idempotent.
+# To run only a specific section: --tags base | firewall | k3s
+
+- name: FurFriend-Finder VPS Bootstrap
+  hosts: vps
+  become: true
+  vars_files:
+    - group_vars/vps.yml
+
+  tasks:
+
+    # ── System update ─────────────────────────────────────────────────────────
+    - name: Update apt cache
+      tags: base
+      apt:
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Install base packages
+      tags: base
+      apt:
+        name: "{{ base_packages }}"
+        state: present
+
+    # ── Firewall (UFW) ────────────────────────────────────────────────────────
+    - name: Reset UFW to a clean slate
+      tags: firewall
+      ufw:
+        state: reset
+
+    - name: Set default incoming policy to deny
+      tags: firewall
+      ufw:
+        direction: incoming
+        policy: deny
+
+    - name: Set default outgoing policy to allow
+      tags: firewall
+      ufw:
+        direction: outgoing
+        policy: allow
+
+    - name: Allow SSH (port 22)
+      tags: firewall
+      ufw:
+        rule: allow
+        port: "22"
+        proto: tcp
+
+    - name: Allow HTTP (port 80)
+      tags: firewall
+      ufw:
+        rule: allow
+        port: "80"
+        proto: tcp
+        comment: k3s Traefik HTTP
+
+    - name: Allow HTTPS (port 443)
+      tags: firewall
+      ufw:
+        rule: allow
+        port: "443"
+        proto: tcp
+        comment: k3s Traefik HTTPS
+
+    - name: Enable UFW
+      tags: firewall
+      ufw:
+        state: enabled
+
+    # ── k3s ───────────────────────────────────────────────────────────────────
+    - name: Check if k3s binary is already installed
+      tags: k3s
+      stat:
+        path: /usr/local/bin/k3s
+      register: k3s_binary
+
+    - name: Install k3s {{ k3s_version }}
+      tags: k3s
+      shell: >
+        curl -sfL https://get.k3s.io |
+        INSTALL_K3S_VERSION={{ k3s_version }} sh -
+      when: not k3s_binary.stat.exists
+
+    - name: Wait for k3s node to become Ready
+      tags: k3s
+      shell: kubectl get nodes --no-headers | grep -c Ready
+      register: node_ready
+      until: node_ready.stdout | int >= 1
+      retries: 18
+      delay: 10
+      changed_when: false
+      when: not k3s_binary.stat.exists
+
+    - name: Ensure k3s service is enabled and running
+      tags: k3s
+      systemd:
+        name: k3s
+        enabled: true
+        state: started
+
+    # ── Post-install info ─────────────────────────────────────────────────────
+    - name: Show k3s node status
+      tags: k3s
+      shell: kubectl get nodes
+      register: node_status
+      changed_when: false
+
+    - name: Print node status
+      tags: k3s
+      debug:
+        msg: "{{ node_status.stdout_lines }}"

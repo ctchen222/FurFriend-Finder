@@ -1,0 +1,19 @@
+# Non-sensitive variables for the VPS host group.
+# Pin k3s to a known stable version. Update this value to upgrade.
+# Find releases at: https://github.com/k3s-io/k3s/releases
+k3s_version: "v1.32.3+k3s1"
+
+# Base packages installed on every VPS run.
+# open-iscsi and nfs-common prepare the OS for any future PV types.
+# apparmor packages are required by k3s containerd on Ubuntu.
+base_packages:
+  - curl
+  - git
+  - ufw
+  - unzip
+  - vim
+  - htop
+  - open-iscsi
+  - nfs-common
+  - apparmor
+  - apparmor-utils
