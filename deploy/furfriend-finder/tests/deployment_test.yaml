@@ -1,0 +1,31 @@
+suite: app deployment
+templates:
+  - templates/deployment.yaml
+tests:
+  - it: renders the app deployment with image, probes, config, and secret references
+    set:
+      image.repository: ghcr.io/example/furfriend-finder
+      image.tag: abc123
+      secrets.appSecretName: app-secret
+    asserts:
+      - isKind:
+          of: Deployment
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: ghcr.io/example/furfriend-finder:abc123
+      - equal:
+          path: spec.template.spec.containers[0].envFrom[0].configMapRef.name
+          value: RELEASE-NAME-furfriend-finder-config
+      - equal:
+          path: spec.template.spec.containers[0].env[0].valueFrom.secretKeyRef.name
+          value: app-secret
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.httpGet.path
+          value: /health
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.httpGet.path
+          value: /health
+      - equal:
+          path: spec.template.spec.initContainers[0].name
+          value: wait-for-schema
+

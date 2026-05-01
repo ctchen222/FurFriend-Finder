@@ -1,0 +1,124 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "furfriend-finder.fullname" . }}
+  labels:
+    {{- include "furfriend-finder.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "furfriend-finder.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "furfriend-finder.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.image.pullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.schemaJob.enabled }}
+      initContainers:
+        - name: wait-for-schema
+          image: "{{ .Values.schemaJob.image.repository }}:{{ .Values.schemaJob.image.tag }}"
+          imagePullPolicy: {{ .Values.schemaJob.image.pullPolicy }}
+          env:
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.postgresql.secretName }}
+                  key: {{ .Values.postgresql.passwordKey }}
+          command:
+            - /bin/sh
+            - -ec
+            - |
+              until psql -h {{ include "furfriend-finder.postgresql.fullname" . }} -U {{ .Values.postgresql.username | quote }} -d {{ .Values.postgresql.database | quote }} -tAc "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'user'" | grep -q 1; do
+                echo "Waiting for schema initialization."
+                sleep 5
+              done
+      {{- end }}
+      containers:
+        - name: app
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "furfriend-finder.fullname" . }}-config
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.appSecretName }}
+                  key: {{ .Values.secrets.databaseUrlKey }}
+            - name: GEOCODING_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.appSecretName }}
+                  key: {{ .Values.secrets.geocodingApiKeyKey }}
+            - name: CHANNEL_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.appSecretName }}
+                  key: {{ .Values.secrets.channelSecretKey }}
+            - name: CHANNEL_ACCESS_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.appSecretName }}
+                  key: {{ .Values.secrets.channelAccessTokenKey }}
+            - name: ADMIN_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.appSecretName }}
+                  key: {{ .Values.secrets.adminApiKeyKey }}
+            - name: SMTP_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.appSecretName }}
+                  key: {{ .Values.secrets.smtpHostKey }}
+            - name: SMTP_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.appSecretName }}
+                  key: {{ .Values.secrets.smtpPortKey }}
+            - name: SMTP_SECURE
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.appSecretName }}
+                  key: {{ .Values.secrets.smtpSecureKey }}
+            - name: SMTP_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.appSecretName }}
+                  key: {{ .Values.secrets.smtpUserKey }}
+            - name: SMTP_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.appSecretName }}
+                  key: {{ .Values.secrets.smtpPasswordKey }}
+            - name: SMTP_SENT_FROM
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.appSecretName }}
+                  key: {{ .Values.secrets.smtpSentFromKey }}
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}

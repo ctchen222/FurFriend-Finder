@@ -1,0 +1,62 @@
+suite: postgresql schema and backup
+templates:
+  - templates/postgresql.yaml
+  - templates/schema-configmap.yaml
+  - templates/schema-job.yaml
+  - templates/backup-cronjob.yaml
+tests:
+  - it: renders postgresql service
+    template: templates/postgresql.yaml
+    documentIndex: 0
+    asserts:
+      - isKind:
+          of: Service
+      - equal:
+          path: spec.ports[0].port
+          value: 5432
+  - it: renders postgresql statefulset with persistent storage
+    template: templates/postgresql.yaml
+    documentIndex: 1
+    set:
+      postgresql.storage.storageClassName: local-path
+    asserts:
+      - isKind:
+          of: StatefulSet
+      - equal:
+          path: spec.volumeClaimTemplates[0].spec.storageClassName
+          value: local-path
+      - equal:
+          path: spec.template.spec.containers[0].env[2].valueFrom.secretKeyRef.name
+          value: furfriend-finder-postgres-secret
+  - it: renders schema configmap and initialization job
+    template: templates/schema-configmap.yaml
+    asserts:
+      - isKind:
+          of: ConfigMap
+      - matchRegex:
+          path: data["V1__Initial.sql"]
+          pattern: CREATE TABLE
+  - it: renders schema job using postgres secret
+    template: templates/schema-job.yaml
+    asserts:
+      - isKind:
+          of: Job
+      - equal:
+          path: spec.template.spec.containers[0].env[0].valueFrom.secretKeyRef.name
+          value: furfriend-finder-postgres-secret
+      - matchRegex:
+          path: spec.template.spec.containers[0].command[2]
+          pattern: V1__Initial.sql
+  - it: renders backup cronjob with host path
+    template: templates/backup-cronjob.yaml
+    set:
+      backup.hostPath: /srv/backups/furfriend-finder
+    asserts:
+      - isKind:
+          of: CronJob
+      - equal:
+          path: spec.schedule
+          value: "0 18 * * *"
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.volumes[0].hostPath.path
+          value: /srv/backups/furfriend-finder

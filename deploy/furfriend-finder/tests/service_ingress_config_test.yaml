@@ -1,0 +1,50 @@
+suite: service ingress and config
+templates:
+  - templates/service.yaml
+  - templates/ingress.yaml
+  - templates/configmap.yaml
+tests:
+  - it: renders service on the configured app port
+    template: templates/service.yaml
+    asserts:
+      - isKind:
+          of: Service
+      - equal:
+          path: spec.ports[0].port
+          value: 2486
+      - equal:
+          path: spec.ports[0].targetPort
+          value: http
+  - it: renders ingress with TLS and cert-manager issuer
+    template: templates/ingress.yaml
+    set:
+      ingress.host: app.example.com
+      ingress.tls.secretName: app-tls
+      ingress.tls.clusterIssuer: letsencrypt-prod
+    asserts:
+      - isKind:
+          of: Ingress
+      - equal:
+          path: metadata.annotations["cert-manager.io/cluster-issuer"]
+          value: letsencrypt-prod
+      - equal:
+          path: spec.tls[0].secretName
+          value: app-tls
+      - equal:
+          path: spec.rules[0].host
+          value: app.example.com
+  - it: renders telemetry-disabled production config
+    template: templates/configmap.yaml
+    asserts:
+      - isKind:
+          of: ConfigMap
+      - equal:
+          path: data.NODE_ENV
+          value: production
+      - equal:
+          path: data.OTEL_SDK_DISABLED
+          value: "true"
+      - equal:
+          path: data.PORT
+          value: "2486"
+
