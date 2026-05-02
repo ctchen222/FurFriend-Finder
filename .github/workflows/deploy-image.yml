@@ -41,7 +41,7 @@ jobs:
       - name: Setup Helm
         uses: azure/setup-helm@v4
         with:
-          version: v3.15.4
+          version: v3.19.5
 
       - name: Lint Helm chart
         run: helm lint deploy/furfriend-finder
