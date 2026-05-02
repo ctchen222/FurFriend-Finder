@@ -12,6 +12,8 @@
     "dev": "tsx watch src/main.ts",
     "start": "tsc -w & nodemon dist/app.js",
     "start:prod": "pnpm run build && node --require ./dist/instrumentation.js dist/app.js",
+    "lint": "eslint src/",
+    "type-check": "tsc --noEmit",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:unit": "jest --testPathPattern='src/__test__/unit'",
