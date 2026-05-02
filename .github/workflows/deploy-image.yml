@@ -1,9 +1,6 @@
 name: Build and Publish Image
 
 on:
-  pull_request:
-    branches:
-      - main
   push:
     branches:
       - main
@@ -86,6 +83,8 @@ jobs:
         with:
           context: .
           push: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           tags: |
             ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
 
