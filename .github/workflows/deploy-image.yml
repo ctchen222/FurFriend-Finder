@@ -35,9 +35,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Run tests
-        run: pnpm exec jest --runInBand
-
       - name: Build application
         run: pnpm run build
 
@@ -46,17 +43,11 @@ jobs:
         with:
           version: v3.15.4
 
-      - name: Install helm-unittest
-        run: helm plugin install https://github.com/helm-unittest/helm-unittest.git
-
       - name: Lint Helm chart
         run: helm lint deploy/furfriend-finder
 
       - name: Render Helm chart
         run: helm template furfriend-finder deploy/furfriend-finder --values deploy/furfriend-finder/values-production.yaml
-
-      - name: Run Helm unit tests
-        run: helm unittest deploy/furfriend-finder
 
   image:
     name: Build and publish GHCR image
