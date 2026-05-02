@@ -13,40 +13,43 @@ import {
 const otlpEndpoint =
     process.env.OTEL_EXPORTER_OTLP_ENDPOINT || 'http://localhost:4317';
 const isDev = process.env.NODE_ENV !== 'production';
+const otelDisabled = process.env.OTEL_SDK_DISABLED === 'true';
 
-const sdk = new NodeSDK({
-    resource: resourceFromAttributes({
-        [ATTR_SERVICE_NAME]:
-            process.env.OTEL_SERVICE_NAME || 'furfriend-finder',
-        [ATTR_SERVICE_VERSION]: '1.0.0',
-        [SEMRESATTRS_DEPLOYMENT_ENVIRONMENT]:
-            process.env.NODE_ENV || 'development',
-    }),
-    traceExporter: new OTLPTraceExporter({ url: otlpEndpoint }),
-    metricReader: new PeriodicExportingMetricReader({
-        exporter: new OTLPMetricExporter({ url: otlpEndpoint }),
-        exportIntervalMillis: 15000,
-    }),
-    instrumentations: [
-        getNodeAutoInstrumentations({
-            '@opentelemetry/instrumentation-fs': { enabled: false },
-            '@opentelemetry/instrumentation-dns': { enabled: false },
-            '@opentelemetry/instrumentation-net': { enabled: false },
-            '@opentelemetry/instrumentation-pg': {
-                requestHook: isDev
-                    ? undefined
-                    : (span) => {
-                          span.setAttribute('db.statement', '[redacted]');
-                      },
-            },
+if (!otelDisabled) {
+    const sdk = new NodeSDK({
+        resource: resourceFromAttributes({
+            [ATTR_SERVICE_NAME]:
+                process.env.OTEL_SERVICE_NAME || 'furfriend-finder',
+            [ATTR_SERVICE_VERSION]: '1.0.0',
+            [SEMRESATTRS_DEPLOYMENT_ENVIRONMENT]:
+                process.env.NODE_ENV || 'development',
         }),
-    ],
-});
+        traceExporter: new OTLPTraceExporter({ url: otlpEndpoint }),
+        metricReader: new PeriodicExportingMetricReader({
+            exporter: new OTLPMetricExporter({ url: otlpEndpoint }),
+            exportIntervalMillis: 15000,
+        }),
+        instrumentations: [
+            getNodeAutoInstrumentations({
+                '@opentelemetry/instrumentation-fs': { enabled: false },
+                '@opentelemetry/instrumentation-dns': { enabled: false },
+                '@opentelemetry/instrumentation-net': { enabled: false },
+                '@opentelemetry/instrumentation-pg': {
+                    requestHook: isDev
+                        ? undefined
+                        : (span) => {
+                              span.setAttribute('db.statement', '[redacted]');
+                          },
+                },
+            }),
+        ],
+    });
 
-sdk.start();
+    sdk.start();
 
-process.on('SIGTERM', () => {
-    sdk.shutdown()
-        .then(() => process.exit(0))
-        .catch(() => process.exit(1));
-});
+    process.on('SIGTERM', () => {
+        sdk.shutdown()
+            .then(() => process.exit(0))
+            .catch(() => process.exit(1));
+    });
+}

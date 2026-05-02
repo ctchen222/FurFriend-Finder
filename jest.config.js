@@ -3,7 +3,7 @@ module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
   testMatch: ['**/__tests__/**/*.ts', '**/?(*.)+(spec|test).ts'],
-  testPathIgnorePatterns: ['/node_modules/', '/dist/', 'e2e'],
+  testPathIgnorePatterns: ['/node_modules/', '/dist/', '/.worktrees/', 'e2e'],
   verbose: true,
   forceExit: true,
   clearMocks: true,
