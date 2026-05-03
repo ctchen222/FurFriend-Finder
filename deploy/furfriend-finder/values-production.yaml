@@ -1,33 +1,3 @@
 image:
   repository: ghcr.io/ctchen222/furfriend-finder
-  tag: REPLACE_WITH_GIT_SHA
-
-ingress:
-  host: 178.156.151.78
-  className: traefik
-  tls:
-    enabled: false
-    secretName: furfriend-finder-tls
-    clusterIssuer: letsencrypt-production
-
-config:
-  appBaseUrl: http://178.156.151.78
-  frontendUrl: http://178.156.151.78
-  emailVerifyCallbackUrl: http://178.156.151.78/verify-email
-  corsAllowedOrigins: http://178.156.151.78
-  telemetry:
-    disabled: "true"
-    serviceName: furfriend-finder
-    otlpEndpoint: ""
-
-secrets:
-  appSecretName: furfriend-finder-app-secret
-
-postgresql:
-  secretName: furfriend-finder-postgres-secret
-  storage:
-    storageClassName: "local-path"
-    size: 10Gi
-
-backup:
-  hostPath: /var/backups/furfriend-finder/postgres
+  tag: 9dd6bb3c2d96f6d6a1094549f9315aee27ad6b38
