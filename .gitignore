@@ -24,3 +24,24 @@ tmp/
 
 # Docs for development
 ./docs/issues/*
+
+# coverage
+coverage
+
+# Git worktrees
+.worktrees/
+
+# Ansible — inventory contains VPS IP, kept local
+deploy/ansible/inventory.ini
+
+# nvmrc
+.nvmrc
+
+# Runtime logs
+logs/
+
+# Local plans (Claude internal)
+plans/
+
+# OTel collector config (use .conf instead)
+observability/otel-collector-config.yaml

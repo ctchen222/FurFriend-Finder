@@ -4,6 +4,7 @@ module.exports = {
         {
             name: 'app',
             script: './dist/app.js',
+            node_args: '--require ./dist/instrumentation.js',
             instances: 2,
             autorestart: true,
             watch: true,

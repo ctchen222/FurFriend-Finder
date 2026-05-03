@@ -1,0 +1,11 @@
+{{- if .Values.schemaJob.enabled -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "furfriend-finder.fullname" . }}-schema
+  labels:
+    {{- include "furfriend-finder.labels" . | nindent 4 }}
+data:
+  V1__Initial.sql: |
+{{ .Files.Get "files/sql/V1__Initial.sql" | indent 4 }}
+{{- end -}}

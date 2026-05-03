@@ -1,0 +1,48 @@
+{{- if .Values.backup.enabled -}}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "furfriend-finder.fullname" . }}-postgres-backup
+  labels:
+    {{- include "furfriend-finder.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backup
+spec:
+  schedule: {{ .Values.backup.schedule | quote }}
+  successfulJobsHistoryLimit: {{ .Values.backup.successfulJobsHistoryLimit }}
+  failedJobsHistoryLimit: {{ .Values.backup.failedJobsHistoryLimit }}
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            {{- include "furfriend-finder.selectorLabels" . | nindent 12 }}
+            app.kubernetes.io/component: backup
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: pg-dump
+              image: "{{ .Values.backup.image.repository }}:{{ .Values.backup.image.tag }}"
+              imagePullPolicy: {{ .Values.backup.image.pullPolicy }}
+              env:
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.postgresql.secretName }}
+                      key: {{ .Values.postgresql.passwordKey }}
+              command:
+                - /bin/sh
+                - -ec
+                - |
+                  mkdir -p /backup
+                  ts="$(date -u +%Y%m%dT%H%M%SZ)"
+                  pg_dump -h {{ include "furfriend-finder.postgresql.fullname" . }} -U {{ .Values.postgresql.username | quote }} -d {{ .Values.postgresql.database | quote }} > "/backup/furfriend-finder-${ts}.sql"
+                  find /backup -name 'furfriend-finder-*.sql' -mtime +{{ .Values.backup.retentionDays }} -delete
+              volumeMounts:
+                - name: backup
+                  mountPath: /backup
+          volumes:
+            - name: backup
+              hostPath:
+                path: {{ .Values.backup.hostPath | quote }}
+                type: DirectoryOrCreate
+{{- end -}}

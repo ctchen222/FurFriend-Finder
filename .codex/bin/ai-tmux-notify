@@ -1,0 +1,137 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat <<'EOF'
+Usage:
+  ai-tmux-notify start [label]
+  ai-tmux-notify attention [label]
+  ai-tmux-notify done [label]
+  ai-tmux-notify error [label]
+  ai-tmux-notify reset
+  ai-tmux-notify wrap <label> -- <command> [args...]
+
+Examples:
+  ai-tmux-notify wrap codex -- codex
+  ai-tmux-notify attention "codex needs approval"
+  ai-tmux-notify done "claude completed"
+EOF
+}
+
+state="${1:-}"
+if [[ -z "$state" ]]; then
+  usage
+  exit 2
+fi
+shift || true
+
+project_name="${AI_NOTIFY_PROJECT:-$(basename "${PWD:-AI}")}"
+title="${AI_NOTIFY_TITLE:-AI}"
+target_pane="${AI_NOTIFY_TMUX_PANE:-${TMUX_PANE:-}}"
+
+case "$state" in
+  start)
+    color="${AI_NOTIFY_COLOR_START:-colour39}"
+    status="running"
+    default_message="Task started"
+    ;;
+  attention)
+    color="${AI_NOTIFY_COLOR_ATTENTION:-colour220}"
+    status="attention"
+    default_message="Needs your input"
+    ;;
+  done)
+    color="${AI_NOTIFY_COLOR_DONE:-colour40}"
+    status="done"
+    default_message="Task completed"
+    ;;
+  error)
+    color="${AI_NOTIFY_COLOR_ERROR:-colour196}"
+    status="error"
+    default_message="Task failed"
+    ;;
+  reset)
+    color="default"
+    status=""
+    default_message=""
+    ;;
+  wrap)
+    label="${1:-AI}"
+    if [[ "${2:-}" != "--" ]]; then
+      usage
+      exit 2
+    fi
+    shift 2
+    if [[ "$#" -eq 0 ]]; then
+      usage
+      exit 2
+    fi
+
+    "$0" start "$label"
+    set +e
+    "$@"
+    exit_code=$?
+    set -e
+
+    if [[ "$exit_code" -eq 0 ]]; then
+      "$0" done "$label"
+    else
+      "$0" error "$label exited with $exit_code"
+    fi
+    exit "$exit_code"
+    ;;
+  help|-h|--help)
+    usage
+    exit 0
+    ;;
+  *)
+    usage
+    exit 2
+    ;;
+esac
+
+message="${1:-$default_message}"
+pane_title=""
+if [[ -n "$status" ]]; then
+  pane_title="${title}:${status}:${message}"
+fi
+
+set_tmux_pane() {
+  if [[ -z "$target_pane" ]] || ! command -v tmux >/dev/null 2>&1; then
+    return 0
+  fi
+
+  if [[ "$state" == "reset" ]]; then
+    tmux set-option -p -t "$target_pane" pane-border-style default >/dev/null 2>&1 || true
+    tmux set-option -p -t "$target_pane" pane-active-border-style default >/dev/null 2>&1 || true
+    tmux select-pane -t "$target_pane" -T "" >/dev/null 2>&1 || true
+    return 0
+  fi
+
+  tmux set-option -p -t "$target_pane" pane-border-style "fg=${color},bg=default" >/dev/null 2>&1 || true
+  tmux set-option -p -t "$target_pane" pane-active-border-style "fg=${color},bg=default" >/dev/null 2>&1 || true
+  tmux select-pane -t "$target_pane" -T "$pane_title" >/dev/null 2>&1 || true
+  tmux display-message -t "$target_pane" "${title}: ${message}" >/dev/null 2>&1 || true
+}
+
+notify_desktop() {
+  if [[ "$state" == "reset" ]]; then
+    return 0
+  fi
+
+  if command -v osascript >/dev/null 2>&1; then
+    /usr/bin/osascript \
+      -e 'on run argv' \
+      -e 'display notification (item 2 of argv) with title (item 1 of argv)' \
+      -e 'end run' \
+      "$title" "${project_name}: ${message}" >/dev/null 2>&1 || true
+    return 0
+  fi
+
+  if command -v notify-send >/dev/null 2>&1; then
+    notify-send -u normal "$title" "${project_name}: ${message}" >/dev/null 2>&1 || true
+  fi
+}
+
+set_tmux_pane
+notify_desktop

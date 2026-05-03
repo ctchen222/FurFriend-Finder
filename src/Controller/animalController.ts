@@ -7,17 +7,21 @@ import CustomError from '../libs/customError';
 import DatabaseUtils from '../libs/database.utils';
 import AnimalHelper from './helper/animalHelper';
 import { Animal } from '../libs/zod/animals';
-import AnimalLostService from '../Service/animalLost';
+import AnimalSyncService from '../Service/animalSync';
 import AnimalService from '../Service/animal';
 
 class AnimalController {
 	repository: AnimalRepository
-	service: AnimalLostService
+	syncService: AnimalSyncService
 	animalService: AnimalService
-	constructor() {
-		this.repository = new AnimalRepository();
-		this.service = new AnimalLostService();
-		this.animalService = new AnimalService();
+	constructor(deps?: {
+		repository?: AnimalRepository;
+		syncService?: AnimalSyncService;
+		animalService?: AnimalService;
+	}) {
+		this.repository = deps?.repository ?? new AnimalRepository();
+		this.syncService = deps?.syncService ?? new AnimalSyncService();
+		this.animalService = deps?.animalService ?? new AnimalService();
 	}
 
 	fetchList = async (
@@ -86,7 +90,7 @@ class AnimalController {
 		next: express.NextFunction
 	) => {
 		const [animalTableinsertCount, animalLostTableCount] =
-			await Promise.all([this.animalService.updateAnimalTable(), this.service.updateTableAnimalLosts()]);
+			await Promise.all([this.animalService.updateAnimalTable(), this.syncService.updateTableAnimalLosts()]);
 
 		res.locals.result = new SuccessResponse('api', {
 			animalTables: animalTableinsertCount,

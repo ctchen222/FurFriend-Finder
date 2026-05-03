@@ -1,10 +1,10 @@
 import cron from 'node-cron';
 import AnimalService from '../Service/animal';
-import AnimalLostService from '../Service/animalLost';
-import { logger } from 'better-auth';
+import AnimalSyncService from '../Service/animalSync';
+import logger from '../config/logger';
 
 const animalService = new AnimalService()
-const animalLostService = new AnimalLostService()
+const animalSyncService = new AnimalSyncService()
 
 export const cronSchedule = cron.schedule(
 	'0 0 * * *',
@@ -14,7 +14,7 @@ export const cronSchedule = cron.schedule(
 		// execute on every 00:00 am
 		try {
 			const animalTableUpdateCount = await animalService.updateAnimalTable();
-			const animalLostUpdateCount = await animalLostService.updateTableAnimalLosts();
+			const animalLostUpdateCount = await animalSyncService.updateTableAnimalLosts();
 
 			logger.info(`[Daily Update]: \n${animalTableUpdateCount} data were updated in table Animal \n${animalLostUpdateCount} data were updated in table Animal_lost`);
 		} catch (error) {

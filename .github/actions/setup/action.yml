@@ -1,0 +1,19 @@
+name: Setup Node and pnpm
+description: Enable Corepack, set up Node.js, and install pnpm dependencies. Caller must run actions/checkout@v4 first.
+
+runs:
+  using: composite
+  steps:
+    - name: Enable Corepack
+      shell: bash
+      run: corepack enable
+
+    - name: Setup Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: 22
+        cache: pnpm
+
+    - name: Install dependencies
+      shell: bash
+      run: pnpm install --frozen-lockfile

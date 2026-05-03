@@ -1,0 +1,2 @@
+import './instrumentation';
+import './app';

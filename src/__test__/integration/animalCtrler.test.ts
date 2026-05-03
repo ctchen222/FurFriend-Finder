@@ -37,11 +37,9 @@ jest.mock('../../Service/animal', () =>
 		updateAnimalTable: (...args: any[]) => mockUpdateAnimalTable(...args),
 	}))
 );
-jest.mock('../../Service/animalLost', () =>
+jest.mock('../../Service/animalSync', () =>
 	jest.fn().mockImplementation(() => ({
 		updateTableAnimalLosts: (...args: any[]) => mockUpdateTableAnimalLosts(...args),
-		findMatchesAndSendMail: jest.fn(),
-		findMatches: jest.fn(),
 	}))
 );
 // handler.ts imports router (→ better-auth ESM) and morgan

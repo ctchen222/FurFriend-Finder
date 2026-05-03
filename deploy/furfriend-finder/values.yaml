@@ -1,0 +1,98 @@
+replicaCount: 1
+
+image:
+  repository: ghcr.io/owner/furfriend-finder
+  tag: REPLACE_WITH_GIT_SHA
+  pullPolicy: IfNotPresent
+  pullSecrets: []
+
+nameOverride: ""
+fullnameOverride: ""
+
+service:
+  type: ClusterIP
+  port: 2486
+
+ingress:
+  enabled: true
+  className: traefik
+  host: furfriend.example.com
+  tls:
+    enabled: true
+    secretName: furfriend-finder-tls
+    clusterIssuer: letsencrypt-production
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+config:
+  nodeEnv: production
+  port: "2486"
+  appBaseUrl: https://furfriend.example.com
+  frontendUrl: https://furfriend.example.com
+  emailVerifyCallbackUrl: https://furfriend.example.com/verify-email
+  corsAllowedOrigins: https://furfriend.example.com
+  telemetry:
+    disabled: "true"
+    serviceName: furfriend-finder
+    otlpEndpoint: ""
+
+secrets:
+  appSecretName: furfriend-finder-app-secret
+  databaseUrlKey: DATABASE_URL
+  geocodingApiKeyKey: GEOCODING_API_KEY
+  channelSecretKey: CHANNEL_SECRET
+  channelAccessTokenKey: CHANNEL_ACCESS_TOKEN
+  adminApiKeyKey: ADMIN_API_KEY
+  smtpHostKey: SMTP_HOST
+  smtpPortKey: SMTP_PORT
+  smtpSecureKey: SMTP_SECURE
+  smtpUserKey: SMTP_USER
+  smtpPasswordKey: SMTP_PASSWORD
+  smtpSentFromKey: SMTP_SENT_FROM
+
+postgresql:
+  enabled: true
+  image:
+    repository: postgres
+    tag: "16-bookworm"
+    pullPolicy: IfNotPresent
+  database: furfriend_finder
+  username: furfriend
+  secretName: furfriend-finder-postgres-secret
+  passwordKey: POSTGRES_PASSWORD
+  storage:
+    size: 10Gi
+    storageClassName: ""
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+schemaJob:
+  enabled: true
+  image:
+    repository: postgres
+    tag: "16-bookworm"
+    pullPolicy: IfNotPresent
+  backoffLimit: 3
+
+backup:
+  enabled: true
+  schedule: "0 18 * * *"
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  retentionDays: 14
+  hostPath: /var/backups/furfriend-finder/postgres
+  image:
+    repository: postgres
+    tag: "16-bookworm"
+    pullPolicy: IfNotPresent

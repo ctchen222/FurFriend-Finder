@@ -2,113 +2,12 @@
 <html lang="zh-TW">
 <head>
     <%- include('partials/_head', { title: '收容所動物' }) %>
-    <style>
-        h1 { text-align: center; font-size: 2.2em; margin-bottom: 24px; }
-
-        /* Filter bar */
-        .filter-bar {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-            align-items: flex-end;
-            background: var(--card-bg-color);
-            border: 1px solid var(--border-color);
-            border-radius: 16px;
-            padding: 20px 24px;
-            margin-bottom: 32px;
-            box-shadow: 0 2px 8px var(--shadow-color);
-        }
-        .filter-group { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 120px; }
-        .filter-group label { font-size: 0.85em; font-weight: bold; color: var(--text-color); margin: 0; }
-        .filter-group select,
-        .filter-group input { padding: 8px 12px; font-size: 0.95em; }
-        .filter-actions { display: flex; gap: 8px; align-items: flex-end; }
-
-        .result-info {
-            font-size: 0.9em;
-            color: #999;
-            margin-bottom: 16px;
-            text-align: right;
-        }
-
-        /* Animal grid */
-        .animal-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
-            gap: 24px;
-        }
-
-        .animal-card {
-            background-color: var(--card-bg-color);
-            border-radius: 16px;
-            box-shadow: 0 6px 20px var(--shadow-color);
-            overflow: hidden;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-        }
-        .animal-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
-        }
-
-        .animal-card-img {
-            width: 100%;
-            height: 190px;
-            object-fit: cover;
-            display: block;
-            background-color: var(--border-color);
-        }
-
-        .animal-card-body { padding: 16px 18px 18px; }
-
-        .animal-card-title {
-            color: var(--heading-color);
-            font-size: 1.15em;
-            font-weight: bold;
-            margin: 0 0 8px;
-        }
-
-        .animal-meta { margin: 0; font-size: 0.88em; color: var(--text-color); line-height: 1.7; }
-        .animal-meta strong { color: var(--heading-color); }
-
-        .shelter-tag {
-            display: inline-block;
-            margin-top: 10px;
-            padding: 3px 10px;
-            background-color: rgba(129, 166, 211, 0.15);
-            border-radius: 20px;
-            font-size: 0.8em;
-            color: var(--primary-color);
-            font-weight: bold;
-        }
-
-        .pagination-controls {
-            text-align: center;
-            margin-top: 40px;
-            display: flex;
-            justify-content: center;
-            gap: 16px;
-        }
-
-        .empty-state {
-            grid-column: 1 / -1;
-            text-align: center;
-            padding: 60px 20px;
-            color: #aaa;
-            font-size: 1.1em;
-        }
-
-        @media (max-width: 600px) {
-            .filter-bar { padding: 16px; }
-            .filter-group { min-width: 100%; }
-        }
-    </style>
 </head>
 <body>
-    <div id="toast" class="toast"></div>
     <%- include('partials/_header') %>
 
     <div class="container--wide">
-        <h1>收容所動物列表</h1>
+        <h1 class="page-title">收容所動物列表</h1>
 
         <div class="filter-bar">
             <div class="filter-group">
@@ -146,7 +45,7 @@
             </div>
             <div class="filter-actions">
                 <button id="filterBtn" class="btn btn-primary btn-sm">搜尋</button>
-                <button id="resetBtn" class="btn btn-sm" style="background:#f0ebe5;color:var(--text-color)">重置</button>
+                <button id="resetBtn" class="btn btn-sm btn-secondary">重置</button>
             </div>
         </div>
 
@@ -188,16 +87,16 @@
             const cardId = `card-${animal.id || Math.random().toString(36).slice(2)}`;
             animalMap.set(cardId, animal);
             return `
-                <div class="animal-card" data-card-id="${cardId}" style="cursor:pointer">
-                    <img class="animal-card-img" src="${imgSrc}" alt="${animal.variety || '動物'}">
+                <div class="animal-card clickable" data-card-id="${cardId}" tabindex="0" role="button">
+                    <img class="animal-card-img" src="${escapeHtml(imgSrc)}" alt="${escapeHtml(animal.variety || '動物')}">
                     <div class="animal-card-body">
-                        <p class="animal-card-title">${animal.variety || '未知品種'}</p>
+                        <p class="animal-card-title">${escapeHtml(animal.variety || '未知品種')}</p>
                         <p class="animal-meta">
-                            <strong>物種:</strong> ${animal.kind || '—'}&nbsp;&nbsp;
+                            <strong>物種:</strong> ${escapeHtml(animal.kind || '—')}&nbsp;&nbsp;
                             <strong>性別:</strong> ${sexLabel(animal.sex)}&nbsp;&nbsp;
-                            <strong>毛色:</strong> ${animal.colour || '—'}
+                            <strong>毛色:</strong> ${escapeHtml(animal.colour || '—')}
                         </p>
-                        ${animal.shelter_name ? `<span class="shelter-tag">📍 ${animal.shelter_name}</span>` : ''}
+                        ${animal.shelter_name ? `<span class="badge shelter-tag">📍 ${escapeHtml(animal.shelter_name)}</span>` : ''}
                     </div>
                 </div>`;
         }
@@ -294,11 +193,21 @@
             if (animal) openLightbox(animal, animal.id || null);
         });
 
+        grid.addEventListener('keydown', (e) => {
+            if (e.key !== 'Enter' && e.key !== ' ') return;
+            const card = e.target.closest('[data-card-id]');
+            if (!card) return;
+            e.preventDefault();
+            const animal = animalMap.get(card.dataset.cardId);
+            if (animal) openLightbox(animal, animal.id || null);
+        });
+
         prevBtn.addEventListener('click', () => prevCursor && fetchPage(prevCursor));
         nextBtn.addEventListener('click', () => nextCursor && fetchPage(nextCursor));
 
         fetchPage();
     });
     </script>
+    <%- include('partials/_footer') %>
 </body>
 </html>
