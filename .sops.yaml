@@ -1,4 +1,4 @@
 creation_rules:
   - path_regex: deploy/secrets/.*\.sops\.ya?ml$
     encrypted_regex: ^(data|stringData)$
-    age: age1replacewithownerprovidedpublicrecipient0000000000000000000000
+    age: age1nvhxw9qgra4xuvluqkz3etedv523w7rx632wyh6w3xsc6uh84cps0h0jka
