@@ -67,7 +67,7 @@ export const matchLogger = winston.createLogger({
 	level: 'http',
 	format: combine(injectTraceId(), timestamp(), json()),
 	transports: [
-		new winston.transports.File({ filename: './logs/match-requests.log' }),
+		new winston.transports.Console(),
 		new OpenTelemetryTransportV3(),
 	],
 });
