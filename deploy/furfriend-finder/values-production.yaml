@@ -3,19 +3,19 @@ image:
   tag: REPLACE_WITH_GIT_SHA
 
 ingress:
-  enabled: false
-  host: 178.156.151.78
-  className: traefik
+  enabled: true
+  host: furfriend-finder.com
+  className: ""
   tls:
     enabled: false
     secretName: furfriend-finder-tls
     clusterIssuer: letsencrypt-production
 
 config:
-  appBaseUrl: http://178.156.151.78
-  frontendUrl: http://178.156.151.78
-  emailVerifyCallbackUrl: http://178.156.151.78/verify-email
-  corsAllowedOrigins: http://178.156.151.78
+  appBaseUrl: https://furfriend-finder.com
+  frontendUrl: https://furfriend-finder.com
+  emailVerifyCallbackUrl: https://furfriend-finder.com/verify-email
+  corsAllowedOrigins: https://furfriend-finder.com
   telemetry:
     disabled: "true"
     serviceName: furfriend-finder
