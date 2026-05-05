@@ -114,7 +114,7 @@ jobs:
 
       - name: Update production values
         run: |
-          perl -0pi -e "s#(?ms)^image:\n  repository: .*\n  tag: .*#image:\n  repository: ${IMAGE_NAME}\n  tag: ${IMAGE_TAG}#" "$VALUES_FILE"
+          perl -0pi -e "s#(?m)^image:\n  repository: .*\n  tag: .*#image:\n  repository: ${IMAGE_NAME}\n  tag: ${IMAGE_TAG}#" "$VALUES_FILE"
           git diff -- "$VALUES_FILE"
 
       - name: Commit GitOps value update
