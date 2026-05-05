@@ -5,9 +5,9 @@ image:
 ingress:
   enabled: true
   host: furfriend-finder.com
-  className: ""
+  className: traefik
   tls:
-    enabled: false
+    enabled: true
     secretName: furfriend-finder-tls
     clusterIssuer: letsencrypt-production
 
