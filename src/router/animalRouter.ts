@@ -20,11 +20,11 @@ router.route('/')
 router.route('/random')
 	.get(catchAsync(animalCtrler.fetchRandom));
 
-router.route('/:id')
-	.get(catchAsync(animalCtrler.fetchById));
-
 router.route('/city/:city')
 	.get(catchAsync(animalCtrler.fetchByCity));
+
+router.route('/:id')
+	.get(catchAsync(animalCtrler.fetchById));
 
 // Manual update tables
 router.route('/manualUpdate')
