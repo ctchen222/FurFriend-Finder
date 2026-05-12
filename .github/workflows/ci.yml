@@ -15,8 +15,32 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: Detect changed paths
+    runs-on: ubuntu-latest
+    outputs:
+      app: ${{ steps.filter.outputs.app }}
+      helm: ${{ steps.filter.outputs.helm }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            app:
+              - 'src/**'
+              - 'package.json'
+              - 'tsconfig.json'
+              - 'pnpm-lock.yaml'
+              - 'eslint.config.js'
+              - '.github/actions/**'
+            helm:
+              - 'deploy/furfriend-finder/**'
+
   lint:
     name: Lint
+    needs: [changes]
+    if: needs.changes.outputs.app == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -27,6 +51,8 @@ jobs:
 
   type-check:
     name: Type check
+    needs: [changes]
+    if: needs.changes.outputs.app == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -37,7 +63,8 @@ jobs:
 
   build:
     name: Build
-    needs: [type-check]
+    needs: [changes, type-check]
+    if: needs.changes.outputs.app == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -48,7 +75,8 @@ jobs:
 
   test-unit:
     name: Unit tests
-    needs: [lint, type-check]
+    needs: [changes, lint, type-check]
+    if: needs.changes.outputs.app == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -57,8 +85,22 @@ jobs:
       - name: Run unit tests
         run: pnpm test:unit
 
+  test-integration:
+    name: Integration tests
+    needs: [changes, test-unit]
+    if: needs.changes.outputs.app == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+
+      - name: Run integration tests
+        run: pnpm test:integration
+
   helm-validate:
     name: Helm validate
+    needs: [changes]
+    if: needs.changes.outputs.helm == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -81,13 +123,32 @@ jobs:
       - name: Run Helm unit tests
         run: helm unittest deploy/furfriend-finder
 
-  test-integration:
-    name: Integration tests
-    needs: [test-unit]
+  status-gate:
+    name: CI status gate
     runs-on: ubuntu-latest
+    needs: [changes, lint, type-check, build, test-unit, test-integration, helm-validate]
+    if: always()
     steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/setup
-
-      - name: Run integration tests
-        run: pnpm test:integration
+      - name: Evaluate job results
+        run: |
+          failed=false
+          while IFS='=' read -r name result; do
+            if [[ "$result" == "failure" || "$result" == "cancelled" ]]; then
+              echo "FAIL: $name → $result"
+              failed=true
+            else
+              echo "OK:   $name → $result"
+            fi
+          done <<EOF
+          changes=${{ needs.changes.result }}
+          lint=${{ needs.lint.result }}
+          type-check=${{ needs.type-check.result }}
+          build=${{ needs.build.result }}
+          test-unit=${{ needs.test-unit.result }}
+          test-integration=${{ needs.test-integration.result }}
+          helm-validate=${{ needs.helm-validate.result }}
+          EOF
+          if [[ "$failed" == "true" ]]; then
+            exit 1
+          fi
+          echo "All checks passed or were skipped."
