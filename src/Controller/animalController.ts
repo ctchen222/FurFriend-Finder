@@ -53,6 +53,10 @@ class AnimalController {
 	) => {
 		const id = req.params.id as string
 
+		if (!/^\d+$/.test(id)) {
+			throw new CustomError(apiMessage.ANIMAL_NOT_EXISTS);
+		}
+
 		const animal = await this.repository.findAnimalShelterById(id);
 		if (!animal) {
 			throw new CustomError(apiMessage.ANIMAL_NOT_EXISTS);
