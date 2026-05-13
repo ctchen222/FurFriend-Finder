@@ -73,6 +73,8 @@
         const PAGE_SIZE = 12;
         let prevCursor = null;
         let nextCursor = null;
+        const pageCursors = [null];
+        let currentPageIndex = 0;
         // Current filter state
         let activeCity = '';
         let activeKind = '';
@@ -135,7 +137,15 @@
             }
         }
 
-        async function fetchPage(cursor = null) {
+        function resetPaginationState() {
+            pageCursors.length = 1;
+            pageCursors[0] = null;
+            currentPageIndex = 0;
+            prevCursor = null;
+            nextCursor = null;
+        }
+
+        async function fetchPage(cursor = null, pageIndex = 0) {
             grid.innerHTML = '<p class="empty-state">載入中...</p>';
             pagination.style.display = 'flex';
             prevBtn.disabled = true;
@@ -152,9 +162,11 @@
                 const cursors = extras.cursors || {};
 
                 showAnimals(animals, null);
-                prevCursor = cursors.prevCursor || null;
+                currentPageIndex = pageIndex;
+                pageCursors.splice(currentPageIndex + 1);
+                prevCursor = currentPageIndex > 0 ? pageCursors[currentPageIndex - 1] : null;
                 nextCursor = cursors.nextCursor || null;
-                prevBtn.disabled = !prevCursor;
+                prevBtn.disabled = currentPageIndex === 0;
                 nextBtn.disabled = !nextCursor;
             } catch (err) {
                 grid.innerHTML = `<p class="empty-state">${err.message}</p>`;
@@ -168,9 +180,11 @@
 
             if (activeCity) {
                 isCityMode = true;
+                resetPaginationState();
                 fetchByCity(activeCity);
             } else {
                 isCityMode = false;
+                resetPaginationState();
                 fetchPage();
             }
         });
@@ -181,6 +195,7 @@
             document.getElementById('filter-city').value = '';
             activeKind = ''; activeSex = ''; activeCity = '';
             isCityMode = false;
+            resetPaginationState();
             pagination.style.display = 'flex';
             fetchPage();
         });
@@ -202,8 +217,17 @@
             if (animal) openLightbox(animal, animal.id || null);
         });
 
-        prevBtn.addEventListener('click', () => prevCursor && fetchPage(prevCursor));
-        nextBtn.addEventListener('click', () => nextCursor && fetchPage(nextCursor));
+        prevBtn.addEventListener('click', () => {
+            if (currentPageIndex === 0) return;
+            const targetPageIndex = currentPageIndex - 1;
+            fetchPage(pageCursors[targetPageIndex], targetPageIndex);
+        });
+        nextBtn.addEventListener('click', () => {
+            if (!nextCursor) return;
+            const targetPageIndex = currentPageIndex + 1;
+            pageCursors[targetPageIndex] = nextCursor;
+            fetchPage(nextCursor, targetPageIndex);
+        });
 
         fetchPage();
     });

@@ -10,7 +10,7 @@ class AnimalHelper {
 		if (parsedCursor) {
 			id = JSON.parse(Buffer.from(parsedCursor, 'base64').toString('ascii')).id
 		}
-		return { parsedPageSize, id };
+		return { parsedPageSize, id, parsedCursor };
 	}
 }
 
