@@ -4,6 +4,10 @@
 
 FurFriend Finder is a pet adoption and lost pet matching platform for Taiwan. The system synchronizes public animal shelter data from Taiwan's Ministry of Agriculture, allowing users to browse shelter animals, report lost pets, and receive email notifications when potential matches are found based on animal characteristics and location.
 
+## Live Site
+
+- Website: https://www.furfriend-finder.com
+
 ## Features
 
 - Shelter animal browsing with pagination, city, species, and gender filters
