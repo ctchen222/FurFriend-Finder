@@ -98,6 +98,17 @@ describe('AnimalController Integration Tests (mock DB)', () => {
 			expect(res.body.extras.animals).toHaveLength(10);
 			expect(res.body.extras.cursors).toBeDefined();
 		});
+
+		it('should generate nextCursor using requested pageSize', async () => {
+			const mockAnimals = Array.from({ length: 12 }, (_, i) => ({ id: i + 1, kind: '狗' }));
+			mockFindAll = jest.fn().mockResolvedValue(mockAnimals);
+
+			const res = await request(app).get('/api/animals?pageSize=12');
+
+			expect(res.status).toBe(200);
+			expect(res.body.extras.animals).toHaveLength(12);
+			expect(res.body.extras.cursors.nextCursor).toBeDefined();
+		});
 	});
 
 	describe('GET /api/animals/:id', () => {
