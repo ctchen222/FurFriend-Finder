@@ -29,10 +29,10 @@ class AnimalController {
 		res: express.Response,
 		next: express.NextFunction
 	) => {
-		const { parsedPageSize, id } = AnimalHelper.getQueryString(req)
+		const { parsedPageSize, id, parsedCursor } = AnimalHelper.getQueryString(req)
 
 		const animals = await this.repository.findAllWithShelter(parsedPageSize, id)
-		const { prevCursor, nextCursor } = DatabaseUtils.cursorPairGenerate(animals)
+		const { prevCursor, nextCursor } = DatabaseUtils.cursorPairGenerate(animals, parsedCursor, parsedPageSize)
 
 		res.locals.result = new SuccessResponse('api',
 			{
