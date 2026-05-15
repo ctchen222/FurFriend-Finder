@@ -43,5 +43,8 @@ logs/
 # Local plans (Claude internal)
 plans/
 
+# Local external design references
+vendor/awesome-design-md/
+
 # OTel collector config (use .conf instead)
 observability/otel-collector-config.yaml

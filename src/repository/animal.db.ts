@@ -198,7 +198,7 @@ class AnimalRepository extends BaseRepository {
     }
 
     async findRandomAnimal() {
-        const query = `
+        const selectRandomAnimal = (whereClause = '') => `
 			SELECT
 				animal.*,
 				animal_shelter.name AS shelter_name,
@@ -207,13 +207,22 @@ class AnimalRepository extends BaseRepository {
 			FROM ${this.tableName}
 			LEFT JOIN animal_shelter
 			ON ${this.tableName}.animal_shelter_id = animal_shelter.id
-			WHERE ${this.tableName}.picture IS NOT NULL AND ${this.tableName}.picture <> ''
+			${whereClause}
 			ORDER BY RANDOM()
 			LIMIT 1;
 		`;
 
-        const { rows } = await pool.query(query);
-        return rows[0];
+        const pictured = await pool.query(
+            selectRandomAnimal(
+                `WHERE ${this.tableName}.picture IS NOT NULL AND ${this.tableName}.picture <> ''`,
+            ),
+        );
+        if (pictured.rows[0]) {
+            return pictured.rows[0];
+        }
+
+        const fallback = await pool.query(selectRandomAnimal());
+        return fallback.rows[0];
     }
 }
 

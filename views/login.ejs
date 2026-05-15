@@ -5,9 +5,11 @@
 </head>
 <body class="auth-layout">
     <div id="toast" class="toast"></div>
-    <div class="auth-card">
-        <div class="auth-logo">🐾</div>
+    <main class="auth-card">
+        <a href="/" class="auth-brand">FurFriend Finder</a>
+        <p class="eyebrow">Account</p>
         <h1>登入 FurFriend Finder</h1>
+        <p class="auth-copy">登入後可以建立協尋案件、管理通知設定，並保留後續配對通知。</p>
         <form id="loginForm" action="/api/auth/login" method="POST">
             <div class="form-group">
                 <label for="email">Email</label>
@@ -21,14 +23,12 @@
         </form>
         <div class="switch-link">
             <p>沒有帳號？ <a href="/register">點此註冊</a></p>
-            <p><a href="/">返回首頁</a> · <a href="/quick-use">快速使用</a></p>
+            <p><a href="/">返回首頁</a> · <a href="/quick-use">快速比對</a></p>
         </div>
-    </div>
+    </main>
 
     <script>
     document.addEventListener('DOMContentLoaded', () => {
-        // common.js auto-calls handleUrlMessages() — no need to repeat here.
-        // Only handle returnTo which is login-page-specific.
         const returnTo = new URLSearchParams(window.location.search).get('returnTo');
         if (returnTo) {
             const form = document.getElementById('loginForm');

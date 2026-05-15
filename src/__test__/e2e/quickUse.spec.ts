@@ -5,9 +5,9 @@ test.describe('Quick Use', () => {
 	// It is unreliable without proper API mocking. Skipped until mock is implemented.
 	test.skip('Quick Use', async ({ page }) => {
 		await page.goto('http://localhost:2486');
-		await page.getByRole('link', { name: '快速使用' }).click();
+		await page.getByRole('link', { name: '快速比對' }).click();
 		await expect(page).toHaveURL('http://localhost:2486/quick-use');
-		await expect(page.locator('h1')).toContainText('快速尋找走失毛孩');
+		await expect(page.locator('h1')).toContainText('快速比對走失毛孩');
 		await page.getByLabel('毛孩名稱 (選填)').fill('二寶');
 		await page.getByLabel('種類').selectOption('狗');
 		await page.getByLabel('品種 (選填)').fill('柴犬');
@@ -18,8 +18,8 @@ test.describe('Quick Use', () => {
 		await expect(page.locator('h2')).toContainText('比對結果');
 
 		// TODO: Or mock api
-		await page.waitForSelector('.result-item');
-		const results = await page.locator('.result-item').count();
+		await page.waitForSelector('.result-card');
+		const results = await page.locator('.result-card').count();
 		expect(results).toBe(10);
 	});
 });

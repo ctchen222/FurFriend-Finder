@@ -59,6 +59,7 @@ test('shelter animals pagination disables previous after returning to first page
       <button id="filterBtn">搜尋</button>
       <button id="resetBtn">重置</button>
       <p id="result-info"></p>
+      <div id="active-filters"></div>
       <div id="animal-grid"></div>
       <div id="pagination-controls">
         <button id="prev-page" disabled>上一頁</button>
@@ -69,6 +70,8 @@ test('shelter animals pagination disables previous after returning to first page
       window.openLightbox = () => {};
       window.escapeHtml = (value) => String(value ?? '');
       window.sexLabel = (value) => value === 'M' ? '公' : value === 'F' ? '母' : '未知';
+      window.getAnimalImage = () => 'https://placehold.co/560x420/f7f7f5/6a6a6a?text=No+photo';
+      window.animalAltText = (animal) => animal.variety || '動物照片';
     </script>
     <script>${script}</script>
   `);
