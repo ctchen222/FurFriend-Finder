@@ -5,9 +5,11 @@
 </head>
 <body class="auth-layout">
     <div id="toast" class="toast"></div>
-    <div class="auth-card">
-        <div class="auth-logo">🐾</div>
+    <main class="auth-card">
+        <a href="/" class="auth-brand">FurFriend Finder</a>
+        <p class="eyebrow">Create account</p>
         <h1>註冊新帳號</h1>
+        <p class="auth-copy">建立帳號後，可以登記協尋案件並接收後續配對通知。</p>
         <form action="/api/auth/signup" method="POST">
             <div class="form-group">
                 <label for="name">姓名</label>
@@ -27,6 +29,6 @@
             <p>已經有帳號了？ <a href="/login">點此登入</a></p>
             <p><a href="/">返回首頁</a></p>
         </div>
-    </div>
+    </main>
 </body>
 </html>

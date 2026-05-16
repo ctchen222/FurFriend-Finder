@@ -6,86 +6,95 @@
 <body>
     <%- include('partials/_header') %>
 
-    <div class="container--card">
-        <h1 class="page-title">協尋寵物資料登記</h1>
-        <p class="page-subtitle">請盡可能詳細地填寫以下資訊，以提高配對成功率。</p>
+    <main class="form-page">
+        <section class="page-hero page-hero--compact">
+            <p class="eyebrow">Lost pet report</p>
+            <h1 class="page-title">協尋寵物資料登記</h1>
+            <p class="page-subtitle">建立案件後，系統會保存走失資訊並執行配對。請先填最能辨識的特徵與走失地點。</p>
+        </section>
 
-        <form id="lostPetForm">
-            <fieldset>
-                <legend>🐾 走失寵物資料</legend>
-                <div class="form-group">
-                    <label for="pet-name">寵物名字</label>
-                    <input type="text" id="pet-name" name="animalLost[name]">
-                </div>
-                <div class="form-group">
-                    <label for="pet-lost-time">走失時間</label>
-                    <input type="date" id="pet-lost-time" name="animalLost[lost_time]">
-                </div>
-                <div class="form-group">
-                    <label for="pet-kind">物種 <span class="required-mark">*</span></label>
-                    <select id="pet-kind" name="animalLost[kind]" required>
-                        <option value="">請選擇</option>
-                        <option value="狗">狗</option>
-                        <option value="貓">貓</option>
-                        <option value="其他">其他</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="pet-variety">品種</label>
-                    <input type="text" id="pet-variety" name="animalLost[variety]" placeholder="例如: 米克斯, 貴賓">
-                </div>
-                <div class="form-group">
-                    <label for="pet-sex">性別</label>
-                    <select id="pet-sex" name="animalLost[sex]">
-                        <option value="M">公</option>
-                        <option value="F">母</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="pet-colour">毛色</label>
-                    <input type="text" id="pet-colour" name="animalLost[colour]" placeholder="例如: 虎斑, 橘色, 黑白">
-                </div>
-                <div class="form-group">
-                    <label for="pet-outlook">外觀</label>
-                    <textarea id="pet-outlook" name="animalLost[outlook]" rows="2"
-                        placeholder="例如: 親人、膽小、左耳有剪耳"></textarea>
-                </div>
-                <div class="form-group">
-                    <label for="pet-feature">特徵</label>
-                    <textarea id="pet-feature" name="animalLost[feature]" rows="2"
-                        placeholder="例如: 尾巴是麒麟尾、項圈是藍色的"></textarea>
-                </div>
-                <div class="form-group">
-                    <label for="pet-lost-place">走失地點 <span class="required-mark">*</span></label>
-                    <input type="text" id="pet-lost-place" name="animalLost[lost_place]" required
-                        placeholder="例如：台北市信義區">
-                </div>
-            </fieldset>
+        <section class="form-shell form-shell--single">
+            <form id="lostPetForm" class="form-card form-card--wide">
+                <fieldset>
+                    <legend>寵物身分</legend>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="pet-name">寵物名字</label>
+                            <input type="text" id="pet-name" name="animalLost[name]" placeholder="例如：小黑">
+                        </div>
+                        <div class="form-group">
+                            <label for="pet-lost-time">走失時間</label>
+                            <input type="date" id="pet-lost-time" name="animalLost[lost_time]">
+                        </div>
+                        <div class="form-group">
+                            <label for="pet-kind">物種 <span class="required-mark">*</span></label>
+                            <select id="pet-kind" name="animalLost[kind]" required>
+                                <option value="">請選擇</option>
+                                <option value="狗">狗</option>
+                                <option value="貓">貓</option>
+                                <option value="其他">其他</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="pet-variety">品種</label>
+                            <input type="text" id="pet-variety" name="animalLost[variety]" placeholder="例如：米克斯、貴賓">
+                        </div>
+                        <div class="form-group">
+                            <label for="pet-sex">性別</label>
+                            <select id="pet-sex" name="animalLost[sex]">
+                                <option value="M">公</option>
+                                <option value="F">母</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="pet-colour">毛色</label>
+                            <input type="text" id="pet-colour" name="animalLost[colour]" placeholder="例如：虎斑、橘色、黑白">
+                        </div>
+                    </div>
+                </fieldset>
 
-            <fieldset>
-                <legend>👤 飼主聯絡資訊</legend>
-                <div class="form-group">
-                    <label for="owner-name">您的姓名 <span class="required-mark">*</span></label>
-                    <input type="text" id="owner-name" name="animalOwner[name]"
-                        value="<%= animalOwner.name || '' %>" required>
-                </div>
-                <div class="form-group">
-                    <label for="owner-email">Email <span class="required-mark">*</span></label>
-                    <input type="email" id="owner-email" name="animalOwner[email]"
-                        value="<%= animalOwner.email || '' %>" required>
-                </div>
-                <div class="form-group">
-                    <label for="owner-phone">手機</label>
-                    <input type="tel" id="owner-phone" name="animalOwner[phone]"
-                        value="<%= animalOwner.phone || '' %>">
-                </div>
-            </fieldset>
+                <fieldset>
+                    <legend>辨識線索</legend>
+                    <div class="form-group">
+                        <label for="pet-lost-place">走失地點 <span class="required-mark">*</span></label>
+                        <input type="text" id="pet-lost-place" name="animalLost[lost_place]" required placeholder="例如：台北市信義區">
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="pet-outlook">外觀</label>
+                            <textarea id="pet-outlook" name="animalLost[outlook]" rows="3" placeholder="例如：親人、膽小、左耳有剪耳"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="pet-feature">特徵</label>
+                            <textarea id="pet-feature" name="animalLost[feature]" rows="3" placeholder="例如：麒麟尾、藍色項圈"></textarea>
+                        </div>
+                    </div>
+                </fieldset>
 
-            <button id="submitBtn" type="submit" class="btn btn-primary btn-pill btn-block btn-submit">
-                提交協尋案件
-            </button>
-        </form>
-    </div>
+                <fieldset>
+                    <legend>聯絡資訊</legend>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="owner-name">您的姓名 <span class="required-mark">*</span></label>
+                            <input type="text" id="owner-name" name="animalOwner[name]" value="<%= animalOwner.name || '' %>" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="owner-email">Email <span class="required-mark">*</span></label>
+                            <input type="email" id="owner-email" name="animalOwner[email]" value="<%= animalOwner.email || '' %>" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="owner-phone">手機</label>
+                            <input type="tel" id="owner-phone" name="animalOwner[phone]" value="<%= animalOwner.phone || '' %>">
+                        </div>
+                    </div>
+                </fieldset>
+
+                <button id="submitBtn" type="submit" class="btn btn-primary btn-pill btn-block btn-submit">
+                    儲存案件並執行配對
+                </button>
+            </form>
+        </section>
+    </main>
 
     <script>
     document.getElementById('lostPetForm').addEventListener('submit', async (e) => {
@@ -93,7 +102,6 @@
         const btn = document.getElementById('submitBtn');
         setButtonLoading(btn, '提交中...');
 
-        // Build nested object from form field names like animalLost[kind]
         const raw = new FormData(e.target);
         const animalLost = {};
         const animalOwner = {};
@@ -121,11 +129,11 @@
             } else {
                 const data = await res.json().catch(() => ({}));
                 showToast(data?.error?.msg || '提交失敗，請確認填寫內容後再試', 'error');
-                resetButton(btn, '提交協尋案件');
+                resetButton(btn, '儲存案件並執行配對');
             }
         } catch {
             showToast('網路錯誤，請稍後再試', 'error');
-            resetButton(btn, '提交協尋案件');
+            resetButton(btn, '儲存案件並執行配對');
         }
     });
     </script>

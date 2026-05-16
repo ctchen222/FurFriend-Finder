@@ -78,6 +78,22 @@ function sexLabel(s) {
     return s === 'M' ? '公' : s === 'F' ? '母' : s || '—';
 }
 
+function getAnimalImage(animal, width = 560, height = 420) {
+    if (animal && animal.picture) return animal.picture;
+    return `https://placehold.co/${width}x${height}/f7f7f5/6a6a6a?text=No+photo`;
+}
+
+function animalAltText(animal) {
+    if (!animal) return '動物照片';
+    const parts = [
+        animal.kind,
+        animal.variety,
+        sexLabel(animal.sex),
+        animal.colour,
+    ].filter(Boolean);
+    return `${parts.join('，') || '動物'}的照片`;
+}
+
 // ============================================================
 //  Lightbox
 // ============================================================
@@ -105,11 +121,11 @@ function openLightbox(animal, animalId) {
 
     const previousFocus = document.activeElement;
 
-    const imgSrc = animal.picture || 'https://placehold.co/600x300/f4efe8/a77b5a?text=%F0%9F%90%BE';
+    const imgSrc = getAnimalImage(animal, 720, 420);
 
     overlay.innerHTML = `
         <div class="lightbox-box">
-            <img class="lightbox-img" src="${escapeHtml(imgSrc)}" alt="${escapeHtml(animal.variety || '動物')}">
+            <img class="lightbox-img" src="${escapeHtml(imgSrc)}" alt="${animalAltText(animal)}">
             <button class="lightbox-close" aria-label="關閉">✕</button>
             <div class="lightbox-body">
                 <h3>${escapeHtml(animal.variety || '未知品種')}</h3>
@@ -163,10 +179,10 @@ function openLightbox(animal, animalId) {
         if (!shelterEl) return;
         if (name) {
             shelterEl.innerHTML = `
-                <h4>📍 收容所資訊</h4>
-                <p><strong>名稱:</strong> ${escapeHtml(name)}</p>
-                ${address ? `<p><strong>地址:</strong> ${escapeHtml(address)}</p>` : ''}
-                ${tel     ? `<p><strong>電話:</strong> <a href="tel:${escapeHtml(tel)}">${escapeHtml(tel)}</a></p>` : ''}`;
+                <h4>收容所資訊</h4>
+                <p><strong>名稱</strong> ${escapeHtml(name)}</p>
+                ${address ? `<p><strong>地址</strong> ${escapeHtml(address)}</p>` : ''}
+                ${tel     ? `<p><strong>電話</strong> <a href="tel:${escapeHtml(tel)}">${escapeHtml(tel)}</a></p>` : ''}`;
         } else {
             shelterEl.innerHTML = '<p class="text-muted">無收容所資訊</p>';
         }

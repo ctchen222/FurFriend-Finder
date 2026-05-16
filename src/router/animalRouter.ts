@@ -23,7 +23,7 @@ router.route('/random')
 router.route('/city/:city')
 	.get(catchAsync(animalCtrler.fetchByCity));
 
-router.route('/:id')
+router.route('/:id(\\d+)')
 	.get(catchAsync(animalCtrler.fetchById));
 
 // Manual update tables

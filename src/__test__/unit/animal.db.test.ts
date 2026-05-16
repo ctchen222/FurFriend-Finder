@@ -45,12 +45,34 @@ describe('AnimalRepository', () => {
 		});
 
 		it('should return undefined when no animal with a picture is found', async () => {
-			(pool.query as jest.Mock).mockResolvedValue({ rows: [] });
+			(pool.query as jest.Mock)
+				.mockResolvedValueOnce({ rows: [] })
+				.mockResolvedValueOnce({ rows: [] });
 
 			const result = await animalRepository.findRandomAnimal();
 
-			expect(pool.query).toHaveBeenCalledTimes(1);
+			expect(pool.query).toHaveBeenCalledTimes(2);
 			expect(result).toBeUndefined();
+		});
+
+		it('should fall back to any animal when no pictured animal exists', async () => {
+			const mockAnimal = {
+				id: 2,
+				kind: '狗',
+				variety: '米克斯',
+				picture: '',
+				shelter_name: '測試收容所',
+			};
+			(pool.query as jest.Mock)
+				.mockResolvedValueOnce({ rows: [] })
+				.mockResolvedValueOnce({ rows: [mockAnimal] });
+
+			const result = await animalRepository.findRandomAnimal();
+
+			expect(pool.query).toHaveBeenCalledTimes(2);
+			const fallbackQuery = (pool.query as jest.Mock).mock.calls[1][0];
+			expect(fallbackQuery).not.toContain('picture IS NOT NULL');
+			expect(result).toEqual(mockAnimal);
 		});
 	});
 

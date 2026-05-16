@@ -5,6 +5,7 @@ import express from 'express';
 let mockFindAll: jest.Mock;
 let mockFindAnimalShelterById: jest.Mock;
 let mockFindAnimalsByCity: jest.Mock;
+let mockFindRandomAnimal: jest.Mock;
 let mockUpdateAnimalTable: jest.Mock;
 let mockUpdateTableAnimalLosts: jest.Mock;
 
@@ -15,7 +16,7 @@ jest.mock('../../repository/animal.db', () =>
 		findAllWithShelter: (...args: any[]) => mockFindAll(...args),
 		findAnimalShelterById: (...args: any[]) => mockFindAnimalShelterById(...args),
 		findAnimalsByCity: (...args: any[]) => mockFindAnimalsByCity(...args),
-		findRandomAnimal: jest.fn().mockResolvedValue(null),
+		findRandomAnimal: (...args: any[]) => mockFindRandomAnimal(...args),
 	}))
 );
 jest.mock('../../repository/animalLost.db', () =>
@@ -77,6 +78,7 @@ describe('AnimalController Integration Tests (mock DB)', () => {
 		mockFindAll = jest.fn().mockResolvedValue([]);
 		mockFindAnimalShelterById = jest.fn().mockResolvedValue(null);
 		mockFindAnimalsByCity = jest.fn().mockResolvedValue([]);
+		mockFindRandomAnimal = jest.fn().mockResolvedValue(null);
 		mockUpdateAnimalTable = jest.fn().mockResolvedValue(0);
 		mockUpdateTableAnimalLosts = jest.fn().mockResolvedValue(0);
 	});
@@ -112,6 +114,18 @@ describe('AnimalController Integration Tests (mock DB)', () => {
 	});
 
 	describe('GET /api/animals/:id', () => {
+		it('should not treat the random route as an id lookup', async () => {
+			mockFindRandomAnimal = jest.fn().mockResolvedValue(null);
+
+			const res = await request(app).get('/api/animals/random');
+
+			expect(res.status).toBe(200);
+			expect(res.body.success).toBe(true);
+			expect(res.body.extras.animal).toBeNull();
+			expect(mockFindAnimalShelterById).not.toHaveBeenCalled();
+			expect(mockFindRandomAnimal).toHaveBeenCalledTimes(1);
+		});
+
 		it('should return 400 ANIMAL_NOT_EXISTS when animal not found', async () => {
 			mockFindAnimalShelterById = jest.fn().mockResolvedValue(null);
 
