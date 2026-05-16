@@ -6,11 +6,14 @@ class AnimalHelper {
 		const { cursor, pageSize } = req.query;
 		const parsedPageSize = pageSize ? parseInt(pageSize as string, 10) : 10;
 		const parsedCursor = cursor ? (cursor as string) : null;
+		let cursorData: { id?: number; update_date?: string | null; open_date?: string | null } | undefined;
 
 		if (parsedCursor) {
-			id = JSON.parse(Buffer.from(parsedCursor, 'base64').toString('ascii')).id
+			const decodedCursor = JSON.parse(Buffer.from(parsedCursor, 'base64').toString('ascii'));
+			cursorData = decodedCursor;
+			id = decodedCursor.id?.toString();
 		}
-		return { parsedPageSize, id, parsedCursor };
+		return { parsedPageSize, id, parsedCursor, cursorData };
 	}
 }
 
