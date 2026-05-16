@@ -1,21 +1,30 @@
 import { Animal } from "./zod/animals";
 
 class DatabaseUtils {
+	static encodeAnimalPageCursor(row: any): string | undefined {
+		if (!row?.id) return undefined;
+
+		return Buffer.from(
+			JSON.stringify({
+				id: row.id,
+				update_date: row.update_date ?? null,
+				open_date: row.open_date ?? null,
+			}),
+		).toString('base64');
+	}
 
 	static cursorPairGenerate<T>(
 		data: any[],
 		currentCursor: string | null = null,
 		pageSize: number = 10,
 	) {
-		const firstElementId = data[0]?.id;
-		const lastElementId = data[data.length - 1]?.id;
 		const isFirstPage = !currentCursor;
 		let nextCursor, prevCursor: string | undefined;
-		if (firstElementId && !isFirstPage) {
-			prevCursor = Buffer.from(JSON.stringify({ "id": firstElementId - 1 })).toString('base64');
+		if (data[0]?.id && !isFirstPage) {
+			prevCursor = DatabaseUtils.encodeAnimalPageCursor(data[0]);
 		}
-		if (lastElementId && data.length === pageSize) {
-			nextCursor = Buffer.from(JSON.stringify({ "id": lastElementId })).toString('base64');
+		if (data.length === pageSize) {
+			nextCursor = DatabaseUtils.encodeAnimalPageCursor(data[data.length - 1]);
 		}
 
 		return {

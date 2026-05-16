@@ -129,17 +129,27 @@ describe('AnimalRepository', () => {
 			expect(result).toEqual(mockRows);
 			const calledQuery = (pool.query as jest.Mock).mock.calls[0][0];
 			expect(calledQuery).toContain('LEFT JOIN animal_shelter');
-			expect(calledQuery).toContain('ORDER BY animal.update_date DESC');
+			expect(calledQuery).toContain('animal.id, animal.sub_id');
+			expect(calledQuery).toContain('animal_shelter.id AS shelter_id');
+			expect(calledQuery).toContain("COALESCE(animal.update_date, DATE '0001-01-01') DESC");
+			expect(calledQuery).toContain('animal.id DESC');
 		});
 
 		it('should include cursor clause when cursor provided', async () => {
 			(pool.query as jest.Mock).mockResolvedValue({ rows: [] });
 
-			await animalRepository.findAllWithShelter(10, '5');
+			await animalRepository.findAllWithShelter(10, {
+				id: 5,
+				update_date: '2026-05-01',
+				open_date: '2026-04-01',
+			});
 
 			const [calledQuery, calledValues] = (pool.query as jest.Mock).mock.calls[0];
-			expect(calledQuery).toContain('WHERE animal.id >');
-			expect(calledValues).toContain('5');
+			expect(calledQuery).toContain('WHERE (');
+			expect(calledQuery).toContain("COALESCE(animal.update_date, DATE '0001-01-01')");
+			expect(calledQuery).toContain('animal.id');
+			expect(calledQuery).toContain('< (');
+			expect(calledValues).toEqual(['2026-05-01', '2026-04-01', 5, 10]);
 		});
 	});
 

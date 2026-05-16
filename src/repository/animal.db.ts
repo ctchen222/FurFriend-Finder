@@ -8,25 +8,7 @@ class AnimalRepository extends BaseRepository {
         super('animal');
     }
 
-    async findAnimalsByCity(city: string) {
-        const query = `
-			SELECT * FROM ${this.tableName}
-			LEFT JOIN animal_shelter ON animal.animal_shelter_id = animal_shelter.id
-			WHERE animal_shelter.address LIKE $1;
-		`;
-
-        const values = [`%${city}%`];
-
-        const { rows } = await pool.query(query, values);
-
-        return rows;
-    }
-
-    async findAllWithShelter(
-        pageSize: number = 10,
-        cursor?: string | undefined,
-        options?: string[],
-    ) {
+    private joinedAnimalSelectFields(options?: string[]): string {
         const animalFields = [
             'id',
             'sub_id',
@@ -45,28 +27,59 @@ class AnimalRepository extends BaseRepository {
             'close_date',
             'update_date',
         ];
-        const shelterFields = ['id', 'name', 'address', 'tel'];
+        const selectedAnimalFields = options && options.length > 0
+            ? options.filter((opt) => animalFields.includes(opt))
+            : animalFields;
 
-        let selectFields: string;
-        if (options && options.length > 0) {
-            const safeAnimalFields = options
-                .filter((opt) => animalFields.includes(opt))
-                .map((opt) => `animal.${opt}`);
-            selectFields = [
-                ...safeAnimalFields,
-                ...shelterFields.map(
-                    (f) => `animal_shelter.${f} as shelter_${f}`,
-                ),
-            ].join(', ');
-        } else {
-            selectFields = '*';
-        }
+        return [
+            ...selectedAnimalFields.map((field) => `animal.${field}`),
+            'animal_shelter.id AS shelter_id',
+            'animal_shelter.name AS shelter_name',
+            'animal_shelter.address AS shelter_address',
+            'animal_shelter.tel AS shelter_tel',
+        ].join(', ');
+    }
+
+    async findAnimalsByCity(city: string) {
+        const query = `
+			SELECT ${this.joinedAnimalSelectFields()} FROM ${this.tableName}
+			LEFT JOIN animal_shelter ON animal.animal_shelter_id = animal_shelter.id
+			WHERE animal_shelter.address LIKE $1;
+		`;
+
+        const values = [`%${city}%`];
+
+        const { rows } = await pool.query(query, values);
+
+        return rows;
+    }
+
+    async findAllWithShelter(
+        pageSize: number = 10,
+        cursor?: { id?: number; update_date?: string | null; open_date?: string | null } | undefined,
+        options?: string[],
+    ) {
+        const selectFields = this.joinedAnimalSelectFields(options);
 
         const values: any[] = [];
         let cursorClause = '';
-        if (cursor !== undefined) {
-            values.push(cursor);
-            cursorClause = `WHERE animal.id > $${values.length}`;
+        if (cursor?.id !== undefined) {
+            values.push(cursor.update_date ?? '0001-01-01');
+            const updateDatePlaceholder = `$${values.length}`;
+            values.push(cursor.open_date ?? '0001-01-01');
+            const openDatePlaceholder = `$${values.length}`;
+            values.push(cursor.id);
+            const idPlaceholder = `$${values.length}`;
+            cursorClause = `
+            WHERE (
+                COALESCE(animal.update_date, DATE '0001-01-01'),
+                COALESCE(animal.open_date, DATE '0001-01-01'),
+                animal.id
+            ) < (
+                ${updateDatePlaceholder}::date,
+                ${openDatePlaceholder}::date,
+                ${idPlaceholder}::int
+            )`;
         }
         values.push(pageSize);
         const pageSizePlaceholder = `$${values.length}`;
@@ -77,7 +90,10 @@ class AnimalRepository extends BaseRepository {
 			LEFT JOIN animal_shelter
 			ON animal.animal_shelter_id = animal_shelter.id
 			${cursorClause}
-			ORDER BY animal.update_date DESC, animal.open_date DESC
+			ORDER BY
+                COALESCE(animal.update_date, DATE '0001-01-01') DESC,
+                COALESCE(animal.open_date, DATE '0001-01-01') DESC,
+                animal.id DESC
 			LIMIT ${pageSizePlaceholder};
 		`;
 
