@@ -3,9 +3,7 @@
 ## Purpose
 
 Deliver transactional and lost-pet match emails through configured SMTP infrastructure.
-
 ## Requirements
-
 ### Requirement: SMTP Configuration
 The system SHALL require SMTP configuration before sending email.
 
@@ -45,3 +43,26 @@ The system SHALL provide a manual SMTP smoke test for operators with real SMTP c
 - **WHEN** an operator runs `npm run smtp:smoke` with valid SMTP test environment variables
 - **THEN** the script sends a test email
 - **AND** reports success only after the SMTP provider accepts the message
+
+### Requirement: Password Reset Email
+The system SHALL send password-reset emails through the configured SMTP mail service when requested through the authentication flow.
+
+#### Scenario: Reset email requested for existing account
+- **WHEN** Better Auth triggers a password-reset email for an existing email/password account
+- **THEN** the system sends an email containing the Better Auth reset URL
+- **AND** uses the configured SMTP sender and credentials
+
+#### Scenario: Reset token is persisted before email delivery
+- **WHEN** Better Auth creates a password-reset token for an existing account
+- **THEN** the system stores the token in the `verification` table using Better Auth's expected camelCase timestamp columns
+
+#### Scenario: Verification email sent for unverified account
+- **WHEN** an unverified email/password user signs up or attempts login with a valid password
+- **THEN** the system sends an email containing the Better Auth verification URL
+- **AND** uses the configured SMTP sender and credentials
+
+#### Scenario: Reset email delivery fails
+- **WHEN** SMTP delivery fails while requesting a password reset
+- **THEN** the system reports reset request failure to the caller
+- **AND** does not report that a reset email was sent
+

@@ -3,22 +3,25 @@
 ## Purpose
 
 Register lost pets and match them against shelter animals using animal traits and geographic distance.
-
 ## Requirements
-
 ### Requirement: Lost Pet Registration
-The system SHALL let users submit lost pet and owner information.
+
+The system SHALL let users submit lost pet and owner information through a clear multi-section report form.
 
 #### Scenario: Valid lost pet report
+
 - **WHEN** a user submits required lost pet details and owner contact information
 - **THEN** the system validates the request
 - **AND** creates or reuses the owner record
 - **AND** stores the lost pet report
+- **AND** the UI communicates the save-and-match action clearly before submission
 
 #### Scenario: Invalid lost pet report
+
 - **WHEN** required fields are missing or invalid
 - **THEN** the system rejects the request
 - **AND** does not create a lost pet report
+- **AND** the UI preserves readable validation feedback near the relevant fields
 
 ### Requirement: Trait-Based Candidate Search
 The system SHALL narrow matching candidates by animal traits before calculating distance.
@@ -43,13 +46,16 @@ The system SHALL rank matching candidates by geographic distance from the lost p
 - **AND** continues ranking other candidates
 
 ### Requirement: Quick Match
-The system SHALL provide anonymous quick matching without creating a lost pet report or sending email.
+
+The system SHALL provide anonymous quick matching without creating a lost pet report or sending email, and SHALL present the flow as a guided form with ranked, scannable results.
 
 #### Scenario: Visitor submits quick match form
+
 - **WHEN** a visitor submits animal traits and lost location through quick-use
 - **THEN** the system returns nearby candidate matches
 - **AND** does not persist a lost pet report
 - **AND** does not send notification email
+- **AND** the page presents returned matches as ranked cards with distance, shelter, photo, and trait metadata when available
 
 ### Requirement: Registered Report Match
 The system SHALL support running matching for a stored lost pet report.
@@ -59,3 +65,4 @@ The system SHALL support running matching for a stored lost pet report.
 - **THEN** the system loads the report
 - **AND** returns ranked shelter animal matches
 - **AND** triggers email notification only when the flow and user preference allow it
+
