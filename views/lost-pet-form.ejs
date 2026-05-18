@@ -125,7 +125,9 @@
             }
             if (res.ok) {
                 showToast('協尋案件提交成功！正在跳轉…', 'success');
-                setTimeout(() => { window.location.href = '/profile?message=report-success'; }, 1500);
+                setTimeout(() => {
+                    window.location.href = `/profile?message=${window.APP_MESSAGE_KEYS.REPORT_SUCCESS}`;
+                }, 1500);
             } else {
                 const data = await res.json().catch(() => ({}));
                 showToast(data?.error?.msg || '提交失敗，請確認填寫內容後再試', 'error');
