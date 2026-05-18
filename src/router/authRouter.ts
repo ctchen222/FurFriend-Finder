@@ -18,8 +18,8 @@ router.route('/login')
 router.route('/logout')
 	.post(catchAsync(authCtrler.logoutUser));
 
-router.route('/reset-password')
-	.post(catchAsync(authCtrler.resetPassword));
+router.route('/request-password-reset')
+	.post(catchAsync(authCtrler.requestPasswordReset));
 
 router.route('/settings')
 	.patch(catchAsync(authCtrler.updateSettings));

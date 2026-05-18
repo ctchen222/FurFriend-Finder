@@ -40,6 +40,11 @@ describe('auth mail integration', () => {
 		});
 	});
 
+	it('should send verification emails on sign up and sign in for unverified users', () => {
+		expect(capturedAuthConfig.emailVerification.sendOnSignUp).toBe(true);
+		expect(capturedAuthConfig.emailVerification.sendOnSignIn).toBe(true);
+	});
+
 	it('should send reset password email through MailService', async () => {
 		await capturedAuthConfig.emailAndPassword.sendResetPassword({
 			user: { email: 'reset@example.com' },

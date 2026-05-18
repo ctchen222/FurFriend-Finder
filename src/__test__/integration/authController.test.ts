@@ -7,10 +7,13 @@ let mockSignInEmail: jest.Mock;
 let mockSignOut: jest.Mock;
 let mockRequestPasswordReset: jest.Mock;
 let mockUserUpdate: jest.Mock;
+let mockBetterAuthHandler: jest.Mock;
 
 // Mock better-auth ESM modules before any imports
 jest.mock('better-auth/node', () => ({
-	toNodeHandler: jest.fn().mockReturnValue((req: any, res: any, next: any) => next()),
+	toNodeHandler: jest.fn().mockReturnValue((req: any, res: any, next: any) =>
+		mockBetterAuthHandler(req, res, next)
+	),
 }));
 jest.mock('../../auth', () => ({
 	auth: {
@@ -42,11 +45,13 @@ jest.mock('../../config/logger', () => ({
 
 import { Handler } from '../../middleware/handler';
 import { router as authRouter } from '../../router/authRouter';
+import logger from '../../config/logger';
 
 // Helper to create a mock auth API response
 function makeAuthResponse(status: number, body: object, cookies: string[] = []) {
 	return {
 		status,
+		ok: status >= 200 && status < 300,
 		headers: {
 			getSetCookie: jest.fn().mockReturnValue(cookies),
 		},
@@ -63,6 +68,7 @@ app.use(Handler.errorHandler);
 
 describe('AuthController Integration Tests', () => {
 	beforeEach(() => {
+		mockBetterAuthHandler = jest.fn((req: any, res: any, next: any) => next());
 		mockSignUpEmail = jest.fn().mockResolvedValue(
 			makeAuthResponse(200, { user: { id: 'u1', email: 'test@example.com' } }, ['session=abc'])
 		);
@@ -75,13 +81,26 @@ describe('AuthController Integration Tests', () => {
 	});
 
 	describe('POST /api/auth/signup', () => {
-		it('should redirect to /?message=signup-success on valid signup', async () => {
+		it('should redirect to login with verification-email-sent on valid signup', async () => {
 			const res = await request(app)
 				.post('/api/auth/signup')
 				.send({ name: '王小明', email: 'test@example.com', password: 'Pass1234!' });
 
-			// completeHandler sends 302 redirect for 'redirect' type
-			expect([200, 302]).toContain(res.status);
+			expect(res.status).toBe(302);
+			expect(res.headers.location).toBe('/login?message=verification-email-sent');
+		});
+
+		it('should redirect to signup-failed when better-auth returns a non-success response', async () => {
+			mockSignUpEmail = jest.fn().mockResolvedValue(
+				makeAuthResponse(400, { message: 'User already exists' })
+			);
+
+			const res = await request(app)
+				.post('/api/auth/signup')
+				.send({ name: '王小明', email: 'test@example.com', password: 'Pass1234!' });
+
+			expect(res.status).toBe(302);
+			expect(res.headers.location).toBe('/register?message=signup-failed');
 		});
 
 		it('should redirect to signup-failed when fields missing', async () => {
@@ -94,26 +113,105 @@ describe('AuthController Integration Tests', () => {
 		});
 	});
 
+	describe('POST /api/auth/request-password-reset', () => {
+		it('should request a reset email and redirect to forgot-password with a sent message', async () => {
+			mockRequestPasswordReset = jest.fn().mockResolvedValue(
+				makeAuthResponse(200, { status: true })
+			);
+
+			const res = await request(app)
+				.post('/api/auth/request-password-reset')
+				.send({ email: 'test@example.com' });
+
+			expect(res.status).toBe(302);
+			expect(res.headers.location).toBe('/forgot-password?message=reset-password-sent');
+			expect(mockRequestPasswordReset).toHaveBeenCalledWith({
+				body: {
+					email: 'test@example.com',
+					redirectTo: 'http://localhost:3000/reset-password',
+				},
+				asResponse: true,
+			});
+		});
+
+		it('should redirect to forgot-password with a failure message when reset email fails', async () => {
+			mockRequestPasswordReset = jest.fn().mockRejectedValue(new Error('SMTP unavailable'));
+
+			const res = await request(app)
+				.post('/api/auth/request-password-reset')
+				.send({ email: 'test@example.com' });
+
+			expect(res.status).toBe(302);
+			expect(res.headers.location).toBe('/forgot-password?message=reset-password-failed');
+			expect(logger.error).toHaveBeenCalledWith(
+				'Password reset request failed',
+				expect.objectContaining({ error: 'SMTP unavailable' })
+			);
+		});
+
+		it('should redirect to forgot-password with a failure message when reset email is missing', async () => {
+			const res = await request(app)
+				.post('/api/auth/request-password-reset')
+				.send({});
+
+			expect(res.status).toBe(302);
+			expect(res.headers.location).toBe('/forgot-password?message=reset-password-failed');
+			expect(mockRequestPasswordReset).not.toHaveBeenCalled();
+		});
+
+		it('should leave POST /api/auth/reset-password for the Better Auth handler', async () => {
+			const res = await request(app)
+				.post('/api/auth/reset-password')
+				.send({ token: 'token', newPassword: 'new-password' });
+
+			expect(res.status).toBe(404);
+			expect(mockBetterAuthHandler).toHaveBeenCalled();
+			expect(mockRequestPasswordReset).not.toHaveBeenCalled();
+		});
+	});
+
 	describe('POST /api/auth/login', () => {
 		it('should redirect to /?message=login-success on valid credentials', async () => {
 			const res = await request(app)
 				.post('/api/auth/login')
 				.send({ email: 'test@example.com', password: 'Pass1234!' });
 
-			expect([200, 302]).toContain(res.status);
+			expect(res.status).toBe(302);
+			expect(res.headers.location).toBe('/?message=login-success');
+			expect(mockSignInEmail).toHaveBeenCalledWith({
+				body: {
+					email: 'test@example.com',
+					password: 'Pass1234!',
+					callbackURL: 'http://localhost:3000/login?message=email-verified',
+				},
+				asResponse: true,
+			});
 		});
 
 		it('should redirect to /login?message=login-failed when credentials invalid', async () => {
 			mockSignInEmail = jest.fn().mockResolvedValue(
-				makeAuthResponse(401, { message: '帳號或密碼錯誤' })
+				makeAuthResponse(401, { code: 'INVALID_EMAIL_OR_PASSWORD', message: '帳號或密碼錯誤' })
 			);
 
 			const res = await request(app)
 				.post('/api/auth/login')
 				.send({ email: 'test@example.com', password: 'wrong' });
 
-			// redirect response
-			expect([200, 302]).toContain(res.status);
+			expect(res.status).toBe(302);
+			expect(res.headers.location).toBe('/login?message=login-failed');
+		});
+
+		it('should redirect to email-not-verified when Better Auth rejects unverified email', async () => {
+			mockSignInEmail = jest.fn().mockResolvedValue(
+				makeAuthResponse(403, { code: 'EMAIL_NOT_VERIFIED', message: 'Email not verified' })
+			);
+
+			const res = await request(app)
+				.post('/api/auth/login')
+				.send({ email: 'test@example.com', password: 'Pass1234!' });
+
+			expect(res.status).toBe(302);
+			expect(res.headers.location).toBe('/login?message=email-not-verified');
 		});
 
 		it('should redirect to login-failed when email or password missing', async () => {

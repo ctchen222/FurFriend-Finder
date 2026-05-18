@@ -15,6 +15,7 @@ import OwnerRepository from '../repository/owner.db';
 import AnimalLostService from '../Service/animalLost';
 import AnimalHelper from './helper/animalHelper';
 import DatabaseUtils from '../libs/database.utils';
+import { APP_MESSAGE_KEYS, withMessage } from '../constants/appMessages';
 
 class AnimalLostController {
     private repository: AnimalLostRepository;
@@ -91,13 +92,13 @@ class AnimalLostController {
 
             res.locals.result = new SuccessResponse(
                 'redirect',
-                '/profile?message=report-success',
+                withMessage('/profile', APP_MESSAGE_KEYS.REPORT_SUCCESS),
             );
         } catch (error) {
             await this.repository.rollback().catch(() => {});
             res.locals.result = new SuccessResponse(
                 'redirect',
-                '/profile?message=report-failed',
+                withMessage('/profile', APP_MESSAGE_KEYS.REPORT_FAILED),
             );
         }
         next('router');

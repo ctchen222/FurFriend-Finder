@@ -4,6 +4,7 @@ import logger from '../config/logger';
 import CustomError from '../libs/customError';
 import SuccessResponse from '../libs/successResponse';
 import routes from '../router';
+import { APP_MESSAGE_KEYS, withMessage } from '../constants/appMessages';
 
 // Morgan setup to use Winston for HTTP logging
 const stream: morgan.StreamOptions = {
@@ -28,10 +29,10 @@ export const Handler = {
 		const errorPosition = stackMessage.split(/[/\\]/).pop() ?? stackMessage
 
 		if (req.originalUrl.includes('/signup')) {
-			return res.redirect('/register?message=signup-failed');
+			return res.redirect(withMessage('/register', APP_MESSAGE_KEYS.SIGNUP_FAILED));
 		}
 		if (req.originalUrl.includes('/login')) {
-			return res.redirect('/login?message=login-failed');
+			return res.redirect(withMessage('/login', APP_MESSAGE_KEYS.LOGIN_FAILED));
 		}
 
 		if (!(err instanceof CustomError)) {
