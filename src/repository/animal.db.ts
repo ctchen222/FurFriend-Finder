@@ -1,4 +1,9 @@
 import { pool } from '../db';
+import {
+    extractCityCountyMetricLabel,
+    recordDbOperation,
+    type CountyInventoryCounts,
+} from '../config/metrics';
 import { Animal } from '../libs/zod/animals';
 import { flexibleDateSchema } from '../libs/zod/date';
 import BaseRepository from './base.db';
@@ -41,17 +46,19 @@ class AnimalRepository extends BaseRepository {
     }
 
     async findAnimalsByCity(city: string) {
-        const query = `
+        return recordDbOperation('find_shelter_animals', async () => {
+            const query = `
 			SELECT ${this.joinedAnimalSelectFields()} FROM ${this.tableName}
 			LEFT JOIN animal_shelter ON animal.animal_shelter_id = animal_shelter.id
 			WHERE animal_shelter.address LIKE $1;
 		`;
 
-        const values = [`%${city}%`];
+            const values = [`%${city}%`];
 
-        const { rows } = await pool.query(query, values);
+            const { rows } = await pool.query(query, values);
 
-        return rows;
+            return rows;
+        });
     }
 
     async findAllWithShelter(
@@ -59,18 +66,19 @@ class AnimalRepository extends BaseRepository {
         cursor?: { id?: number; update_date?: string | null; open_date?: string | null } | undefined,
         options?: string[],
     ) {
-        const selectFields = this.joinedAnimalSelectFields(options);
+        return recordDbOperation('find_shelter_animals', async () => {
+            const selectFields = this.joinedAnimalSelectFields(options);
 
-        const values: any[] = [];
-        let cursorClause = '';
-        if (cursor?.id !== undefined) {
-            values.push(cursor.update_date ?? '0001-01-01');
-            const updateDatePlaceholder = `$${values.length}`;
-            values.push(cursor.open_date ?? '0001-01-01');
-            const openDatePlaceholder = `$${values.length}`;
-            values.push(cursor.id);
-            const idPlaceholder = `$${values.length}`;
-            cursorClause = `
+            const values: any[] = [];
+            let cursorClause = '';
+            if (cursor?.id !== undefined) {
+                values.push(cursor.update_date ?? '0001-01-01');
+                const updateDatePlaceholder = `$${values.length}`;
+                values.push(cursor.open_date ?? '0001-01-01');
+                const openDatePlaceholder = `$${values.length}`;
+                values.push(cursor.id);
+                const idPlaceholder = `$${values.length}`;
+                cursorClause = `
             WHERE (
                 COALESCE(animal.update_date, DATE '0001-01-01'),
                 COALESCE(animal.open_date, DATE '0001-01-01'),
@@ -80,11 +88,11 @@ class AnimalRepository extends BaseRepository {
                 ${openDatePlaceholder}::date,
                 ${idPlaceholder}::int
             )`;
-        }
-        values.push(pageSize);
-        const pageSizePlaceholder = `$${values.length}`;
+            }
+            values.push(pageSize);
+            const pageSizePlaceholder = `$${values.length}`;
 
-        const query = `
+            const query = `
 			SELECT ${selectFields}
 			FROM ${this.tableName}
 			LEFT JOIN animal_shelter
@@ -97,12 +105,14 @@ class AnimalRepository extends BaseRepository {
 			LIMIT ${pageSizePlaceholder};
 		`;
 
-        const { rows } = await pool.query(query, values);
-        return rows;
+            const { rows } = await pool.query(query, values);
+            return rows;
+        });
     }
 
     async findAnimalShelterById(animalId: string): Promise<Animal | null> {
-        const query = `
+        return recordDbOperation('find_shelter_animals', async () => {
+            const query = `
 			SELECT 
 				animal.*, animal_shelter.name AS shelter_name,
 				animal_shelter.address AS shelter_address, animal_shelter.tel AS shelter_tel
@@ -112,14 +122,45 @@ class AnimalRepository extends BaseRepository {
 			WHERE animal.id = $1;
 		`;
 
-        const values = [animalId];
-        const { rows } = await pool.query(query, values);
+            const values = [animalId];
+            const { rows } = await pool.query(query, values);
 
-        return rows[0] || null;
+            return rows[0] || null;
+        });
+    }
+
+    async countShelterAnimalsByCounty(): Promise<CountyInventoryCounts> {
+        return recordDbOperation('find_shelter_animals', async () => {
+            const query = `
+                SELECT animal_shelter.address AS shelter_address
+                FROM ${this.tableName}
+                LEFT JOIN animal_shelter
+                ON animal.animal_shelter_id = animal_shelter.id
+                WHERE animal_shelter.address IS NOT NULL;
+            `;
+            const { rows } = await pool.query<{ shelter_address: string }>(
+                query,
+            );
+            const counts: CountyInventoryCounts = {};
+
+            for (const row of rows) {
+                const cityCounty = extractCityCountyMetricLabel(
+                    row.shelter_address,
+                );
+                if (cityCounty === null) {
+                    continue;
+                }
+
+                counts[cityCounty] = (counts[cityCounty] ?? 0) + 1;
+            }
+
+            return counts;
+        });
     }
 
     async bulkInsertAnimals(animals: Animal[]): Promise<number> {
-        const seen = new Map<string, Animal>();
+        return recordDbOperation('bulk_insert_animals', async () => {
+            const seen = new Map<string, Animal>();
         const noSubId: Animal[] = [];
         for (const animal of animals) {
             if (!animal.subid) {
@@ -211,10 +252,12 @@ class AnimalRepository extends BaseRepository {
 
         await pool.query('COMMIT');
         return insertedRowCount;
+        });
     }
 
     async findRandomAnimal() {
-        const selectRandomAnimal = (whereClause = '') => `
+        return recordDbOperation('find_shelter_animals', async () => {
+            const selectRandomAnimal = (whereClause = '') => `
 			SELECT
 				animal.*,
 				animal_shelter.name AS shelter_name,
@@ -228,17 +271,18 @@ class AnimalRepository extends BaseRepository {
 			LIMIT 1;
 		`;
 
-        const pictured = await pool.query(
-            selectRandomAnimal(
-                `WHERE ${this.tableName}.picture IS NOT NULL AND ${this.tableName}.picture <> ''`,
-            ),
-        );
-        if (pictured.rows[0]) {
-            return pictured.rows[0];
-        }
+            const pictured = await pool.query(
+                selectRandomAnimal(
+                    `WHERE ${this.tableName}.picture IS NOT NULL AND ${this.tableName}.picture <> ''`,
+                ),
+            );
+            if (pictured.rows[0]) {
+                return pictured.rows[0];
+            }
 
-        const fallback = await pool.query(selectRandomAnimal());
-        return fallback.rows[0];
+            const fallback = await pool.query(selectRandomAnimal());
+            return fallback.rows[0];
+        });
     }
 }
 

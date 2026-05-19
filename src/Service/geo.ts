@@ -3,6 +3,9 @@ import { getDistance } from "geolib";
 import CustomError from "../libs/customError";
 import * as apiMessage from '../libs/message'
 import { locationSchema } from "../libs/zod/geo";
+import {
+	recordGeocodingRequest,
+} from "../config/metrics";
 
 class GeoService {
 	client: Client;
@@ -21,30 +24,38 @@ class GeoService {
 			},
 		};
 
-		try {
-			const { data } = await this.client.geocode(geocodeRequest);
+		return recordGeocodingRequest(async (setMetricStatus) => {
+			try {
+				const { data } = await this.client.geocode(geocodeRequest);
 
-			switch (data.status) {
-				case 'OK': {
-					const location = data.results[0].geometry.location;
-					const parsedLocation = locationSchema.parse(location);
-					return parsedLocation;
+				switch (data.status) {
+					case 'OK': {
+						const location = data.results[0].geometry.location;
+						const parsedLocation = locationSchema.parse(location);
+						setMetricStatus('ok');
+						return parsedLocation;
+					}
+					case 'ZERO_RESULTS':
+						setMetricStatus('zero_results');
+						return null;
+					case 'OVER_QUERY_LIMIT':
+						setMetricStatus('over_query_limit');
+						throw new CustomError(apiMessage.GEOCODING_RATE_LIMIT);
+					case 'REQUEST_DENIED':
+						setMetricStatus('request_denied');
+						throw new CustomError(apiMessage.INVALID_CREDENTIALS);
+					default:
+						setMetricStatus('error');
+						throw new CustomError(apiMessage.GEOCODING_FAILED);
 				}
-				case 'ZERO_RESULTS':
-					return null;
-				case 'OVER_QUERY_LIMIT':
-					throw new CustomError(apiMessage.GEOCODING_RATE_LIMIT);
-				case 'REQUEST_DENIED':
-					throw new CustomError(apiMessage.INVALID_CREDENTIALS);
-				default:
-					throw new CustomError(apiMessage.GEOCODING_FAILED);
+			} catch (error) {
+				if (error instanceof CustomError) {
+					throw error;
+				}
+				setMetricStatus('error');
+				throw new CustomError(apiMessage.GEOCODING_FAILED);
 			}
-		} catch (error) {
-			if (error instanceof CustomError) {
-				throw error;
-			}
-			throw new CustomError(apiMessage.GEOCODING_FAILED);
-		}
+		});
 	}
 
 	static calculateDistanceKm(

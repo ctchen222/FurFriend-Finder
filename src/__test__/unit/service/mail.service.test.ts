@@ -107,5 +107,15 @@ describe('MailService', () => {
         'utf8'
       );
     });
+
+    it('should reject and not send mail when the match template cannot be read', async () => {
+      (fs.readFile as jest.Mock).mockRejectedValueOnce(new Error('template missing'));
+
+      await expect(
+        service.sendMatchedMail('owner@example.com', '小明', [{ id: 1 }])
+      ).rejects.toThrow('template missing');
+
+      expect(mockSendMail).not.toHaveBeenCalled();
+    });
   });
 });

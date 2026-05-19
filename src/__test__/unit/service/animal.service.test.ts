@@ -1,9 +1,57 @@
-import AnimalService from '../../../Service/animal';
+const mockSetShelterAnimalInventory = jest.fn();
+const mockSetAnimalSyncLastSuccessTimestamp = jest.fn();
+const mockAnimalSyncRunsAdd = jest.fn();
+const mockAnimalSyncDurationRecord = jest.fn();
+const mockAnimalSyncUpdatedRowsAdd = jest.fn();
+const mockAnimalSyncApiFailuresAdd = jest.fn();
+const mockRecordAnimalSyncApiRequest = jest.fn(
+  async (source: string, work: () => Promise<unknown>) => {
+    try {
+      return await work();
+    } catch (error) {
+      mockAnimalSyncApiFailuresAdd(1, { source });
+      throw error;
+    }
+  },
+);
+const mockRecordAnimalSyncRun = jest.fn(
+  async (source: string, table: string, work: () => Promise<number>) => {
+    let status = 'error';
+    try {
+      const updatedRows = await work();
+      mockAnimalSyncUpdatedRowsAdd(updatedRows, { table });
+      mockSetAnimalSyncLastSuccessTimestamp(source);
+      status = 'success';
+      return updatedRows;
+    } finally {
+      mockAnimalSyncRunsAdd(1, { status, source });
+      mockAnimalSyncDurationRecord(0, { source });
+    }
+  },
+);
 
 jest.mock('axios');
 jest.mock('../../../repository/animal.db');
+jest.mock('../../../config/metrics', () => ({
+  animalSyncApiFailuresCounter: { add: (...args: unknown[]) => mockAnimalSyncApiFailuresAdd(...args) },
+  animalSyncDurationHistogram: { record: (...args: unknown[]) => mockAnimalSyncDurationRecord(...args) },
+  animalSyncRunsCounter: { add: (...args: unknown[]) => mockAnimalSyncRunsAdd(...args) },
+  animalSyncUpdatedRowsCounter: { add: (...args: unknown[]) => mockAnimalSyncUpdatedRowsAdd(...args) },
+  registerDbPoolGauge: jest.fn(),
+  recordAnimalSyncApiRequest: (...args: unknown[]) => mockRecordAnimalSyncApiRequest(...args),
+  recordDbOperation: (_operation: string, work: () => Promise<unknown>) => work(),
+  recordAnimalSyncRun: (...args: unknown[]) => mockRecordAnimalSyncRun(...args),
+  safeMetricAttributes: (attributes: Record<string, unknown>) => attributes,
+  setAnimalSyncLastSuccessTimestamp: (...args: unknown[]) => mockSetAnimalSyncLastSuccessTimestamp(...args),
+  setShelterAnimalInventory: (...args: unknown[]) => mockSetShelterAnimalInventory(...args),
+}));
+jest.mock('../../../config/logger', () => ({
+  __esModule: true,
+  default: { warn: jest.fn() },
+}));
 
 import axios from 'axios';
+import AnimalService from '../../../Service/animal';
 import AnimalRepository from '../../../repository/animal.db';
 
 const mockedAxios = axios as jest.Mocked<typeof axios>;
@@ -12,11 +60,47 @@ const MockedAnimalRepository = AnimalRepository as jest.MockedClass<typeof Anima
 describe('AnimalService.updateAnimalTable', () => {
   let service: AnimalService;
   let mockBulkInsertAnimals: jest.Mock;
+  let mockCountShelterAnimalsByCounty: jest.Mock;
 
   beforeEach(() => {
     mockBulkInsertAnimals = jest.fn().mockResolvedValue(5);
+    mockCountShelterAnimalsByCounty = jest.fn().mockResolvedValue({ 臺北市: 5 });
+    mockSetShelterAnimalInventory.mockClear();
+    mockSetAnimalSyncLastSuccessTimestamp.mockClear();
+    mockAnimalSyncRunsAdd.mockClear();
+    mockAnimalSyncDurationRecord.mockClear();
+    mockAnimalSyncUpdatedRowsAdd.mockClear();
+    mockAnimalSyncApiFailuresAdd.mockClear();
+    mockRecordAnimalSyncApiRequest.mockClear();
+    mockRecordAnimalSyncRun.mockClear();
+    mockRecordAnimalSyncApiRequest.mockImplementation(
+      async (source: string, work: () => Promise<unknown>) => {
+        try {
+          return await work();
+        } catch (error) {
+          mockAnimalSyncApiFailuresAdd(1, { source });
+          throw error;
+        }
+      },
+    );
+    mockRecordAnimalSyncRun.mockImplementation(
+      async (source: string, table: string, work: () => Promise<number>) => {
+        let status = 'error';
+        try {
+          const updatedRows = await work();
+          mockAnimalSyncUpdatedRowsAdd(updatedRows, { table });
+          mockSetAnimalSyncLastSuccessTimestamp(source);
+          status = 'success';
+          return updatedRows;
+        } finally {
+          mockAnimalSyncRunsAdd(1, { status, source });
+          mockAnimalSyncDurationRecord(0, { source });
+        }
+      },
+    );
     MockedAnimalRepository.mockImplementation(() => ({
       bulkInsertAnimals: mockBulkInsertAnimals,
+      countShelterAnimalsByCounty: mockCountShelterAnimalsByCounty,
       findAll: jest.fn(),
       findById: jest.fn(),
       findOne: jest.fn(),
@@ -61,6 +145,17 @@ describe('AnimalService.updateAnimalTable', () => {
         expect.objectContaining({ kind: '狗', variety: '米克斯', animal_shelter_id: 1 }),
       ])
     );
+    expect(mockCountShelterAnimalsByCounty).toHaveBeenCalledTimes(1);
+    expect(mockSetShelterAnimalInventory).toHaveBeenCalledWith({ 臺北市: 5 });
+    expect(mockAnimalSyncUpdatedRowsAdd).toHaveBeenCalledWith(5, { table: 'animal' });
+    expect(mockSetAnimalSyncLastSuccessTimestamp).toHaveBeenCalledWith('shelter_animals_api');
+    expect(mockAnimalSyncRunsAdd).toHaveBeenCalledWith(1, {
+      status: 'success',
+      source: 'shelter_animals_api',
+    });
+    expect(mockAnimalSyncDurationRecord).toHaveBeenCalledWith(expect.any(Number), {
+      source: 'shelter_animals_api',
+    });
     expect(count).toBe(5);
   });
 
@@ -85,5 +180,12 @@ describe('AnimalService.updateAnimalTable', () => {
     mockedAxios.get.mockRejectedValue(new Error('Network error'));
 
     await expect(service.updateAnimalTable()).rejects.toThrow('Network error');
+    expect(mockAnimalSyncApiFailuresAdd).toHaveBeenCalledWith(1, {
+      source: 'shelter_animals_api',
+    });
+    expect(mockAnimalSyncRunsAdd).toHaveBeenCalledWith(1, {
+      status: 'error',
+      source: 'shelter_animals_api',
+    });
   });
 });

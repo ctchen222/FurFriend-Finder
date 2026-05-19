@@ -8,7 +8,40 @@ jest.mock('@googlemaps/google-maps-services-js', () => ({
   Client: jest.fn(),
 }));
 
+jest.mock('../../../config/metrics', () => {
+  const geocodingRequestCounter = { add: jest.fn() };
+  const geocodingDurationHistogram = { record: jest.fn() };
+  const recordGeocodingRequest = jest.fn(async (
+    work: (setStatus: (status: string) => void) => Promise<unknown>,
+  ) => {
+    let status = 'error';
+    try {
+      return await work((nextStatus) => {
+        status = nextStatus;
+      });
+    } finally {
+      geocodingRequestCounter.add(1, { status });
+      geocodingDurationHistogram.record(0, { status });
+    }
+  });
+  return {
+    geocodingRequestCounter,
+    geocodingDurationHistogram,
+    recordGeocodingRequest,
+    safeMetricAttributes: (attributes: Record<string, unknown>) => attributes,
+  };
+});
+
+import {
+  geocodingDurationHistogram,
+  geocodingRequestCounter,
+  recordGeocodingRequest,
+} from '../../../config/metrics';
+
 const MockedClient = Client as jest.MockedClass<typeof Client>;
+const mockGeocodingAdd = geocodingRequestCounter.add as jest.Mock;
+const mockGeocodingDurationRecord = geocodingDurationHistogram.record as jest.Mock;
+const mockRecordGeocodingRequest = recordGeocodingRequest as jest.Mock;
 
 describe('GeoService', () => {
   let service: GeoService;
@@ -17,6 +50,24 @@ describe('GeoService', () => {
   beforeEach(() => {
     // Re-setup Client mock in beforeEach because resetMocks:true clears implementations
     mockGeocode = jest.fn();
+    mockGeocodingAdd.mockClear();
+    mockGeocodingDurationRecord.mockClear();
+    mockRecordGeocodingRequest.mockClear();
+    mockRecordGeocodingRequest.mockImplementation(
+      async (
+        work: (setStatus: (status: string) => void) => Promise<unknown>,
+      ) => {
+        let status = 'error';
+        try {
+          return await work((nextStatus) => {
+            status = nextStatus;
+          });
+        } finally {
+          mockGeocodingAdd(1, { status });
+          mockGeocodingDurationRecord(0, { status });
+        }
+      },
+    );
     MockedClient.mockImplementation(() => ({
       geocode: mockGeocode,
       directions: jest.fn(),
@@ -42,6 +93,8 @@ describe('GeoService', () => {
 
       const result = await service.geocoding('台北市信義區');
       expect(result).toEqual({ lat: 25.04, lng: 121.51 });
+      expect(mockGeocodingAdd).toHaveBeenCalledWith(1, { status: 'ok' });
+      expect(mockGeocodingDurationRecord).toHaveBeenCalledWith(expect.any(Number), { status: 'ok' });
     });
 
     it('should return null for ZERO_RESULTS status', async () => {
@@ -51,6 +104,8 @@ describe('GeoService', () => {
 
       const result = await service.geocoding('不存在的地址XYZ123');
       expect(result).toBeNull();
+      expect(mockGeocodingAdd).toHaveBeenCalledWith(1, { status: 'zero_results' });
+      expect(mockGeocodingDurationRecord).toHaveBeenCalledWith(expect.any(Number), { status: 'zero_results' });
     });
 
     it('should throw CustomError with GEOCODING_RATE_LIMIT for OVER_QUERY_LIMIT', async () => {
@@ -62,6 +117,8 @@ describe('GeoService', () => {
         code: apiMessage.GEOCODING_RATE_LIMIT.code,
         httpCode: apiMessage.GEOCODING_RATE_LIMIT.httpCode,
       });
+      expect(mockGeocodingAdd).toHaveBeenCalledWith(1, { status: 'over_query_limit' });
+      expect(mockGeocodingDurationRecord).toHaveBeenCalledWith(expect.any(Number), { status: 'over_query_limit' });
     });
 
     it('should throw CustomError with INVALID_CREDENTIALS for REQUEST_DENIED', async () => {
@@ -73,6 +130,8 @@ describe('GeoService', () => {
         code: apiMessage.INVALID_CREDENTIALS.code,
         httpCode: apiMessage.INVALID_CREDENTIALS.httpCode,
       });
+      expect(mockGeocodingAdd).toHaveBeenCalledWith(1, { status: 'request_denied' });
+      expect(mockGeocodingDurationRecord).toHaveBeenCalledWith(expect.any(Number), { status: 'request_denied' });
     });
 
     it('should throw CustomError with GEOCODING_FAILED for unknown status', async () => {
@@ -83,6 +142,8 @@ describe('GeoService', () => {
       await expect(service.geocoding('some address')).rejects.toMatchObject({
         code: apiMessage.GEOCODING_FAILED.code,
       });
+      expect(mockGeocodingAdd).toHaveBeenCalledWith(1, { status: 'error' });
+      expect(mockGeocodingDurationRecord).toHaveBeenCalledWith(expect.any(Number), { status: 'error' });
     });
 
     it('should throw CustomError with GEOCODING_FAILED when client throws network error', async () => {
@@ -91,6 +152,8 @@ describe('GeoService', () => {
       await expect(service.geocoding('some address')).rejects.toMatchObject({
         code: apiMessage.GEOCODING_FAILED.code,
       });
+      expect(mockGeocodingAdd).toHaveBeenCalledWith(1, { status: 'error' });
+      expect(mockGeocodingDurationRecord).toHaveBeenCalledWith(expect.any(Number), { status: 'error' });
     });
   });
 
