@@ -153,6 +153,29 @@ describe('AnimalRepository', () => {
 		});
 	});
 
+	describe('countShelterAnimalsByCounty', () => {
+		it('should group shelter inventory by normalized Taiwan city/county', async () => {
+			(pool.query as jest.Mock).mockResolvedValue({
+				rows: [
+					{ shelter_address: '台北市信義區信義路五段' },
+					{ shelter_address: '臺北市內湖區潭美街' },
+					{ shelter_address: '新竹縣竹北市光明六路' },
+					{ shelter_address: '新竹市東區光復路' },
+					{ shelter_address: '東京都港區' },
+				],
+			});
+
+			const result = await animalRepository.countShelterAnimalsByCounty();
+
+			expect(result).toEqual({
+				臺北市: 2,
+				新竹縣: 1,
+				新竹市: 1,
+			});
+			expect(Object.keys(result)).not.toContain('台北市信義區信義路五段');
+		});
+	});
+
 	describe('bulkInsertAnimals', () => {
 		it('should start transaction, insert shelters and animals, then commit', async () => {
 			(pool.query as jest.Mock).mockImplementation((query: string) => {

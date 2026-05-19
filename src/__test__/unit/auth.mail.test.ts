@@ -37,7 +37,7 @@ describe('auth mail integration', () => {
 			to: 'verify@example.com',
 			subject: 'Verify your email address',
 			text: 'Click the link to verify your email: https://example.com/verify',
-		});
+		}, 'verification');
 	});
 
 	it('should send verification emails on sign up and sign in for unverified users', () => {
@@ -56,6 +56,6 @@ describe('auth mail integration', () => {
 			to: 'reset@example.com',
 			subject: 'Reset your password',
 			text: 'Click the link to reset your password: https://example.com/reset',
-		});
+		}, 'reset_password');
 	});
 });

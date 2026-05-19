@@ -21,7 +21,7 @@ export const auth = betterAuth({
                 to: user.email,
                 subject: 'Verify your email address',
                 text: `Click the link to verify your email: ${url}`,
-            });
+            }, 'verification');
         },
     },
     emailAndPassword: {
@@ -33,7 +33,7 @@ export const auth = betterAuth({
                 to: user.email,
                 subject: 'Reset your password',
                 text: `Click the link to reset your password: ${url}`,
-            });
+            }, 'reset_password');
         },
         onPasswordReset: async ({ user }, request) => {
             logger.info('Password reset completed', { userId: user.id });
