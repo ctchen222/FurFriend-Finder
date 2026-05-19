@@ -101,9 +101,9 @@ function sexLabel(s) {
     return s === 'M' ? '公' : s === 'F' ? '母' : s || '—';
 }
 
-function getAnimalImage(animal, width = 560, height = 420) {
+function getAnimalImage(animal) {
     if (animal && animal.picture) return animal.picture;
-    return `https://placehold.co/${width}x${height}/f7f7f5/6a6a6a?text=No+photo`;
+    return '';
 }
 
 function animalAltText(animal) {
@@ -116,6 +116,38 @@ function animalAltText(animal) {
     ].filter(Boolean);
     return `${parts.join('，') || '動物'}的照片`;
 }
+
+function missingAnimalPhotoMarkup(sizeClass = '') {
+    const classes = ['animal-photo-fallback', sizeClass].filter(Boolean).map(escapeHtml).join(' ');
+    return `
+        <div class="${classes}" role="img" aria-label="照片暫缺">
+            <span class="animal-photo-fallback-mark" aria-hidden="true"></span>
+            <span class="animal-photo-fallback-label">照片暫缺</span>
+        </div>`;
+}
+
+function animalPhotoMarkup(animal, imageClassName) {
+    const imgSrc = getAnimalImage(animal);
+    if (!imgSrc) return missingAnimalPhotoMarkup(imageClassName);
+
+    return `<img class="${escapeHtml(imageClassName)}"
+                 src="${escapeHtml(imgSrc)}"
+                 alt="${escapeHtml(animalAltText(animal))}"
+                 data-missing-photo-class="${escapeHtml(imageClassName)}">`;
+}
+
+function replaceMissingAnimalPhoto(img) {
+    if (!img || !img.parentNode) return;
+    const fallbackClass = img.getAttribute('data-missing-photo-class') || '';
+    img.outerHTML = missingAnimalPhotoMarkup(fallbackClass);
+}
+
+document.addEventListener('error', (event) => {
+    const target = event.target;
+    if (target instanceof HTMLImageElement && target.hasAttribute('data-missing-photo-class')) {
+        replaceMissingAnimalPhoto(target);
+    }
+}, true);
 
 // ============================================================
 //  Lightbox
@@ -144,11 +176,9 @@ function openLightbox(animal, animalId) {
 
     const previousFocus = document.activeElement;
 
-    const imgSrc = getAnimalImage(animal, 720, 420);
-
     overlay.innerHTML = `
         <div class="lightbox-box">
-            <img class="lightbox-img" src="${escapeHtml(imgSrc)}" alt="${animalAltText(animal)}">
+            ${animalPhotoMarkup(animal, 'lightbox-img')}
             <button class="lightbox-close" aria-label="關閉">✕</button>
             <div class="lightbox-body">
                 <h3>${escapeHtml(animal.variety || '未知品種')}</h3>

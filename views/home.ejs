@@ -102,9 +102,8 @@
                 container.innerHTML = '<p class="featured-loading">目前沒有可顯示的動物。</p>';
                 return;
             }
-            const imgSrc = getAnimalImage(a, 720, 460);
             container.innerHTML = `
-                <img class="featured-img" src="${escapeHtml(imgSrc)}" alt="${animalAltText(a)}">
+                ${animalPhotoMarkup(a, 'featured-img')}
                 <div class="featured-body">
                     <p class="eyebrow">Featured animal</p>
                     <h3>${escapeHtml(a.variety || a.kind || '未知品種')}</h3>

@@ -116,9 +116,7 @@
                     <article class="result-card">
                         <div class="result-rank" aria-label="排名 ${i + 1}">${i + 1}</div>
                         <button class="result-photo-button" type="button" aria-label="查看 ${animalAltText(animal)} 詳情" data-result-index="${i}">
-                            <img class="result-img"
-                                 src="${escapeHtml(getAnimalImage(animal, 240, 240))}"
-                                 alt="${animalAltText(animal)}">
+                            ${animalPhotoMarkup(animal, 'result-img')}
                         </button>
                         <div class="result-details">
                             <div class="result-title-row">

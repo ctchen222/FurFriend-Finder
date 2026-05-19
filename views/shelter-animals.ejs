@@ -93,14 +93,13 @@
         const animalMap = new Map();
 
         function renderCard(animal) {
-            const imgSrc = getAnimalImage(animal, 560, 420);
             const cardId = `card-${animal.id || Math.random().toString(36).slice(2)}`;
             animalMap.set(cardId, animal);
             const title = animal.variety || animal.kind || '未知品種';
             return `
                 <article class="animal-card clickable" data-card-id="${cardId}" tabindex="0" role="button" aria-label="查看 ${animalAltText(animal)} 詳情">
                     <div class="animal-card-photo">
-                        <img class="animal-card-img" src="${escapeHtml(imgSrc)}" alt="${animalAltText(animal)}">
+                        ${animalPhotoMarkup(animal, 'animal-card-img')}
                     </div>
                     <div class="animal-card-body">
                         <p class="animal-card-title">${escapeHtml(title)}</p>
