@@ -6,126 +6,86 @@
 <body>
     <%- include('partials/_header') %>
 
-    <!-- Section 1: Hero -->
-    <section class="home-hero">
-        <span class="hero-icons" aria-hidden="true">🐕&nbsp;&nbsp;🐈&nbsp;&nbsp;🐾</span>
-        <h1 class="hero-title">FurFriend Finder</h1>
-        <p class="hero-subtitle">每一隻走失的毛孩，都值得一個回家的機會。</p>
-        <div class="cta-container">
-            <a href="/report-lost" class="btn btn-primary btn-pill">🔍 開始協尋登記</a>
-            <a href="/shelter-animals" class="btn btn-secondary btn-pill">📋 瀏覽收容動物</a>
-        </div>
-        <div class="hero-stats">
-            <span class="hero-stat">🏠 整合全台動物收容所資料</span>
-            <span class="hero-stat">📧 即時 Email 配對通知</span>
-        </div>
-    </section>
+    <main>
+        <section class="home-hero">
+            <div class="hero-copy">
+                <p class="eyebrow">Taiwan shelter-data matching</p>
+                <h1 class="hero-title">Find lost pets across Taiwan shelter records.</h1>
+                <p class="hero-subtitle">
+                    輸入走失地點與外觀特徵，FurFriend Finder 會比對全台公開收容資料，
+                    讓你更快找到可能的線索。
+                </p>
+            </div>
 
-    <!-- Section 2: Mission -->
-    <section class="mission-section">
-        <p class="mission-quote">我們相信，每一個生命都值得被珍惜</p>
-        <p class="mission-text">
-            FurFriend Finder 整合全台動物收容所公開資料，運用智慧配對技術，<br>
-            讓走失毛孩與飼主更快團聚——因為每一次等待，對牠們來說都太長了。
-        </p>
-    </section>
+            <div class="hero-action-panel" aria-label="主要操作">
+                <a href="/quick-use" class="action-card action-card--primary">
+                    <span class="action-kicker">No login required</span>
+                    <strong>快速比對</strong>
+                    <span>先用物種、毛色與地點找出可能候選。</span>
+                </a>
+                <a href="/report-lost" class="action-card">
+                    <span class="action-kicker">Ongoing follow-up</span>
+                    <strong>協尋登記</strong>
+                    <span>建立案件並保留後續 Email 通知機會。</span>
+                </a>
+                <a href="/shelter-animals" class="action-card">
+                    <span class="action-kicker">Browse records</span>
+                    <strong>瀏覽收容動物</strong>
+                    <span>以縣市、物種、性別篩選公開資料。</span>
+                </a>
+            </div>
 
-    <!-- Section 3: Challenge Stats -->
-    <section class="challenge-section">
-        <h2 class="challenge-title">台灣流浪動物面臨的挑戰</h2>
-        <div class="stats-grid">
-            <div class="stat-card">
-                <span class="stat-icon">🏠</span>
-                <span class="stat-highlight">全台 32 座</span>
-                <p class="stat-desc">公立動物收容所，收容數量持續超載，資源嚴重不足。</p>
+            <div class="trust-row" aria-label="平台重點">
+                <span>公立收容所公開資料</span>
+                <span>地理距離排序</span>
+                <span>Email 配對通知</span>
             </div>
-            <div class="stat-card">
-                <span class="stat-icon">🐾</span>
-                <span class="stat-highlight">每年數萬隻</span>
-                <p class="stat-desc">動物進入收容系統，其中大多數是走失的家庭寵物。</p>
-            </div>
-            <div class="stat-card">
-                <span class="stat-icon">💔</span>
-                <span class="stat-highlight">尋回率不到 30%</span>
-                <p class="stat-desc">走失寵物僅有少數能與飼主團聚，資訊不透明是最大障礙。</p>
-            </div>
-        </div>
-        <p class="challenge-source">資料參考農業部動物保護資訊網公開統計</p>
-    </section>
+        </section>
 
-    <!-- Section 4: Solutions -->
-    <section class="solutions-section">
-        <h2>FurFriend Finder 如何幫助你</h2>
-        <div class="solutions-grid">
-            <div class="solution-card">
-                <span class="solution-icon">🔍</span>
-                <h3 class="solution-title">智慧配對</h3>
-                <p class="solution-desc">輸入品種、毛色、走失地點，系統自動比對全台收容所資料，快速找到最可能的走失毛孩。</p>
-                <a href="/quick-use" class="solution-link">立即比對 →</a>
+        <section class="content-band">
+            <div class="section-heading">
+                <p class="eyebrow">Daily record</p>
+                <h2>今日推薦動物</h2>
+                <a href="/shelter-animals">查看全部</a>
             </div>
-            <div class="solution-card">
-                <span class="solution-icon">📧</span>
-                <h3 class="solution-title">即時通知</h3>
-                <p class="solution-desc">登記走失資料後，系統持續比對最新資料。一有相似結果，立即發送 Email 通知您。</p>
-                <a href="/report-lost" class="solution-link">登記協尋 →</a>
-            </div>
-            <div class="solution-card">
-                <span class="solution-icon">🐾</span>
-                <h3 class="solution-title">收容所瀏覽</h3>
-                <p class="solution-desc">瀏覽全台收容所的公開動物資料，用物種、縣市、性別篩選，找到正在等待認養的毛孩。</p>
-                <a href="/shelter-animals" class="solution-link">瀏覽動物 →</a>
-            </div>
-        </div>
-    </section>
-
-    <!-- Section 5: How it Works -->
-    <div class="container">
-        <div class="card section">
-            <h2>如何運作</h2>
-            <div class="steps-grid">
-                <div class="step-card">
-                    <span class="step-num">1</span>
-                    <span class="step-icon">📝</span>
-                    <p class="step-text">填寫走失寵物的詳細資料，包含外觀特徵與走失地點。</p>
-                </div>
-                <div class="step-card">
-                    <span class="step-num">2</span>
-                    <span class="step-icon">🔍</span>
-                    <p class="step-text">系統自動比對全台收容所的公開資料，找出最相似的毛孩。</p>
-                </div>
-                <div class="step-card">
-                    <span class="step-num">3</span>
-                    <span class="step-icon">📧</span>
-                    <p class="step-text">發現高度相似的毛孩後，立即透過 Email 通知您。</p>
-                </div>
-                <div class="step-card">
-                    <span class="step-num">4</span>
-                    <span class="step-icon">🐾</span>
-                    <p class="step-text">在「個人資料頁」隨時查看案件狀態，手動發起配對。</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Section 6: Featured Animal -->
-        <div class="featured-section">
-            <h2>今日推薦動物</h2>
             <div id="featured-animal" class="featured-card">
                 <p class="featured-loading">載入中...</p>
             </div>
-            <p class="view-more-link">
-                <a href="/shelter-animals">查看更多收容所動物 →</a>
-            </p>
-        </div>
-    </div>
+        </section>
 
-    <!-- Section 7: Bottom CTA -->
-    <section class="bottom-cta">
-        <p class="bottom-cta-title">讓每隻毛孩，都有被找到的機會。</p>
-        <div class="cta-container">
-            <a href="/report-lost" class="btn btn-primary btn-pill">🔍 開始協尋登記</a>
-            <a href="/quick-use"   class="btn btn-secondary btn-pill">⚡ 快速比對</a>
-        </div>
-    </section>
+        <section class="workflow-section">
+            <div class="section-heading section-heading--center">
+                <p class="eyebrow">How matching works</p>
+                <h2>從焦慮到下一步，只保留必要流程</h2>
+            </div>
+            <div class="steps-grid">
+                <article class="step-card">
+                    <span class="step-num">1</span>
+                    <h3>描述特徵</h3>
+                    <p>輸入物種、毛色、品種與走失地點。資訊越準確，候選排序越有參考價值。</p>
+                </article>
+                <article class="step-card">
+                    <span class="step-num">2</span>
+                    <h3>比對收容資料</h3>
+                    <p>系統先找出外觀相近的公開收容資料，再依地理距離排序。</p>
+                </article>
+                <article class="step-card">
+                    <span class="step-num">3</span>
+                    <h3>採取行動</h3>
+                    <p>查看候選照片與收容所資訊，或建立協尋案件保留後續通知。</p>
+                </article>
+            </div>
+        </section>
+
+        <section class="bottom-cta">
+            <p class="eyebrow">Start from the fastest path</p>
+            <h2>先比對，再決定是否建立協尋案件。</h2>
+            <div class="cta-container">
+                <a href="/quick-use" class="btn btn-primary btn-pill">開始快速比對</a>
+                <a href="/report-lost" class="btn btn-secondary btn-pill">登記協尋案件</a>
+            </div>
+        </section>
+    </main>
 
     <script>
     let isFeaturedLoading = false;
@@ -142,15 +102,18 @@
                 container.innerHTML = '<p class="featured-loading">目前沒有可顯示的動物。</p>';
                 return;
             }
-            const imgSrc = a.picture || 'https://placehold.co/320x320/f4efe8/a77b5a?text=%F0%9F%90%BE';
             container.innerHTML = `
-                <img class="featured-img" src="${escapeHtml(imgSrc)}" alt="${escapeHtml(a.variety || '動物')}">
+                ${animalPhotoMarkup(a, 'featured-img')}
                 <div class="featured-body">
-                    <h3>${escapeHtml(a.variety || '未知品種')}</h3>
-                    <p><strong>物種:</strong> ${escapeHtml(a.kind || '—')}</p>
-                    <p><strong>性別:</strong> ${sexLabel(a.sex)}</p>
-                    <p><strong>毛色:</strong> ${escapeHtml(a.colour || '—')}</p>
-                    ${a.shelter_name ? `<span class="badge featured-shelter">📍 ${escapeHtml(a.shelter_name)}</span>` : ''}
+                    <p class="eyebrow">Featured animal</p>
+                    <h3>${escapeHtml(a.variety || a.kind || '未知品種')}</h3>
+                    <dl class="metadata-list">
+                        <div><dt>物種</dt><dd>${escapeHtml(a.kind || '—')}</dd></div>
+                        <div><dt>性別</dt><dd>${sexLabel(a.sex)}</dd></div>
+                        <div><dt>毛色</dt><dd>${escapeHtml(a.colour || '—')}</dd></div>
+                    </dl>
+                    ${a.shelter_name ? `<span class="badge featured-shelter">${escapeHtml(a.shelter_name)}</span>` : ''}
+                    <a class="text-link" href="/shelter-animals">瀏覽更多收容動物</a>
                 </div>`;
         } catch {
             container.innerHTML = '<p class="featured-loading">無法載入動物資料。</p>';
@@ -161,16 +124,6 @@
 
     document.addEventListener('DOMContentLoaded', () => {
         loadFeatured();
-        let timer = setInterval(loadFeatured, 10000);
-
-        document.addEventListener('visibilitychange', () => {
-            if (document.hidden) {
-                clearInterval(timer);
-            } else {
-                loadFeatured();
-                timer = setInterval(loadFeatured, 10000);
-            }
-        });
     });
     </script>
     <%- include('partials/_footer') %>

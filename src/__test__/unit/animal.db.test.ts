@@ -45,12 +45,34 @@ describe('AnimalRepository', () => {
 		});
 
 		it('should return undefined when no animal with a picture is found', async () => {
-			(pool.query as jest.Mock).mockResolvedValue({ rows: [] });
+			(pool.query as jest.Mock)
+				.mockResolvedValueOnce({ rows: [] })
+				.mockResolvedValueOnce({ rows: [] });
 
 			const result = await animalRepository.findRandomAnimal();
 
-			expect(pool.query).toHaveBeenCalledTimes(1);
+			expect(pool.query).toHaveBeenCalledTimes(2);
 			expect(result).toBeUndefined();
+		});
+
+		it('should fall back to any animal when no pictured animal exists', async () => {
+			const mockAnimal = {
+				id: 2,
+				kind: '狗',
+				variety: '米克斯',
+				picture: '',
+				shelter_name: '測試收容所',
+			};
+			(pool.query as jest.Mock)
+				.mockResolvedValueOnce({ rows: [] })
+				.mockResolvedValueOnce({ rows: [mockAnimal] });
+
+			const result = await animalRepository.findRandomAnimal();
+
+			expect(pool.query).toHaveBeenCalledTimes(2);
+			const fallbackQuery = (pool.query as jest.Mock).mock.calls[1][0];
+			expect(fallbackQuery).not.toContain('picture IS NOT NULL');
+			expect(result).toEqual(mockAnimal);
 		});
 	});
 
@@ -107,17 +129,50 @@ describe('AnimalRepository', () => {
 			expect(result).toEqual(mockRows);
 			const calledQuery = (pool.query as jest.Mock).mock.calls[0][0];
 			expect(calledQuery).toContain('LEFT JOIN animal_shelter');
-			expect(calledQuery).toContain('ORDER BY animal.update_date DESC');
+			expect(calledQuery).toContain('animal.id, animal.sub_id');
+			expect(calledQuery).toContain('animal_shelter.id AS shelter_id');
+			expect(calledQuery).toContain("COALESCE(animal.update_date, DATE '0001-01-01') DESC");
+			expect(calledQuery).toContain('animal.id DESC');
 		});
 
 		it('should include cursor clause when cursor provided', async () => {
 			(pool.query as jest.Mock).mockResolvedValue({ rows: [] });
 
-			await animalRepository.findAllWithShelter(10, '5');
+			await animalRepository.findAllWithShelter(10, {
+				id: 5,
+				update_date: '2026-05-01',
+				open_date: '2026-04-01',
+			});
 
 			const [calledQuery, calledValues] = (pool.query as jest.Mock).mock.calls[0];
-			expect(calledQuery).toContain('WHERE animal.id >');
-			expect(calledValues).toContain('5');
+			expect(calledQuery).toContain('WHERE (');
+			expect(calledQuery).toContain("COALESCE(animal.update_date, DATE '0001-01-01')");
+			expect(calledQuery).toContain('animal.id');
+			expect(calledQuery).toContain('< (');
+			expect(calledValues).toEqual(['2026-05-01', '2026-04-01', 5, 10]);
+		});
+	});
+
+	describe('countShelterAnimalsByCounty', () => {
+		it('should group shelter inventory by normalized Taiwan city/county', async () => {
+			(pool.query as jest.Mock).mockResolvedValue({
+				rows: [
+					{ shelter_address: '台北市信義區信義路五段' },
+					{ shelter_address: '臺北市內湖區潭美街' },
+					{ shelter_address: '新竹縣竹北市光明六路' },
+					{ shelter_address: '新竹市東區光復路' },
+					{ shelter_address: '東京都港區' },
+				],
+			});
+
+			const result = await animalRepository.countShelterAnimalsByCounty();
+
+			expect(result).toEqual({
+				臺北市: 2,
+				新竹縣: 1,
+				新竹市: 1,
+			});
+			expect(Object.keys(result)).not.toContain('台北市信義區信義路五段');
 		});
 	});
 

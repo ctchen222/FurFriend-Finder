@@ -1,0 +1,69 @@
+suite: grafana
+templates:
+  - templates/grafana-datasources-configmap.yaml
+  - templates/grafana-dashboards-configmap.yaml
+  - templates/grafana-deployment.yaml
+  - templates/grafana-service.yaml
+  - templates/grafana-ingress.yaml
+tests:
+  - it: provisions stable datasource UIDs
+    template: templates/grafana-datasources-configmap.yaml
+    asserts:
+      - isKind:
+          of: ConfigMap
+      - matchRegex:
+          path: data["datasources.yaml"]
+          pattern: "uid: prometheus"
+      - matchRegex:
+          path: data["datasources.yaml"]
+          pattern: "uid: tempo"
+      - matchRegex:
+          path: data["datasources.yaml"]
+          pattern: "uid: loki"
+  - it: packages baseline and optimization dashboards
+    template: templates/grafana-dashboards-configmap.yaml
+    asserts:
+      - exists:
+          path: data["application-overview.json"]
+      - exists:
+          path: data["business-metrics.json"]
+      - exists:
+          path: data["traces-explorer.json"]
+      - exists:
+          path: data["logs-explorer.json"]
+      - exists:
+          path: data["product-optimization.json"]
+      - exists:
+          path: data["slo-readiness.json"]
+  - it: requires Grafana login and existing admin Secret
+    template: templates/grafana-deployment.yaml
+    asserts:
+      - isKind:
+          of: Deployment
+      - equal:
+          path: spec.template.spec.containers[0].env[0].valueFrom.secretKeyRef.name
+          value: grafana-admin
+      - equal:
+          path: spec.template.spec.containers[0].env[1].valueFrom.secretKeyRef.key
+          value: admin-password
+      - equal:
+          path: spec.template.spec.containers[0].env[2].value
+          value: "false"
+  - it: exposes only Grafana through Ingress
+    template: templates/grafana-ingress.yaml
+    set:
+      grafana.ingress.host: grafana.example.com
+      grafana.ingress.tls.secretName: grafana-tls
+      grafana.ingress.tls.clusterIssuer: letsencrypt-prod
+    asserts:
+      - isKind:
+          of: Ingress
+      - equal:
+          path: metadata.annotations["cert-manager.io/cluster-issuer"]
+          value: letsencrypt-prod
+      - equal:
+          path: spec.rules[0].host
+          value: grafana.example.com
+      - equal:
+          path: spec.rules[0].http.paths[0].backend.service.name
+          value: grafana

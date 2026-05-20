@@ -1,60 +1,82 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-    <%- include('partials/_head', { title: '快速使用' }) %>
+    <%- include('partials/_head', { title: '快速比對' }) %>
 </head>
 <body>
     <%- include('partials/_header') %>
 
-    <div class="container--card">
-        <h1 class="page-title">快速尋找走失毛孩</h1>
-        <p class="page-subtitle">輸入毛孩資訊，快速比對潛在的收容所資料。</p>
+    <main class="form-page">
+        <section class="page-hero page-hero--compact">
+            <p class="eyebrow">Quick match</p>
+            <h1 class="page-title">快速比對走失毛孩</h1>
+            <p class="page-subtitle">不用登入。先輸入關鍵特徵與走失地點，查看公開收容資料中最接近的候選。</p>
+        </section>
 
-        <form id="quickMatchForm">
-            <div class="form-group">
-                <label for="kind">種類 <span class="required-mark">*</span></label>
-                <select id="kind" name="kind" required>
-                    <option value="">請選擇</option>
-                    <option value="狗">狗</option>
-                    <option value="貓">貓</option>
-                    <option value="其他">其他</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="variety">品種 <small class="hint">(選填)</small></label>
-                <input type="text" id="variety" name="variety" placeholder="例如：米克斯、貴賓">
-            </div>
-            <div class="form-group">
-                <label for="sex">性別</label>
-                <select id="sex" name="sex">
-                    <option value="">不確定</option>
-                    <option value="M">公</option>
-                    <option value="F">母</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="colour">毛色 <small class="hint">(選填)</small></label>
-                <input type="text" id="colour" name="colour" placeholder="例如：黑白、橘色">
-            </div>
-            <div class="form-group">
-                <label for="lost_place">走失地點 <span class="required-mark">*</span></label>
-                <input type="text" id="lost_place" name="lost_place" placeholder="例如：新北市中和區" required>
-            </div>
-            <button id="submitBtn" type="submit" class="btn btn-primary btn-block btn-submit">
-                開始比對
-            </button>
-        </form>
+        <section class="form-shell">
+            <aside class="guidance-panel">
+                <p class="eyebrow">What happens next</p>
+                <h2>系統會回傳候選，不會建立案件或寄信。</h2>
+                <p>如果結果有參考價值，可以再建立協尋案件，保留後續通知與個人頁追蹤。</p>
+                <a href="/report-lost" class="text-link">需要持續追蹤？前往協尋登記</a>
+            </aside>
 
-        <div class="results-section" id="resultsSection" hidden>
-            <h2>比對結果</h2>
+            <div class="form-card">
+                <form id="quickMatchForm">
+                    <fieldset>
+                        <legend>動物特徵</legend>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="kind">種類 <span class="required-mark">*</span></label>
+                                <select id="kind" name="kind" required>
+                                    <option value="">請選擇</option>
+                                    <option value="狗">狗</option>
+                                    <option value="貓">貓</option>
+                                    <option value="其他">其他</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="variety">品種 <small class="hint">(選填)</small></label>
+                                <input type="text" id="variety" name="variety" placeholder="例如：米克斯、貴賓">
+                            </div>
+                            <div class="form-group">
+                                <label for="sex">性別</label>
+                                <select id="sex" name="sex">
+                                    <option value="">不確定</option>
+                                    <option value="M">公</option>
+                                    <option value="F">母</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="colour">毛色 <small class="hint">(選填)</small></label>
+                                <input type="text" id="colour" name="colour" placeholder="例如：黑白、橘色">
+                            </div>
+                        </div>
+                    </fieldset>
+
+                    <fieldset>
+                        <legend>走失地點</legend>
+                        <div class="form-group">
+                            <label for="lost_place">走失地點 <span class="required-mark">*</span></label>
+                            <input type="text" id="lost_place" name="lost_place" placeholder="例如：新北市中和區" required>
+                        </div>
+                    </fieldset>
+
+                    <button id="submitBtn" type="submit" class="btn btn-primary btn-block btn-submit">
+                        開始比對
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <section class="results-section container--wide" id="resultsSection" hidden>
+            <div class="section-heading">
+                <p class="eyebrow">Ranked candidates</p>
+                <h2>比對結果</h2>
+            </div>
             <div id="matchResults"></div>
-        </div>
-
-        <div class="cta-section">
-            <p>想要每天收到更多比對資訊？</p>
-            <a href="/register">立即免費註冊</a> · <a href="/login">已有帳號，登入</a>
-        </div>
-    </div>
+        </section>
+    </main>
 
     <script>
     document.getElementById('quickMatchForm').addEventListener('submit', async (event) => {
@@ -80,31 +102,36 @@
             resultsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
             if (matches.length === 0) {
-                matchResultsDiv.innerHTML = '<p class="empty-state">😔 沒有找到符合條件的毛孩，請嘗試放寬搜尋條件。</p>';
+                matchResultsDiv.innerHTML = `
+                    <div class="empty-state empty-state--panel">
+                        <h3>目前沒有找到明確候選</h3>
+                        <p>可以放寬品種或毛色條件，先瀏覽附近收容所資料，或建立協尋案件保留後續通知。</p>
+                        <div class="cta-container">
+                            <a class="btn btn-secondary" href="/shelter-animals">瀏覽收容動物</a>
+                            <a class="btn btn-primary" href="/report-lost">建立協尋案件</a>
+                        </div>
+                    </div>`;
             } else {
                 matchResultsDiv.innerHTML = matches.map((animal, i) => `
-                    <div class="result-card">
-                        <div class="result-rank">${i + 1}</div>
-                        <img class="result-img clickable"
-                             src="${escapeHtml(animal.picture || 'https://placehold.co/180x180/f4efe8/a77b5a?text=%F0%9F%90%BE')}"
-                             alt="${escapeHtml(animal.kind || '')}">
+                    <article class="result-card">
+                        <div class="result-rank" aria-label="排名 ${i + 1}">${i + 1}</div>
+                        <button class="result-photo-button" type="button" aria-label="查看 ${animalAltText(animal)} 詳情" data-result-index="${i}">
+                            ${animalPhotoMarkup(animal, 'result-img')}
+                        </button>
                         <div class="result-details">
-                            <p><strong>物種:</strong> ${escapeHtml(animal.kind || '—')} &nbsp;|&nbsp; <strong>品種:</strong> ${escapeHtml(animal.variety || '—')}</p>
-                            <p><strong>性別:</strong> ${sexLabel(animal.sex)} &nbsp;|&nbsp; <strong>毛色:</strong> ${escapeHtml(animal.colour || '—')}</p>
-                            <p><strong>發現地點:</strong> ${escapeHtml(animal.found_place || '—')}</p>
-                            <p><strong>收容所:</strong> ${escapeHtml(animal.shelter_name || animal.name || '—')}</p>
-                            ${animal.distance != null ? `<span class="badge distance-badge">📍 ${Number(animal.distance).toFixed(1)} 公里</span>` : ''}
-                            <p class="result-hint">點擊圖片查看詳情</p>
+                            <div class="result-title-row">
+                                <h3>${escapeHtml(animal.variety || animal.kind || '未知品種')}</h3>
+                                ${animal.distance != null ? `<span class="badge distance-badge">${Number(animal.distance).toFixed(1)} 公里</span>` : ''}
+                            </div>
+                            <p class="animal-meta">${escapeHtml(animal.kind || '—')} · ${sexLabel(animal.sex)} · ${escapeHtml(animal.colour || '—')}</p>
+                            <p><strong>收容所</strong> ${escapeHtml(animal.shelter_name || animal.name || '—')}</p>
+                            <p><strong>發現地點</strong> ${escapeHtml(animal.found_place || '—')}</p>
                         </div>
-                    </div>
+                    </article>
                 `).join('');
 
-                // Attach lightbox — pass full animal object (incl. shelter fields)
-                // so openLightbox renders shelter info without an extra API call
-                matchResultsDiv.querySelectorAll('.result-card').forEach((card, i) => {
-                    const img = card.querySelector('.result-img');
-                    if (!img) return;
-                    img.addEventListener('click', () => openLightbox(matches[i], null));
+                matchResultsDiv.querySelectorAll('[data-result-index]').forEach((button) => {
+                    button.addEventListener('click', () => openLightbox(matches[Number(button.dataset.resultIndex)], null));
                 });
             }
         } catch (err) {

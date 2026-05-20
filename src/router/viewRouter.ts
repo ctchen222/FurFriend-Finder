@@ -23,6 +23,18 @@ router.get('/login', (req, res) => {
 	res.render('login', { user: res.locals.user });
 });
 
+router.get('/forgot-password', (req, res) => {
+	res.render('forgot-password', { user: res.locals.user });
+});
+
+router.get('/reset-password', (req, res) => {
+	res.render('reset-password', {
+		user: res.locals.user,
+		token: typeof req.query.token === 'string' ? req.query.token : '',
+		error: typeof req.query.error === 'string' ? req.query.error : '',
+	});
+});
+
 router.get('/', (req, res) => {
 	res.render('home', { user: res.locals.user });
 });

@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "observability-stack.tempo.name" . }}
+  labels:
+    {{- include "observability-stack.labels" . | nindent 4 }}
+    app.kubernetes.io/component: tempo
+spec:
+  serviceName: {{ include "observability-stack.tempo.name" . }}
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "observability-stack.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: tempo
+  template:
+    metadata:
+      labels:
+        {{- include "observability-stack.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: tempo
+    spec:
+      containers:
+        - name: tempo
+          image: "{{ .Values.tempo.image.repository }}:{{ .Values.tempo.image.tag }}"
+          imagePullPolicy: {{ .Values.tempo.image.pullPolicy }}
+          args:
+            - -config.file=/etc/tempo.yaml
+          ports:
+            - name: http
+              containerPort: 3200
+            - name: otlp-grpc
+              containerPort: 4317
+          volumeMounts:
+            - name: config
+              mountPath: /etc/tempo.yaml
+              subPath: tempo.yaml
+            - name: data
+              mountPath: /var/tempo
+          resources:
+            {{- toYaml .Values.tempo.resources | nindent 12 }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "observability-stack.tempo.name" . }}-config
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        {{- $storageClassName := include "observability-stack.storageClassName" (dict "root" . "componentStorage" .Values.tempo.storage) }}
+        {{- if $storageClassName }}
+        storageClassName: {{ $storageClassName | quote }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.tempo.storage.size | quote }}

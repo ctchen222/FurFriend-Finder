@@ -7,6 +7,7 @@ import CustomError from "../libs/customError";
 import logger from "../config/logger";
 import OwnerRepository from "../repository/owner.db";
 import { Owner } from "../libs/zod/owner";
+import { recordMatchFlow } from "../config/metrics";
 
 class AnimalLostService {
 	private mailService: MailService;
@@ -27,34 +28,36 @@ class AnimalLostService {
 	}
 
 	findMatchesAndSendMail = async (animalId: string) => {
-		const lostAnimal = await this.repository.findById<AnimalLost>(animalId);
-		if (!lostAnimal) {
-			throw new CustomError(apiMessage.CONTENT_NOT_FOUND);
-		}
+		return recordMatchFlow(async () => {
+			const lostAnimal = await this.repository.findById<AnimalLost>(animalId);
+			if (!lostAnimal) {
+				throw new CustomError(apiMessage.CONTENT_NOT_FOUND);
+			}
 
-		const owner = await this.ownerRepository.findById<Owner>(lostAnimal.owner_id);
-		if (!owner) {
-			throw new CustomError(apiMessage.CONTENT_NOT_FOUND);
-		}
+			const owner = await this.ownerRepository.findById<Owner>(lostAnimal.owner_id);
+			if (!owner) {
+				throw new CustomError(apiMessage.CONTENT_NOT_FOUND);
+			}
 
-		const matchInput: MatchInput = {
-			name: lostAnimal.name,
-			colour: lostAnimal.colour,
-			sex: lostAnimal.sex,
-			kind: lostAnimal.kind,
-			variety: lostAnimal.variety,
-			lost_place: lostAnimal.lost_place,
-		};
+			const matchInput: MatchInput = {
+				name: lostAnimal.name,
+				colour: lostAnimal.colour,
+				sex: lostAnimal.sex,
+				kind: lostAnimal.kind,
+				variety: lostAnimal.variety,
+				lost_place: lostAnimal.lost_place,
+			};
 
-		const { metadata, top10Matches, allCandidates } = await this.matchingService.performMatch(matchInput);
+			const { metadata, top10Matches, allCandidates } = await this.matchingService.performMatch(matchInput);
 
-		if (top10Matches.length > 0 && owner.email) {
-			await this.mailService.sendMatchedMail(owner.email, owner.name, top10Matches);
-			logger.info(`Sent matched mail to ${owner.email} for lost animal ID ${animalId}.`);
-		}
+			if (top10Matches.length > 0 && owner.email) {
+				await this.mailService.sendMatchedMail(owner.email, owner.name, top10Matches);
+				logger.info(`Sent matched mail to ${owner.email} for lost animal ID ${animalId}.`);
+			}
 
-		logger.info(`Found ${allCandidates.length} potential matches for lost animal ID ${animalId}. Returning top ${top10Matches.length} closest matches.`);
-		return { metadata, lostAnimal, top10Matches };
+			logger.info(`Found ${allCandidates.length} potential matches for lost animal ID ${animalId}. Returning top ${top10Matches.length} closest matches.`);
+			return { metadata, lostAnimal, top10Matches };
+		});
 	}
 
 	findMatches = async (lostAnimal: QuickMatchRequest) => {

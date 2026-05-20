@@ -19,6 +19,25 @@ jest.mock('../../../config/logger', () => ({
   default: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), http: jest.fn() },
   matchLogger: { http: jest.fn() },
 }));
+jest.mock('../../../config/metrics', () => {
+  const matchDurationHistogram = { record: jest.fn() };
+  return {
+    matchDurationHistogram,
+    recordMatchFlow: async (_work: () => Promise<unknown>) => {
+      try {
+        return await _work();
+      } finally {
+        matchDurationHistogram.record(0, { boundary: 'match_flow' });
+      }
+    },
+    safeMetricAttributes: (attributes: Record<string, unknown>) => attributes,
+    registerDbPoolGauge: jest.fn(),
+  };
+});
+
+import { matchDurationHistogram } from '../../../config/metrics';
+
+const mockMatchDurationRecord = matchDurationHistogram.record as jest.Mock;
 
 function buildMockAnimalLost(overrides = {}) {
   return {
@@ -65,6 +84,7 @@ describe('AnimalLostService', () => {
     mockOwnerFindById = jest.fn();
     mockSendMatchedMail = jest.fn().mockResolvedValue({});
     mockPerformMatch = jest.fn().mockResolvedValue(buildMockMatchResult());
+    mockMatchDurationRecord.mockClear();
 
     const mockRepo = {
       findById: mockFindById,
@@ -108,6 +128,7 @@ describe('AnimalLostService', () => {
         '王小明',
         expect.any(Array)
       );
+      expect(mockMatchDurationRecord).toHaveBeenCalledWith(expect.any(Number), { boundary: 'match_flow' });
     });
 
     it('should throw CONTENT_NOT_FOUND when lost animal does not exist', async () => {
@@ -116,6 +137,7 @@ describe('AnimalLostService', () => {
       await expect(service.findMatchesAndSendMail('999')).rejects.toMatchObject({
         code: apiMessage.CONTENT_NOT_FOUND.code,
       });
+      expect(mockMatchDurationRecord).toHaveBeenCalledWith(expect.any(Number), { boundary: 'match_flow' });
     });
 
     it('should throw CONTENT_NOT_FOUND when owner does not exist', async () => {
@@ -125,6 +147,7 @@ describe('AnimalLostService', () => {
       await expect(service.findMatchesAndSendMail('1')).rejects.toMatchObject({
         code: apiMessage.CONTENT_NOT_FOUND.code,
       });
+      expect(mockMatchDurationRecord).toHaveBeenCalledWith(expect.any(Number), { boundary: 'match_flow' });
     });
 
     it('should NOT send mail when owner has no email', async () => {
@@ -144,6 +167,15 @@ describe('AnimalLostService', () => {
       await service.findMatchesAndSendMail('1');
 
       expect(mockSendMatchedMail).not.toHaveBeenCalled();
+    });
+
+    it('should propagate mail delivery errors when matched mail fails', async () => {
+      mockFindById.mockResolvedValue(buildMockAnimalLost());
+      mockOwnerFindById.mockResolvedValue(buildMockOwner());
+      mockSendMatchedMail.mockRejectedValue(new Error('SMTP unavailable'));
+
+      await expect(service.findMatchesAndSendMail('1')).rejects.toThrow('SMTP unavailable');
+      expect(mockMatchDurationRecord).toHaveBeenCalledWith(expect.any(Number), { boundary: 'match_flow' });
     });
   });
 

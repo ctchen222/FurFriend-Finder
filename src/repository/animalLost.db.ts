@@ -1,4 +1,9 @@
 import { pool } from "../db";
+import {
+	extractCityCountyMetricLabel,
+	recordDbOperation,
+	type CountyInventoryCounts,
+} from "../config/metrics";
 import { formatDate } from "../libs/animal.utils";
 import { AnimalCandidate, AnimalLostData } from "../libs/zod/animals";
 import BaseRepository from "./base.db";
@@ -12,7 +17,8 @@ class AnimalLostRepository extends BaseRepository {
 	}
 
 	async findMatchingAnimals(colour?: string[], kind?: string, sex?: string, variety?: string) {
-		const filters: string[] = [OPEN_STATUS_FILTER];
+		return recordDbOperation('find_match_candidates', async () => {
+			const filters: string[] = [OPEN_STATUS_FILTER];
 		const values: any[] = [];
 
 		if (colour && colour.length > 0) {
@@ -51,21 +57,54 @@ class AnimalLostRepository extends BaseRepository {
 
 		const { rows } = await pool.query<AnimalCandidate>(query, values);
 		return rows;
+		});
+	}
+
+	async findById<T>(id: number | string, options?: string[]): Promise<T> {
+		return recordDbOperation('find_lost_animal', () =>
+			super.findById<T>(id, options),
+		);
 	}
 
 	async findByOwnerId(ownerId: number): Promise<AnimalLostData[]> {
-		const query = `
+		return recordDbOperation('find_lost_animal', async () => {
+			const query = `
 			SELECT *
 			FROM ${this.tableName}
 			WHERE owner_id = $1
 		`;
-		const values = [ownerId];
-		const result = await pool.query(query, values);
-		return result.rows;
+			const values = [ownerId];
+			const result = await pool.query(query, values);
+			return result.rows;
+		});
+	}
+
+	async countLostAnimalsByCounty(): Promise<CountyInventoryCounts> {
+		return recordDbOperation('find_lost_animal', async () => {
+			const query = `
+				SELECT lost_place
+				FROM ${this.tableName}
+				WHERE lost_place IS NOT NULL;
+			`;
+			const { rows } = await pool.query<{ lost_place: string }>(query);
+			const counts: CountyInventoryCounts = {};
+
+			for (const row of rows) {
+				const cityCounty = extractCityCountyMetricLabel(row.lost_place);
+				if (cityCounty === null) {
+					continue;
+				}
+
+				counts[cityCounty] = (counts[cityCounty] ?? 0) + 1;
+			}
+
+			return counts;
+		});
 	}
 
 	async bulkInsertAnimalLosts(animalLosts: AnimalLostData[]): Promise<number> {
-		let insertedRowCount = 0;
+		return recordDbOperation('bulk_insert_lost_animals', async () => {
+			let insertedRowCount = 0;
 		const batchSize = 100;
 
 		await pool.query("START TRANSACTION");
@@ -164,6 +203,7 @@ class AnimalLostRepository extends BaseRepository {
 		await pool.query("COMMIT");
 
 		return insertedRowCount;
+		});
 	}
 }
 

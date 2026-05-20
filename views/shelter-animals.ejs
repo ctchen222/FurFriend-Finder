@@ -6,59 +6,69 @@
 <body>
     <%- include('partials/_header') %>
 
-    <div class="container--wide">
-        <h1 class="page-title">收容所動物列表</h1>
+    <main class="catalog-page">
+        <section class="page-hero page-hero--compact">
+            <p class="eyebrow">Shelter catalog</p>
+            <h1 class="page-title">收容所動物</h1>
+            <p class="page-subtitle">用縣市、物種與性別縮小範圍，快速查看正在等待認養或可能與走失案件相關的公開資料。</p>
+        </section>
 
-        <div class="filter-bar">
-            <div class="filter-group">
-                <label for="filter-kind">物種</label>
-                <select id="filter-kind">
-                    <option value="">全部</option>
-                    <option value="狗">狗</option>
-                    <option value="貓">貓</option>
-                    <option value="其他">其他</option>
-                </select>
+        <section class="container--wide">
+            <div class="filter-bar" aria-label="收容所動物篩選">
+                <div class="filter-group">
+                    <label for="filter-kind">物種</label>
+                    <select id="filter-kind">
+                        <option value="">全部</option>
+                        <option value="狗">狗</option>
+                        <option value="貓">貓</option>
+                        <option value="其他">其他</option>
+                    </select>
+                </div>
+                <div class="filter-group filter-group--wide">
+                    <label for="filter-city">縣市</label>
+                    <input type="text" id="filter-city" placeholder="例如：台北市" list="city-list">
+                    <datalist id="city-list">
+                        <option value="台北市"></option><option value="新北市"></option>
+                        <option value="桃園市"></option><option value="台中市"></option>
+                        <option value="台南市"></option><option value="高雄市"></option>
+                        <option value="新竹縣"></option><option value="新竹市"></option>
+                        <option value="苗栗縣"></option><option value="彰化縣"></option>
+                        <option value="南投縣"></option><option value="雲林縣"></option>
+                        <option value="嘉義縣"></option><option value="嘉義市"></option>
+                        <option value="屏東縣"></option><option value="宜蘭縣"></option>
+                        <option value="花蓮縣"></option><option value="台東縣"></option>
+                        <option value="澎湖縣"></option><option value="金門縣"></option>
+                    </datalist>
+                </div>
+                <div class="filter-group">
+                    <label for="filter-sex">性別</label>
+                    <select id="filter-sex">
+                        <option value="">全部</option>
+                        <option value="M">公</option>
+                        <option value="F">母</option>
+                    </select>
+                </div>
+                <div class="filter-actions">
+                    <button id="filterBtn" class="btn btn-primary btn-sm">搜尋</button>
+                    <button id="resetBtn" class="btn btn-sm btn-secondary">重置</button>
+                </div>
             </div>
-            <div class="filter-group">
-                <label for="filter-city">縣市</label>
-                <input type="text" id="filter-city" placeholder="例如：台北市" list="city-list">
-                <datalist id="city-list">
-                    <option value="台北市"></option><option value="新北市"></option>
-                    <option value="桃園市"></option><option value="台中市"></option>
-                    <option value="台南市"></option><option value="高雄市"></option>
-                    <option value="新竹縣"></option><option value="新竹市"></option>
-                    <option value="苗栗縣"></option><option value="彰化縣"></option>
-                    <option value="南投縣"></option><option value="雲林縣"></option>
-                    <option value="嘉義縣"></option><option value="嘉義市"></option>
-                    <option value="屏東縣"></option><option value="宜蘭縣"></option>
-                    <option value="花蓮縣"></option><option value="台東縣"></option>
-                    <option value="澎湖縣"></option><option value="金門縣"></option>
-                </datalist>
-            </div>
-            <div class="filter-group">
-                <label for="filter-sex">性別</label>
-                <select id="filter-sex">
-                    <option value="">全部</option>
-                    <option value="M">公</option>
-                    <option value="F">母</option>
-                </select>
-            </div>
-            <div class="filter-actions">
-                <button id="filterBtn" class="btn btn-primary btn-sm">搜尋</button>
-                <button id="resetBtn" class="btn btn-sm btn-secondary">重置</button>
-            </div>
-        </div>
 
-        <p class="result-info" id="result-info"></p>
-        <div id="animal-grid" class="animal-grid">
-            <p class="empty-state">載入中...</p>
-        </div>
+            <div class="catalog-toolbar">
+                <p class="result-info" id="result-info"></p>
+                <div class="active-filters" id="active-filters" aria-live="polite"></div>
+            </div>
 
-        <div class="pagination-controls" id="pagination-controls">
-            <button id="prev-page" class="btn btn-primary" disabled>← 上一頁</button>
-            <button id="next-page" class="btn btn-primary" disabled>下一頁 →</button>
-        </div>
-    </div>
+            <div id="animal-grid" class="animal-grid" aria-live="polite">
+                <p class="empty-state">載入中...</p>
+            </div>
+
+            <div class="pagination-controls" id="pagination-controls">
+                <button id="prev-page" class="btn btn-secondary" disabled>上一頁</button>
+                <button id="next-page" class="btn btn-primary" disabled>下一頁</button>
+            </div>
+        </section>
+    </main>
 
     <script>
     document.addEventListener('DOMContentLoaded', async () => {
@@ -69,38 +79,34 @@
         const resultInfo  = document.getElementById('result-info');
         const filterBtn   = document.getElementById('filterBtn');
         const resetBtn    = document.getElementById('resetBtn');
+        const activeFiltersEl = document.getElementById('active-filters');
 
         const PAGE_SIZE = 12;
         let prevCursor = null;
         let nextCursor = null;
         const pageCursors = [null];
         let currentPageIndex = 0;
-        // Current filter state
         let activeCity = '';
         let activeKind = '';
         let activeSex  = '';
-        let isCityMode = false; // city API returns all results (no pagination)
-
-        // Map from rendered card index → animal data (for lightbox)
+        let isCityMode = false;
         const animalMap = new Map();
 
         function renderCard(animal) {
-            const imgSrc = animal.picture || 'https://placehold.co/560x380/f4efe8/a77b5a?text=%F0%9F%90%BE';
             const cardId = `card-${animal.id || Math.random().toString(36).slice(2)}`;
             animalMap.set(cardId, animal);
+            const title = animal.variety || animal.kind || '未知品種';
             return `
-                <div class="animal-card clickable" data-card-id="${cardId}" tabindex="0" role="button">
-                    <img class="animal-card-img" src="${escapeHtml(imgSrc)}" alt="${escapeHtml(animal.variety || '動物')}">
-                    <div class="animal-card-body">
-                        <p class="animal-card-title">${escapeHtml(animal.variety || '未知品種')}</p>
-                        <p class="animal-meta">
-                            <strong>物種:</strong> ${escapeHtml(animal.kind || '—')}&nbsp;&nbsp;
-                            <strong>性別:</strong> ${sexLabel(animal.sex)}&nbsp;&nbsp;
-                            <strong>毛色:</strong> ${escapeHtml(animal.colour || '—')}
-                        </p>
-                        ${animal.shelter_name ? `<span class="badge shelter-tag">📍 ${escapeHtml(animal.shelter_name)}</span>` : ''}
+                <article class="animal-card clickable" data-card-id="${cardId}" tabindex="0" role="button" aria-label="查看 ${animalAltText(animal)} 詳情">
+                    <div class="animal-card-photo">
+                        ${animalPhotoMarkup(animal, 'animal-card-img')}
                     </div>
-                </div>`;
+                    <div class="animal-card-body">
+                        <p class="animal-card-title">${escapeHtml(title)}</p>
+                        <p class="animal-meta">${escapeHtml(animal.kind || '—')} · ${sexLabel(animal.sex)} · ${escapeHtml(animal.colour || '—')}</p>
+                        ${animal.shelter_name ? `<p class="animal-location">${escapeHtml(animal.shelter_name)}</p>` : ''}
+                    </div>
+                </article>`;
         }
 
         function applyClientFilters(animals) {
@@ -111,16 +117,26 @@
             });
         }
 
+        function renderActiveFilters() {
+            const chips = [];
+            if (activeKind) chips.push(`物種：${activeKind}`);
+            if (activeCity) chips.push(`縣市：${activeCity}`);
+            if (activeSex) chips.push(`性別：${sexLabel(activeSex)}`);
+            activeFiltersEl.innerHTML = chips.map(chip => `<span class="filter-chip">${escapeHtml(chip)}</span>`).join('');
+        }
+
         function showAnimals(animals, total) {
+            animalMap.clear();
             const filtered = applyClientFilters(animals);
             if (filtered.length > 0) {
                 grid.innerHTML = filtered.map(renderCard).join('');
             } else {
-                grid.innerHTML = '<p class="empty-state">😔 沒有符合條件的動物，請嘗試放寬篩選條件。</p>';
+                grid.innerHTML = '<p class="empty-state">沒有符合條件的動物。可以放寬物種、性別或縣市篩選。</p>';
             }
             resultInfo.textContent = total != null
                 ? `共找到 ${filtered.length} 筆結果`
                 : `目前顯示 ${filtered.length} 筆`;
+            renderActiveFilters();
         }
 
         async function fetchByCity(city) {
@@ -200,7 +216,6 @@
             fetchPage();
         });
 
-        // Event delegation for lightbox — works even after grid re-renders
         grid.addEventListener('click', (e) => {
             const card = e.target.closest('[data-card-id]');
             if (!card) return;

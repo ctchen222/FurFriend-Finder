@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 
 const viewPath = path.resolve(__dirname, '../../../views/shelter-animals.ejs');
+const commonPath = path.resolve(__dirname, '../../public/js/common.js');
 
 function animal(id: number) {
   return {
@@ -11,7 +12,7 @@ function animal(id: number) {
     variety: `測試品種 ${id}`,
     sex: 'M',
     colour: '棕色',
-    picture: '',
+    picture: id === 1 ? '/broken-animal-photo.jpg' : '',
     shelter_name: `測試收容所 ${id}`,
   };
 }
@@ -25,7 +26,12 @@ function extractShelterAnimalsScript() {
 
 test('shelter animals pagination disables previous after returning to first page', async ({ page }) => {
   const script = extractShelterAnimalsScript();
+  const commonScript = fs.readFileSync(commonPath, 'utf8');
   const requests: string[] = [];
+
+  await page.route('**/broken-animal-photo.jpg', async (route) => {
+    await route.abort();
+  });
 
   await page.route('**/api/animals**', async (route) => {
     const url = new URL(route.request().url());
@@ -59,17 +65,14 @@ test('shelter animals pagination disables previous after returning to first page
       <button id="filterBtn">搜尋</button>
       <button id="resetBtn">重置</button>
       <p id="result-info"></p>
+      <div id="active-filters"></div>
       <div id="animal-grid"></div>
       <div id="pagination-controls">
         <button id="prev-page" disabled>上一頁</button>
         <button id="next-page" disabled>下一頁</button>
       </div>
     </main>
-    <script>
-      window.openLightbox = () => {};
-      window.escapeHtml = (value) => String(value ?? '');
-      window.sexLabel = (value) => value === 'M' ? '公' : value === 'F' ? '母' : '未知';
-    </script>
+    <script>${commonScript}</script>
     <script>${script}</script>
   `);
 
@@ -77,6 +80,9 @@ test('shelter animals pagination disables previous after returning to first page
   const nextButton = page.locator('#next-page');
 
   await expect(page.locator('.animal-card')).toHaveCount(12);
+  await expect(page.locator('.animal-card-photo .animal-photo-fallback')).toHaveCount(12);
+  await expect(page.getByText('No photo')).toHaveCount(0);
+  await expect(page.locator('img[src*="placehold.co"]')).toHaveCount(0);
   await expect(prevButton).toBeDisabled();
   await expect(nextButton).toBeEnabled();
   expect(requests).toEqual(['/api/animals?pageSize=12']);

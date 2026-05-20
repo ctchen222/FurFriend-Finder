@@ -30,15 +30,38 @@ function showToast(message, type = 'success', duration = 3000) {
  *
  * @param {Record<string,string>} [messageMap] - Optional key→display-text map for ?message= values.
  */
+window.APP_MESSAGE_KEYS = Object.freeze({
+    SIGNUP_SUCCESS: 'signup-success',
+    LOGIN_SUCCESS: 'login-success',
+    LOGOUT_SUCCESS: 'logout-success',
+    SIGNUP_FAILED: 'signup-failed',
+    LOGIN_FAILED: 'login-failed',
+    VERIFICATION_EMAIL_SENT: 'verification-email-sent',
+    EMAIL_NOT_VERIFIED: 'email-not-verified',
+    EMAIL_VERIFIED: 'email-verified',
+    RESET_PASSWORD_SENT: 'reset-password-sent',
+    RESET_PASSWORD_FAILED: 'reset-password-failed',
+    RESET_PASSWORD_SUCCESS: 'reset-password-success',
+    REPORT_SUCCESS: 'report-success',
+    REPORT_FAILED: 'report-failed',
+    SETTINGS_SAVED: 'settings-saved',
+});
+
 const DEFAULT_MESSAGE_MAP = {
-    'signup-success': '註冊成功！歡迎您的加入。',
-    'login-success':  '登入成功！',
-    'logout-success': '您已成功登出。',
-    'signup-failed':  '註冊失敗，請檢查您輸入的資料。',
-    'login-failed':   '登入失敗，請確認您的信箱與密碼。',
-    'report-success': '協尋案件提交成功！',
-    'report-failed':  '協尋案件提交失敗，請稍後再試。',
-    'settings-saved': '設定已儲存。',
+    [window.APP_MESSAGE_KEYS.SIGNUP_SUCCESS]: '註冊成功！歡迎您的加入。',
+    [window.APP_MESSAGE_KEYS.LOGIN_SUCCESS]:  '登入成功！',
+    [window.APP_MESSAGE_KEYS.LOGOUT_SUCCESS]: '您已成功登出。',
+    [window.APP_MESSAGE_KEYS.SIGNUP_FAILED]:  '註冊失敗，請檢查您輸入的資料。',
+    [window.APP_MESSAGE_KEYS.LOGIN_FAILED]:   '登入失敗，請確認您的信箱與密碼。',
+    [window.APP_MESSAGE_KEYS.VERIFICATION_EMAIL_SENT]: '驗證信已寄出，請先完成信箱驗證。',
+    [window.APP_MESSAGE_KEYS.EMAIL_NOT_VERIFIED]: '請先完成信箱驗證；如果密碼正確，我們已重新寄送驗證信。',
+    [window.APP_MESSAGE_KEYS.EMAIL_VERIFIED]: '信箱驗證完成，請登入。',
+    [window.APP_MESSAGE_KEYS.RESET_PASSWORD_SENT]: '如果此 Email 已註冊，請查看信箱中的重設連結。',
+    [window.APP_MESSAGE_KEYS.RESET_PASSWORD_FAILED]: '密碼重設信寄送失敗，請稍後再試。',
+    [window.APP_MESSAGE_KEYS.RESET_PASSWORD_SUCCESS]: '密碼已更新，請使用新密碼登入。',
+    [window.APP_MESSAGE_KEYS.REPORT_SUCCESS]: '協尋案件提交成功！',
+    [window.APP_MESSAGE_KEYS.REPORT_FAILED]:  '協尋案件提交失敗，請稍後再試。',
+    [window.APP_MESSAGE_KEYS.SETTINGS_SAVED]: '設定已儲存。',
 };
 
 function handleUrlMessages(messageMap) {
@@ -78,6 +101,54 @@ function sexLabel(s) {
     return s === 'M' ? '公' : s === 'F' ? '母' : s || '—';
 }
 
+function getAnimalImage(animal) {
+    if (animal && animal.picture) return animal.picture;
+    return '';
+}
+
+function animalAltText(animal) {
+    if (!animal) return '動物照片';
+    const parts = [
+        animal.kind,
+        animal.variety,
+        sexLabel(animal.sex),
+        animal.colour,
+    ].filter(Boolean);
+    return `${parts.join('，') || '動物'}的照片`;
+}
+
+function missingAnimalPhotoMarkup(sizeClass = '') {
+    const classes = ['animal-photo-fallback', sizeClass].filter(Boolean).map(escapeHtml).join(' ');
+    return `
+        <div class="${classes}" role="img" aria-label="照片暫缺">
+            <span class="animal-photo-fallback-mark" aria-hidden="true"></span>
+            <span class="animal-photo-fallback-label">照片暫缺</span>
+        </div>`;
+}
+
+function animalPhotoMarkup(animal, imageClassName) {
+    const imgSrc = getAnimalImage(animal);
+    if (!imgSrc) return missingAnimalPhotoMarkup(imageClassName);
+
+    return `<img class="${escapeHtml(imageClassName)}"
+                 src="${escapeHtml(imgSrc)}"
+                 alt="${escapeHtml(animalAltText(animal))}"
+                 data-missing-photo-class="${escapeHtml(imageClassName)}">`;
+}
+
+function replaceMissingAnimalPhoto(img) {
+    if (!img || !img.parentNode) return;
+    const fallbackClass = img.getAttribute('data-missing-photo-class') || '';
+    img.outerHTML = missingAnimalPhotoMarkup(fallbackClass);
+}
+
+document.addEventListener('error', (event) => {
+    const target = event.target;
+    if (target instanceof HTMLImageElement && target.hasAttribute('data-missing-photo-class')) {
+        replaceMissingAnimalPhoto(target);
+    }
+}, true);
+
 // ============================================================
 //  Lightbox
 // ============================================================
@@ -105,11 +176,9 @@ function openLightbox(animal, animalId) {
 
     const previousFocus = document.activeElement;
 
-    const imgSrc = animal.picture || 'https://placehold.co/600x300/f4efe8/a77b5a?text=%F0%9F%90%BE';
-
     overlay.innerHTML = `
         <div class="lightbox-box">
-            <img class="lightbox-img" src="${escapeHtml(imgSrc)}" alt="${escapeHtml(animal.variety || '動物')}">
+            ${animalPhotoMarkup(animal, 'lightbox-img')}
             <button class="lightbox-close" aria-label="關閉">✕</button>
             <div class="lightbox-body">
                 <h3>${escapeHtml(animal.variety || '未知品種')}</h3>
@@ -163,10 +232,10 @@ function openLightbox(animal, animalId) {
         if (!shelterEl) return;
         if (name) {
             shelterEl.innerHTML = `
-                <h4>📍 收容所資訊</h4>
-                <p><strong>名稱:</strong> ${escapeHtml(name)}</p>
-                ${address ? `<p><strong>地址:</strong> ${escapeHtml(address)}</p>` : ''}
-                ${tel     ? `<p><strong>電話:</strong> <a href="tel:${escapeHtml(tel)}">${escapeHtml(tel)}</a></p>` : ''}`;
+                <h4>收容所資訊</h4>
+                <p><strong>名稱</strong> ${escapeHtml(name)}</p>
+                ${address ? `<p><strong>地址</strong> ${escapeHtml(address)}</p>` : ''}
+                ${tel     ? `<p><strong>電話</strong> <a href="tel:${escapeHtml(tel)}">${escapeHtml(tel)}</a></p>` : ''}`;
         } else {
             shelterEl.innerHTML = '<p class="text-muted">無收容所資訊</p>';
         }

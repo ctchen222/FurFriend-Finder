@@ -1,0 +1,70 @@
+spec:
+  template:
+    spec:
+      initContainers:
+        - name: copy-sops
+          image: ghcr.io/getsops/sops:v3.12.2-alpine
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+          args:
+            - cp "$(command -v sops)" /custom-tools/sops && chmod 0555 /custom-tools/sops
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+            seccompProfile:
+              type: RuntimeDefault
+          volumeMounts:
+            - name: custom-tools
+              mountPath: /custom-tools
+      containers:
+        - name: sops-secrets
+          image: quay.io/argoproj/argocd:v3.3.9
+          imagePullPolicy: IfNotPresent
+          command:
+            - /var/run/argocd/argocd-cmp-server
+          env:
+            - name: SOPS_AGE_KEY_FILE
+              value: /sops-age/keys.txt
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 999
+            seccompProfile:
+              type: RuntimeDefault
+          volumeMounts:
+            - name: var-files
+              mountPath: /var/run/argocd
+            - name: plugins
+              mountPath: /home/argocd/cmp-server/plugins
+            - name: cmp-tmp
+              mountPath: /tmp
+            - name: argocd-sops-cmp-plugin
+              mountPath: /home/argocd/cmp-server/config/plugin.yaml
+              subPath: plugin.yaml
+            - name: custom-tools
+              mountPath: /usr/local/bin/sops
+              subPath: sops
+            - name: sops-age-key
+              mountPath: /sops-age
+              readOnly: true
+      volumes:
+        - name: argocd-sops-cmp-plugin
+          configMap:
+            name: argocd-sops-cmp-plugin
+        - name: custom-tools
+          emptyDir: {}
+        - name: cmp-tmp
+          emptyDir: {}
+        - name: sops-age-key
+          secret:
+            secretName: sops-age-key
+            defaultMode: 0400

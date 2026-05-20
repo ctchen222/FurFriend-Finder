@@ -20,7 +20,7 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          claude_args: "--max-turns 3 --model claude-haiku-4-5-20251001"
+          claude_args: "--max-turns 6 --model claude-haiku-4-5-20251001"
           prompt: |
             Read this GitHub issue and output ONLY an implementation plan as a comment.
             Do NOT make any file changes. Do NOT write any code.

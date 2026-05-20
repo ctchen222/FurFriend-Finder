@@ -24,6 +24,7 @@ describe('AnimalLostRepository', () => {
 	beforeEach(() => {
 		repo = new AnimalLostRepository();
 		mockQuery = pool.query as jest.Mock;
+		mockQuery.mockClear();
 	});
 
 	describe('findMatchingAnimals', () => {
@@ -105,6 +106,29 @@ describe('AnimalLostRepository', () => {
 
 			expect(result).toEqual(mockLostAnimals);
 			expect(result).toHaveLength(2);
+		});
+	});
+
+	describe('countLostAnimalsByCounty', () => {
+		it('should group lost animal inventory by normalized Taiwan city/county', async () => {
+			mockQuery.mockResolvedValue({
+				rows: [
+					{ lost_place: '台南市東區' },
+					{ lost_place: '臺南市北區' },
+					{ lost_place: '嘉義縣民雄鄉' },
+					{ lost_place: '嘉義市東區' },
+					{ lost_place: '東京都港區' },
+				],
+			});
+
+			const result = await repo.countLostAnimalsByCounty();
+
+			expect(result).toEqual({
+				臺南市: 2,
+				嘉義縣: 1,
+				嘉義市: 1,
+			});
+			expect(Object.keys(result)).not.toContain('台南市東區');
 		});
 	});
 

@@ -5,7 +5,16 @@ import * as apiMessage from '../libs/message';
 import CustomError from "../libs/customError";
 import { getMetadata } from "../repository/utils/dataTransform";
 import logger from "../config/logger";
-import { matchRequestCounter } from "../config/metrics";
+import {
+	geocodingFailedShelterCounter,
+	geocodingUniqueShelterAddressesHistogram,
+	matchCandidatesHistogram,
+	matchNoResultCounter,
+	matchResultsHistogram,
+	matchTruncatedCounter,
+	recordMatchRequest,
+	safeMetricAttributes,
+} from "../config/metrics";
 
 const GEOCODING_BATCH_LIMIT = 200;
 // Shelters farther than this distance (km) from the lost_place are excluded from results.
@@ -52,6 +61,7 @@ class MatchingService {
 		const uniqueShelterAddresses = [...new Set(
 			candidates.map(a => a.shelter_address).filter((p): p is string => !!p)
 		)];
+		geocodingUniqueShelterAddressesHistogram.record(uniqueShelterAddresses.length, safeMetricAttributes({ boundary: 'perform_match' }));
 
 		const shelterCoords = new Map<string, { lat: number; lng: number } | null>();
 		const failedShelters = new Set<string>();
@@ -63,6 +73,7 @@ class MatchingService {
 					.catch(err => {
 						logger.warn(`Geocoding failed for shelter "${address}", skipping affected animals: ${err}`);
 						failedShelters.add(address);
+						geocodingFailedShelterCounter.add(1, safeMetricAttributes({ boundary: 'perform_match' }));
 					})
 			)
 		);
@@ -95,7 +106,7 @@ class MatchingService {
 	}
 
 	async performMatch(input: MatchInput): Promise<MatchResult> {
-		try {
+		return recordMatchRequest('perform_match', async () => {
 			const { colour, kind, sex, variety, lost_place } = this.normalizeMatchCriteria(input);
 
 			const lostAnimalCoordinates = await this.geoService.geocoding(lost_place);
@@ -104,27 +115,29 @@ class MatchingService {
 			}
 
 			const allCandidates = await this.repository.findMatchingAnimals(colour, kind, sex, variety);
+			matchCandidatesHistogram.record(allCandidates.length, safeMetricAttributes({ boundary: 'perform_match' }));
 
 			const candidates = allCandidates.slice(0, GEOCODING_BATCH_LIMIT);
 			// Guard against unbounded geocoding batches that would exhaust API quota.
 			if (allCandidates.length > GEOCODING_BATCH_LIMIT) {
 				logger.warn(`Candidate count ${allCandidates.length} exceeds geocoding limit ${GEOCODING_BATCH_LIMIT}; truncated to ${candidates.length}.`);
+				matchTruncatedCounter.add(1, safeMetricAttributes({ boundary: 'perform_match' }));
 			}
 
 			const animalsWithDistance = await this.geocodeAndCalculateDistances(lostAnimalCoordinates, candidates);
 
 			const sortedMatches = animalsWithDistance.sort((a, b) => a.distance - b.distance);
 			const top10Matches = sortedMatches.slice(0, 10);
+			matchResultsHistogram.record(top10Matches.length, safeMetricAttributes({ boundary: 'perform_match' }));
+			if (top10Matches.length === 0) {
+				matchNoResultCounter.add(1, safeMetricAttributes({ boundary: 'perform_match' }));
+			}
 			// metadata.total reflects the original DB result count (pre-truncation),
 			// so the UI can show "N potential matches found" even when only top-10 are returned.
 			const metadata = getMetadata(allCandidates);
 
-			matchRequestCounter.add(1, { status: 'success' });
 			return { metadata, top10Matches, allCandidates };
-		} catch (err) {
-			matchRequestCounter.add(1, { status: 'error' });
-			throw err;
-		}
+		});
 	}
 }
 
