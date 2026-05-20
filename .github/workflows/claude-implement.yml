@@ -20,18 +20,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Compute branch name
+      - name: Compute issue number
         id: branch
         run: |
           ISSUE_NUMBER="${{ github.event.issue.number }}"
-          SLUG=$(echo "${{ github.event.issue.title }}" \
-            | tr '[:upper:]' '[:lower:]' \
-            | sed 's/[^a-z0-9]/-/g' \
-            | sed 's/--*/-/g' \
-            | sed 's/^-\|-$//g' \
-            | cut -c1-40)
-          DATE=$(date +%Y%m%d)
-          echo "name=minion/${DATE}-${SLUG}" >> $GITHUB_OUTPUT
           echo "issue_number=${ISSUE_NUMBER}" >> $GITHUB_OUTPUT
 
       - name: Fetch Phase 1 plan comment
@@ -54,8 +46,8 @@ jobs:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           base_branch: dev
-          branch: ${{ steps.branch.outputs.name }}
-          claude_args: "--max-turns 2 --model claude-haiku-4-5-20251001"
+          branch_prefix: minion/
+          claude_args: "--max-turns 8 --model claude-haiku-4-5-20251001"
           prompt: |
             Implement the following approved plan exactly as described.
             Do NOT deviate from the plan. Do NOT add unrequested features or refactor
