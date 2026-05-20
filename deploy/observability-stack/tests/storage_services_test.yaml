@@ -1,0 +1,59 @@
+suite: storage services
+templates:
+  - templates/prometheus-statefulset.yaml
+  - templates/prometheus-service.yaml
+  - templates/tempo-statefulset.yaml
+  - templates/tempo-service.yaml
+  - templates/loki-statefulset.yaml
+  - templates/loki-service.yaml
+tests:
+  - it: renders Prometheus with PVC-backed storage and Collector scrape config
+    template: templates/prometheus-statefulset.yaml
+    asserts:
+      - isKind:
+          of: StatefulSet
+      - equal:
+          path: spec.volumeClaimTemplates[0].spec.storageClassName
+          value: local-path
+      - equal:
+          path: spec.volumeClaimTemplates[0].spec.resources.requests.storage
+          value: 5Gi
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: --storage.tsdb.retention.time=7d
+  - it: keeps Prometheus internal
+    template: templates/prometheus-service.yaml
+    asserts:
+      - isKind:
+          of: Service
+      - equal:
+          path: spec.type
+          value: ClusterIP
+      - equal:
+          path: spec.ports[0].port
+          value: 9090
+  - it: renders Tempo OTLP receiver internally
+    template: templates/tempo-service.yaml
+    asserts:
+      - isKind:
+          of: Service
+      - equal:
+          path: spec.type
+          value: ClusterIP
+      - equal:
+          path: spec.ports[1].name
+          value: otlp-grpc
+      - equal:
+          path: spec.ports[1].port
+          value: 4317
+  - it: renders Loki with PVC-backed storage
+    template: templates/loki-statefulset.yaml
+    asserts:
+      - isKind:
+          of: StatefulSet
+      - equal:
+          path: spec.volumeClaimTemplates[0].spec.storageClassName
+          value: local-path
+      - equal:
+          path: spec.volumeClaimTemplates[0].spec.resources.requests.storage
+          value: 5Gi

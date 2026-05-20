@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "observability-stack.loki.name" . }}-config
+  labels:
+    {{- include "observability-stack.labels" . | nindent 4 }}
+    app.kubernetes.io/component: loki
+data:
+  loki.yaml: |
+{{ .Files.Get "files/loki.yaml" | indent 4 }}

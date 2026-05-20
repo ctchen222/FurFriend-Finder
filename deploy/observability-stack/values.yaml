@@ -1,0 +1,101 @@
+global:
+  storageClassName: local-path
+
+serviceNames:
+  otelCollector: otel-collector
+  prometheus: prometheus
+  tempo: tempo
+  loki: loki
+  grafana: grafana
+
+otelCollector:
+  image:
+    repository: otel/opentelemetry-collector-contrib
+    tag: latest
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+prometheus:
+  image:
+    repository: prom/prometheus
+    tag: latest
+    pullPolicy: IfNotPresent
+  retention: 7d
+  storage:
+    size: 5Gi
+    storageClassName: ""
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+
+tempo:
+  image:
+    repository: grafana/tempo
+    tag: latest
+    pullPolicy: IfNotPresent
+  storage:
+    size: 5Gi
+    storageClassName: ""
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+
+loki:
+  image:
+    repository: grafana/loki
+    tag: latest
+    pullPolicy: IfNotPresent
+  storage:
+    size: 5Gi
+    storageClassName: ""
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+
+grafana:
+  image:
+    repository: grafana/grafana
+    tag: 12.2.1
+    pullPolicy: IfNotPresent
+  adminSecret:
+    name: grafana-admin
+    userKey: admin-user
+    passwordKey: admin-password
+  persistence:
+    size: 2Gi
+    storageClassName: ""
+  ingress:
+    enabled: true
+    className: traefik
+    host: dashboard.furfriend-finder.com
+    tls:
+      enabled: true
+      secretName: dashboard-furfriend-finder-tls
+      clusterIssuer: letsencrypt-production
+    annotations: {}
+    traefikIpAllowlistMiddleware: ""
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi

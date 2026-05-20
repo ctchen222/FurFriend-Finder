@@ -1,0 +1,6 @@
+apiVersion: v2
+name: observability-stack
+description: Helm chart for the FurFriend Finder k3s observability stack
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
