@@ -9,7 +9,7 @@ jobs:
     # Only trigger when repo owner types exactly "approved" on an issue
     if: |
       github.event.comment.body == 'approved' &&
-      github.event.comment.user.login == 'ctchen' &&
+      github.event.comment.user.login == 'ctchen222' &&
       github.event.issue.pull_request == null
     runs-on: ubuntu-latest
     permissions:
@@ -53,6 +53,7 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          base_branch: dev
           branch: ${{ steps.branch.outputs.name }}
           claude_args: "--max-turns 2 --model claude-haiku-4-5-20251001"
           prompt: |
@@ -62,6 +63,6 @@ jobs:
 
             ${{ steps.plan.outputs.content != '' && format('Approved plan:{0}{1}', '\n', steps.plan.outputs.content) || format('No plan comment found. Use the issue description as your guide:{0}Title: {1}{0}Body:{0}{2}', '\n', github.event.issue.title, github.event.issue.body) }}
 
-            After implementing, open a pull request targeting main:
+            After implementing, open a pull request targeting dev:
             - Title: ${{ github.event.issue.title }}
             - Body must reference: Closes #${{ steps.branch.outputs.issue_number }}
