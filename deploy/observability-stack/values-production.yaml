@@ -1,0 +1,37 @@
+global:
+  storageClassName: local-path
+
+prometheus:
+  retention: 7d
+  storage:
+    size: 5Gi
+    storageClassName: local-path
+
+tempo:
+  storage:
+    size: 5Gi
+    storageClassName: local-path
+
+loki:
+  storage:
+    size: 5Gi
+    storageClassName: local-path
+
+grafana:
+  adminSecret:
+    name: furfriend-grafana-admin
+    userKey: admin-user
+    passwordKey: admin-password
+  ingress:
+    enabled: true
+    className: traefik
+    host: dashboard.furfriend-finder.com
+    tls:
+      enabled: true
+      secretName: dashboard-furfriend-finder-tls
+      clusterIssuer: letsencrypt-production
+    annotations: {}
+    traefikIpAllowlistMiddleware: ""
+  persistence:
+    size: 2Gi
+    storageClassName: local-path

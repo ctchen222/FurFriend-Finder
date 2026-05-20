@@ -45,6 +45,22 @@ tests:
           path: data.OTEL_SDK_DISABLED
           value: "true"
       - equal:
+          path: data.OTEL_EXPORTER_OTLP_ENDPOINT
+          value: ""
+      - equal:
           path: data.PORT
           value: "2486"
-
+  - it: renders telemetry-enabled config for the in-cluster Collector
+    template: templates/configmap.yaml
+    set:
+      config.telemetry.disabled: "false"
+      config.telemetry.otlpEndpoint: http://otel-collector.observability:4317
+    asserts:
+      - isKind:
+          of: ConfigMap
+      - equal:
+          path: data.OTEL_SDK_DISABLED
+          value: "false"
+      - equal:
+          path: data.OTEL_EXPORTER_OTLP_ENDPOINT
+          value: http://otel-collector.observability:4317

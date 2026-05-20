@@ -17,9 +17,9 @@ config:
   emailVerifyCallbackUrl: https://furfriend-finder.com/verify-email
   corsAllowedOrigins: https://furfriend-finder.com
   telemetry:
-    disabled: "true"
+    disabled: "false"
     serviceName: furfriend-finder
-    otlpEndpoint: ""
+    otlpEndpoint: "http://otel-collector.observability:4317"
 
 secrets:
   appSecretName: furfriend-finder-app-secret

@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "observability-stack.grafana.name" . }}-data
+  labels:
+    {{- include "observability-stack.labels" . | nindent 4 }}
+    app.kubernetes.io/component: grafana
+spec:
+  accessModes:
+    - ReadWriteOnce
+  {{- $storageClassName := include "observability-stack.storageClassName" (dict "root" . "componentStorage" .Values.grafana.persistence) }}
+  {{- if $storageClassName }}
+  storageClassName: {{ $storageClassName | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.grafana.persistence.size | quote }}

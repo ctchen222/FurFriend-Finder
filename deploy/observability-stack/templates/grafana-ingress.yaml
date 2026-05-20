@@ -1,0 +1,38 @@
+{{- if .Values.grafana.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "observability-stack.grafana.name" . }}
+  labels:
+    {{- include "observability-stack.labels" . | nindent 4 }}
+    app.kubernetes.io/component: grafana
+  annotations:
+    {{- if and .Values.grafana.ingress.tls.enabled .Values.grafana.ingress.tls.clusterIssuer }}
+    cert-manager.io/cluster-issuer: {{ .Values.grafana.ingress.tls.clusterIssuer | quote }}
+    {{- end }}
+    {{- if .Values.grafana.ingress.traefikIpAllowlistMiddleware }}
+    traefik.ingress.kubernetes.io/router.middlewares: {{ .Values.grafana.ingress.traefikIpAllowlistMiddleware | quote }}
+    {{- end }}
+    {{- with .Values.grafana.ingress.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  ingressClassName: {{ .Values.grafana.ingress.className | quote }}
+  {{- if .Values.grafana.ingress.tls.enabled }}
+  tls:
+    - hosts:
+        - {{ .Values.grafana.ingress.host | quote }}
+      secretName: {{ .Values.grafana.ingress.tls.secretName | quote }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.grafana.ingress.host | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "observability-stack.grafana.name" . }}
+                port:
+                  name: http
+{{- end }}

@@ -1,0 +1,48 @@
+suite: otel collector
+templates:
+  - templates/collector-configmap.yaml
+  - templates/collector-deployment.yaml
+  - templates/collector-service.yaml
+tests:
+  - it: renders Collector config from packaged file
+    template: templates/collector-configmap.yaml
+    asserts:
+      - isKind:
+          of: ConfigMap
+      - equal:
+          path: metadata.name
+          value: otel-collector-config
+      - matchRegex:
+          path: data["config.yaml"]
+          pattern: "endpoint: \"tempo:4317\""
+      - matchRegex:
+          path: data["config.yaml"]
+          pattern: "endpoint: \"http://loki:3100/otlp\""
+  - it: renders Collector workload ports
+    template: templates/collector-deployment.yaml
+    asserts:
+      - isKind:
+          of: Deployment
+      - equal:
+          path: spec.template.spec.containers[0].ports[0].containerPort
+          value: 4317
+      - equal:
+          path: spec.template.spec.containers[0].ports[1].containerPort
+          value: 4318
+      - equal:
+          path: spec.template.spec.containers[0].ports[2].containerPort
+          value: 8889
+  - it: keeps Collector internal
+    template: templates/collector-service.yaml
+    asserts:
+      - isKind:
+          of: Service
+      - equal:
+          path: spec.type
+          value: ClusterIP
+      - equal:
+          path: spec.ports[0].name
+          value: otlp-grpc
+      - equal:
+          path: spec.ports[2].name
+          value: prometheus

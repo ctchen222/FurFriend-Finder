@@ -1,0 +1,292 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "max": 100,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 99
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "(100 * (1 - sum(increase(http_server_duration_milliseconds_count{http_status_code=~\"5..\"}[$__range])) / clamp_min(sum(increase(http_server_duration_milliseconds_count[$__range])), 1))) or on() vector(100)",
+          "legendFormat": "availability",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "HTTP Availability",
+      "type": "gauge"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 0
+      },
+      "id": 2,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "vector(99)",
+          "legendFormat": "target",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Availability Target",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 0
+      },
+      "id": 3,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "clamp_min((100 * (1 - sum(increase(http_server_duration_milliseconds_count{http_status_code=~\"5..\"}[$__range])) / clamp_min(sum(increase(http_server_duration_milliseconds_count[$__range])), 1)) - 99) / 1 * 100, 0) or on() vector(100)",
+          "legendFormat": "budget remaining",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Availability Error Budget Context",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "max": 5000,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 5000
+              }
+            ]
+          },
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 8
+      },
+      "id": 4,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "(histogram_quantile(0.95, sum by (le) (rate(match_duration_milliseconds_bucket{boundary=\"perform_match\"}[$__rate_interval]))) >= 0) or on() vector(0)",
+          "legendFormat": "quick match p95",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Quick Match P95",
+      "type": "gauge"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 8
+      },
+      "id": 5,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "vector(5000)",
+          "legendFormat": "target",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Quick Match Target",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 8
+      },
+      "id": 6,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "clamp_min(histogram_quantile(0.95, sum by (le) (rate(match_duration_milliseconds_bucket{boundary=\"perform_match\"}[$__rate_interval]))) - 5000, 0) or on() vector(0)",
+          "legendFormat": "ms over target",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Quick Match Over Target Context",
+      "type": "stat"
+    },
+    {
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 16
+      },
+      "id": 7,
+      "options": {
+        "content": "This dashboard is SLO readiness only. Availability target is 99%. Quick-match P95 target is 5 seconds. Alert rules, notification policies, receivers, and real secrets remain in the separate alerting OpenSpec change.",
+        "mode": "markdown"
+      },
+      "title": "Scope",
+      "type": "text"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": [
+    "furfriend",
+    "optimization",
+    "slo-readiness"
+  ],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timezone": "browser",
+  "title": "FurFriend SLO Readiness",
+  "uid": "furfriend-slo-readiness",
+  "version": 1
+}
