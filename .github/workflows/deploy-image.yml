@@ -93,7 +93,7 @@ jobs:
     needs: image
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
     if: >-
       github.event_name == 'push' &&
       github.ref == 'refs/heads/main' &&
@@ -107,7 +107,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          ssh-key: ${{ secrets.GITOPS_DEPLOY_KEY }}
 
       - name: Normalize image name
         run: echo "IMAGE_NAME=${IMAGE_NAME,,}" >> "$GITHUB_ENV"
@@ -116,6 +116,33 @@ jobs:
         run: |
           perl -0pi -e "s#(?m)^image:\n  repository: .*\n  tag: .*#image:\n  repository: ${IMAGE_NAME}\n  tag: ${IMAGE_TAG}#" "$VALUES_FILE"
           git diff -- "$VALUES_FILE"
+
+      - name: Validate GitOps diff
+        run: |
+          if git diff --quiet -- "$VALUES_FILE"; then
+            echo "GitOps values already point at ${IMAGE_TAG}."
+            exit 0
+          fi
+
+          changed_files="$(git diff --name-only)"
+          if [ "$changed_files" != "$VALUES_FILE" ]; then
+            echo "Unexpected files changed by GitOps image tag update:" >&2
+            echo "$changed_files" >&2
+            exit 1
+          fi
+
+          unexpected_lines="$(
+            git diff --unified=0 -- "$VALUES_FILE" \
+              | grep -E '^[+-][^+-]' \
+              | grep -Ev '^[+-]  (repository|tag): ' \
+              || true
+          )"
+
+          if [ -n "$unexpected_lines" ]; then
+            echo "Unexpected diff outside the production image repository/tag block:" >&2
+            echo "$unexpected_lines" >&2
+            exit 1
+          fi
 
       - name: Commit GitOps value update
         run: |
@@ -127,4 +154,4 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add "$VALUES_FILE"
           git commit -m "chore(deploy): update image tag to ${IMAGE_TAG} [skip image]"
-          git push
+          git push origin HEAD:main
