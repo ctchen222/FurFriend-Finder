@@ -160,11 +160,13 @@ This project supports both local Docker Compose and Kubernetes deployment.
 - Docker Compose: `docker-compose.yml`
 - Helm chart: `deploy/furfriend-finder`
 - Argo CD application: `deploy/argocd/application.yaml`
-- VPS runbooks: `deploy/runbooks`
+- VPS GitOps deployment: `deploy/runbooks/vps-gitops-deployment.md`
+- Deployment runbooks: `deploy/runbooks`
 
 ## Documentation
 
 - Full system spec: `docs/spec.md`
+- Deployment specs: `openspec/specs/deployment-automation/spec.md`, `openspec/specs/vps-operations/spec.md`
 - Deployment runbooks: `deploy/runbooks`
 - Observability plan: `docs/observability-system-plan.md`
 - CI plan: `docs/plans/2026-03-30-ci-pipeline-plan.md`
