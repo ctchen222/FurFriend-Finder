@@ -39,6 +39,20 @@ spec:
                   key: {{ .Values.grafana.adminSecret.passwordKey }}
             - name: GF_AUTH_ANONYMOUS_ENABLED
               value: "false"
+            {{- with .Values.grafana.server }}
+            - name: GF_SERVER_DOMAIN
+              value: {{ .domain | quote }}
+            - name: GF_SERVER_ROOT_URL
+              value: {{ .rootUrl | quote }}
+            - name: GF_SERVER_PROTOCOL
+              value: {{ .protocol | quote }}
+            - name: GF_SERVER_SERVE_FROM_SUB_PATH
+              value: {{ .serveFromSubPath | quote }}
+            {{- end }}
+            {{- with .Values.grafana.live }}
+            - name: GF_LIVE_ALLOWED_ORIGINS
+              value: {{ .allowedOrigins | quote }}
+            {{- end }}
           readinessProbe:
             httpGet:
               path: /api/health
