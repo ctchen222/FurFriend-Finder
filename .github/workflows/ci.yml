@@ -21,6 +21,7 @@ jobs:
     outputs:
       app: ${{ steps.filter.outputs.app }}
       helm: ${{ steps.filter.outputs.helm }}
+      workflow: ${{ steps.filter.outputs.workflow }}
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3
@@ -36,6 +37,20 @@ jobs:
               - '.github/actions/**'
             helm:
               - 'deploy/furfriend-finder/**'
+            workflow:
+              - '.github/scripts/**'
+              - '.github/workflows/**'
+
+  workflow-smoke:
+    name: Workflow smoke tests
+    needs: [changes]
+    if: needs.changes.outputs.workflow == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Test Minion workflow scripts
+        run: .github/scripts/test-minion-workflow.sh
 
   lint:
     name: Lint
@@ -126,7 +141,7 @@ jobs:
   status-gate:
     name: CI status gate
     runs-on: ubuntu-latest
-    needs: [changes, lint, type-check, build, test-unit, test-integration, helm-validate]
+    needs: [changes, workflow-smoke, lint, type-check, build, test-unit, test-integration, helm-validate]
     if: always()
     steps:
       - name: Evaluate job results
@@ -147,6 +162,7 @@ jobs:
           test-unit=${{ needs.test-unit.result }}
           test-integration=${{ needs.test-integration.result }}
           helm-validate=${{ needs.helm-validate.result }}
+          workflow-smoke=${{ needs.workflow-smoke.result }}
           EOF
           if [[ "$failed" == "true" ]]; then
             exit 1
