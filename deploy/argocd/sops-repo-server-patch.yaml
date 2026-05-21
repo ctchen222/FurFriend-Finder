@@ -1,6 +1,9 @@
 spec:
   template:
     spec:
+      securityContext:
+        fsGroup: 999
+        fsGroupChangePolicy: OnRootMismatch
       initContainers:
         - name: copy-sops
           image: ghcr.io/getsops/sops:v3.12.2-alpine
@@ -67,4 +70,4 @@ spec:
         - name: sops-age-key
           secret:
             secretName: sops-age-key
-            defaultMode: 0400
+            defaultMode: 0440
