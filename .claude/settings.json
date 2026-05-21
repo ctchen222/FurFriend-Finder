@@ -8,7 +8,12 @@
   "teammateMode": "tmux",
   "permissions": {
     "deny": [
-      "Bash(gh pr merge*)"
+      "Bash(gh pr merge*)",
+      "Bash(gh api*pulls/*/merge*)",
+      "Bash(gh api*git/refs/heads/main*)",
+      "Bash(git push origin main*)",
+      "Bash(git push origin HEAD:main*)",
+      "Bash(git push* origin main*)"
     ]
   }
 }

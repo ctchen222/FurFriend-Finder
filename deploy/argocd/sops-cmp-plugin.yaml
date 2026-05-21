@@ -16,7 +16,7 @@ data:
           command:
             - sh
             - -c
-            - find . -maxdepth 1 -name '*.sops.yaml' -print -quit | grep -q .
+            - file="$(find . -maxdepth 1 -name '*.sops.yaml' -print -quit)"; test -n "$file"; printf '%s\n' "$file"
       generate:
         command:
           - sh
