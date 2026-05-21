@@ -20,6 +20,7 @@ Prometheus, Tempo, Loki, and OTel Collector must stay as `ClusterIP` Services. D
 - Argo CD installed in the `argocd` namespace.
 - cert-manager and Traefik available in the cluster.
 - DNS for the Grafana host points to the VPS public IP.
+- The base VPS GitOps deployment sequence in `deploy/runbooks/vps-gitops-deployment.md` has been followed through secrets bootstrap.
 
 The default production host is:
 
