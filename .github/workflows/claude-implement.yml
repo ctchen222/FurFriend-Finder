@@ -19,12 +19,27 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: dev
+          fetch-depth: 0
 
-      - name: Compute issue number
+      - name: Compute issue metadata
         id: branch
+        env:
+          ISSUE_TITLE: ${{ github.event.issue.title }}
         run: |
           ISSUE_NUMBER="${{ github.event.issue.number }}"
+          DATE="$(TZ=Asia/Taipei date +%y%m%d)"
+          SLUG=$(printf '%s' "$ISSUE_TITLE" \
+            | tr '[:upper:]' '[:lower:]' \
+            | sed -E 's/[^a-z0-9]+/-/g; s/^-+//; s/-+$//; s/-+/-/g' \
+            | cut -c1-48)
+          if [ -z "$SLUG" ]; then
+            SLUG="issue-${ISSUE_NUMBER}"
+          fi
+          BRANCH_NAME="fix/${DATE}-${SLUG}-${ISSUE_NUMBER}"
           echo "issue_number=${ISSUE_NUMBER}" >> $GITHUB_OUTPUT
+          echo "branch_name=${BRANCH_NAME}" >> $GITHUB_OUTPUT
 
       - name: Fetch Phase 1 plan comment
         id: plan
@@ -63,31 +78,45 @@ jobs:
             with title "${{ github.event.issue.title }}" and body reference
             "Closes #${{ steps.branch.outputs.issue_number }}".
 
-      - name: Create Minion pull request
+      - name: Create Minion branch and pull request
         id: pr
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          BRANCH_NAME: ${{ steps.minion.outputs.branch_name }}
+          BRANCH_NAME: ${{ steps.branch.outputs.branch_name }}
+          CLAUDE_BRANCH_NAME: ${{ steps.minion.outputs.branch_name }}
           ISSUE_NUMBER: ${{ steps.branch.outputs.issue_number }}
           PR_TITLE: ${{ github.event.issue.title }}
         run: |
-          if [ -z "$BRANCH_NAME" ]; then
-            echo "::error::Claude action did not report a branch_name output"
-            exit 1
-          fi
-
           case "$BRANCH_NAME" in
-            minion/*) ;;
+            feature/*|fix/*|chore/*|docs/*|test/*|refactor/*) ;;
             *)
-              echo "::error::Unexpected Minion branch name: $BRANCH_NAME"
+              echo "::error::Unexpected workflow branch name: $BRANCH_NAME"
               exit 1
               ;;
           esac
 
-          if ! git ls-remote --exit-code --heads origin "$BRANCH_NAME" >/dev/null; then
-            echo "::error::Minion branch was not pushed: $BRANCH_NAME"
+          echo "Claude action branch output: ${CLAUDE_BRANCH_NAME:-<empty>}"
+          echo "Current branch before PR creation: $(git branch --show-current || true)"
+          git status --short
+
+          git fetch origin dev
+          BASE_SHA=$(git rev-parse origin/dev)
+
+          if [ "$(git branch --show-current || true)" != "$BRANCH_NAME" ]; then
+            git switch -C "$BRANCH_NAME"
+          fi
+
+          if ! git diff --quiet || ! git diff --cached --quiet; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add .
+            git commit -m "fix: implement issue #${ISSUE_NUMBER}"
+          elif [ "$(git rev-parse HEAD)" = "$BASE_SHA" ]; then
+            echo "::error::Minion produced no file changes or commits"
             exit 1
           fi
+
+          git push --force-with-lease origin "HEAD:refs/heads/${BRANCH_NAME}"
 
           PR_URL=$(gh pr list \
             --repo "$GITHUB_REPOSITORY" \
@@ -112,7 +141,7 @@ jobs:
       - name: Verify Minion pull request
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          BRANCH_NAME: ${{ steps.minion.outputs.branch_name }}
+          BRANCH_NAME: ${{ steps.branch.outputs.branch_name }}
           ISSUE_NUMBER: ${{ steps.branch.outputs.issue_number }}
         run: |
           PR_JSON=$(gh pr list \
