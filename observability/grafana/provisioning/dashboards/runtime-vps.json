@@ -46,7 +46,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(v8js_memory_heap_used_bytes) or sum(nodejs_heap_size_used_bytes) or on() vector(0)",
+          "expr": "sum(v8js_memory_heap_used_bytes) or on() vector(0)",
           "legendFormat": "heap used",
           "range": true,
           "refId": "A"
@@ -57,7 +57,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(v8js_memory_heap_limit_bytes) or sum(nodejs_heap_size_total_bytes) or on() vector(0)",
+          "expr": "sum(v8js_memory_heap_limit_bytes) or on() vector(0)",
           "legendFormat": "heap limit",
           "range": true,
           "refId": "B"
@@ -125,7 +125,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "max(nodejs_eventloop_delay_p99_seconds) or max(nodejs_performance_event_loop_delay_p99) or on() vector(0)",
+          "expr": "max(nodejs_eventloop_delay_p99_seconds) or on() vector(0)",
           "legendFormat": "event loop p99",
           "range": true,
           "refId": "A"
@@ -175,7 +175,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "cores"
+          "unit": "s"
         },
         "overrides": []
       },
@@ -193,13 +193,13 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(rate(process_cpu_seconds_total[$__rate_interval])) or on() vector(0)",
-          "legendFormat": "process cpu",
+          "expr": "sum(rate(nodejs_eventloop_time_seconds_total[$__rate_interval])) or on() vector(0)",
+          "legendFormat": "event loop active time",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Process CPU",
+      "title": "Event Loop Active Time",
       "type": "timeseries"
     },
     {
@@ -243,7 +243,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "bytes"
+          "unit": "percent"
         },
         "overrides": []
       },
@@ -261,24 +261,13 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) or on() vector(0)",
-          "legendFormat": "host used memory",
+          "expr": "(100 * sum(v8js_memory_heap_used_bytes) / clamp_min(sum(v8js_memory_heap_limit_bytes), 1)) or on() vector(0)",
+          "legendFormat": "heap utilization",
           "range": true,
           "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "sum(container_memory_usage_bytes) or on() vector(0)",
-          "legendFormat": "container memory",
-          "range": true,
-          "refId": "B"
         }
       ],
-      "title": "Future Host/Container Memory",
+      "title": "Heap Utilization",
       "type": "timeseries"
     },
     {
@@ -290,7 +279,7 @@
       },
       "id": 8,
       "options": {
-        "content": "Runtime panels use Node/V8 metrics from @opentelemetry/instrumentation-runtime-node when available. Host and container panels require later k3s scrape targets such as node-exporter, kubelet/cAdvisor, kube-state-metrics, or equivalent Prometheus ServiceMonitors.",
+        "content": "Runtime panels use Node/V8 metrics emitted by the application through OpenTelemetry. Host and container memory are intentionally excluded until k3s node-exporter, kubelet/cAdvisor, kube-state-metrics, or equivalent scrape targets are installed.",
         "mode": "markdown"
       },
       "title": "k3s Scrape Target Notes",

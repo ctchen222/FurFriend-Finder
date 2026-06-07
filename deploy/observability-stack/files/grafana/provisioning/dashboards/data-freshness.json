@@ -46,13 +46,13 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (source, status) (increase(animal_sync_runs_total[$__range])) or on() vector(0)",
+          "expr": "sum by (source, status) (last_over_time(animal_sync_runs_total[$__range])) or on() vector(0)",
           "legendFormat": "{{source}} {{status}}",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Sync Runs By Source And Status",
+      "title": "Last Observed Sync Runs By Source And Status",
       "type": "barchart"
     },
     {
@@ -80,13 +80,13 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "(histogram_quantile(0.95, sum by (le, source) (rate(animal_sync_duration_milliseconds_bucket[$__rate_interval]))) >= 0) or on() vector(0)",
+          "expr": "(histogram_quantile(0.95, sum by (le, source) (last_over_time(animal_sync_duration_milliseconds_bucket[$__range]))) >= 0) or on() vector(0)",
           "legendFormat": "{{source}} p95",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Sync Duration P95",
+      "title": "Last Observed Sync Duration P95",
       "type": "timeseries"
     },
     {
@@ -114,13 +114,13 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (table) (increase(animal_sync_updated_rows_total[$__range])) or on() vector(0)",
+          "expr": "sum by (table) (last_over_time(animal_sync_updated_rows_total[$__range])) or on() vector(0)",
           "legendFormat": "{{table}}",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Rows Updated By Dataset",
+      "title": "Last Observed Rows Updated By Dataset",
       "type": "barchart"
     },
     {
@@ -182,7 +182,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "max by (source) (animal_sync_last_success_timestamp * 1000) or on() vector(0)",
+          "expr": "max by (source) (max_over_time(animal_sync_last_success_timestamp_seconds[$__range]) * 1000) or on() vector(0)",
           "legendFormat": "{{source}}",
           "range": true,
           "refId": "A"
@@ -216,7 +216,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "((time() - max by (source) (animal_sync_last_success_timestamp)) / 3600) or on() vector(0)",
+          "expr": "((time() - max by (source) (max_over_time(animal_sync_last_success_timestamp_seconds[$__range]))) / 3600) or on() vector(0)",
           "legendFormat": "{{source}}",
           "range": true,
           "refId": "A"
