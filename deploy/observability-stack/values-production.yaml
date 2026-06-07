@@ -32,6 +32,13 @@ grafana:
       clusterIssuer: letsencrypt-production
     annotations: {}
     traefikIpAllowlistMiddleware: ""
+  server:
+    domain: dashboard.furfriend-finder.com
+    rootUrl: https://dashboard.furfriend-finder.com/
+    protocol: http
+    serveFromSubPath: "false"
+  live:
+    allowedOrigins: https://dashboard.furfriend-finder.com
   persistence:
     size: 2Gi
     storageClassName: local-path
