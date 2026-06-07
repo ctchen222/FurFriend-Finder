@@ -1,8 +1,11 @@
 # deployment-automation Specification
 
 ## Purpose
-TBD - created by archiving change deploy-k3s-gitops. Update Purpose after archive.
+
+Define the repo-owned deployment automation contract for FurFriend Finder. The repository owns the container build, GHCR publishing, Helm charts, Argo CD desired state, GitOps image-tag updates, and local validation. The repository SHALL NOT require VPS SSH, kubeconfig, cluster-admin credentials, or plaintext production secrets to build, validate, publish, or update desired deployment state.
+
 ## Requirements
+
 ### Requirement: Reproducible Repo-Owned Image Build
 
 The repository SHALL define a production container build that can be executed from a clean checkout without VPS access.
@@ -23,51 +26,74 @@ The repository SHALL define a production container build that can be executed fr
 
 ### Requirement: GHCR Image Publishing
 
-The repository SHALL publish production images to GitHub Container Registry through GitHub Actions.
+The repository SHALL publish production images to GitHub Container Registry through GitHub Actions after changes land on `main`.
 
 #### Scenario: Main branch image publish
 
-- **WHEN** a main branch commit passes install, test, and build checks
+- **WHEN** a `main` branch commit passes deployment-image validation
 - **THEN** CI SHALL publish an image to GHCR
 - **AND** the production image tag SHALL include the Git commit SHA
 
 #### Scenario: Failed validation blocks deployment state
 
-- **WHEN** install, tests, build, or image publish fail
+- **WHEN** install, build, Helm lint, Helm render, or image publish fails
 - **THEN** CI SHALL NOT update production GitOps values
 - **AND** no new production rollout SHALL be triggered by that failed commit
 
-#### Scenario: GitOps value update avoids recursive CI loops
+### Requirement: Protected GitOps Image Tag Updates
+
+The repository SHALL update production GitOps image state without weakening `main` branch protection for human writers.
+
+#### Scenario: Deploy key updates the production image tag
+
+- **WHEN** CI successfully publishes a production image from `main`
+- **THEN** the `Update GitOps image tag` job SHALL update `deploy/furfriend-finder/values-production.yaml`
+- **AND** the update SHALL be pushed with the repository secret `GITOPS_DEPLOY_KEY`
+- **AND** the `GITHUB_TOKEN` repository contents permission SHALL remain read-only for that job
+- **AND** the resulting Git commit SHALL map the production image tag back to the source commit SHA
+
+#### Scenario: GitOps update is file and field restricted
+
+- **WHEN** the workflow prepares the GitOps image tag commit
+- **THEN** the workflow SHALL fail before push if any file other than `deploy/furfriend-finder/values-production.yaml` is changed
+- **AND** the intended diff SHALL only update the production image `repository` and `tag` lines
+
+#### Scenario: GitOps update avoids recursive image publish loops
 
 - **WHEN** CI commits a production image tag update into GitOps values
-- **THEN** the workflow SHALL use a bot identity and a deterministic commit message
-- **AND** the workflow SHALL include a skip condition that prevents bot value-update commits from publishing another production image
+- **THEN** the workflow SHALL use a deterministic commit message containing `[skip image]`
+- **AND** `Build and publish GHCR image` SHALL be skipped for that tag-update commit
+- **AND** `Update GitOps image tag` SHALL be skipped for that tag-update commit
 - **AND** workflow concurrency SHALL prevent overlapping image publish and values-update runs for the same branch
-- **AND** workflow permissions SHALL be limited to the package and contents permissions needed for image push and value update
 
 ### Requirement: Helm Production Manifests
 
-The repository SHALL provide a Helm chart under `/deploy` that describes the production application and database release.
+The repository SHALL provide Helm charts under `/deploy` that describe production Kubernetes resources.
 
-#### Scenario: Helm renders without cluster access
+#### Scenario: app chart renders without cluster access
 
-- **WHEN** an operator or CI runs `helm lint` and `helm template`
+- **WHEN** an operator or CI runs `helm lint` and `helm template` for `deploy/furfriend-finder`
 - **THEN** the chart SHALL render without requiring access to the VPS
 - **AND** it SHALL include the app Deployment, Service, Ingress, ConfigMap, Secret references, readiness probe, and liveness probe
 - **AND** it SHALL include PostgreSQL StatefulSet, PVC, Service, schema initialization Job, and backup CronJob resources
 
+#### Scenario: observability chart renders without cluster access
+
+- **WHEN** an operator or CI runs `helm lint` and `helm template` for `deploy/observability-stack`
+- **THEN** the chart SHALL render without requiring access to the VPS
+- **AND** it SHALL include OTel Collector, Prometheus, Tempo, Loki, Grafana, Services, PVC-backed storage, Grafana Ingress, datasources, and dashboard provisioning
+- **AND** only Grafana SHALL be externally exposed by the rendered observability manifests
+
 #### Scenario: Production values avoid plaintext secrets
 
 - **WHEN** production values are committed
-- **THEN** they SHALL define non-sensitive deployment settings such as image repository, image tag, domain placeholder, resources, and secret names
-- **AND** they SHALL NOT contain plaintext SMTP, LINE, Google Geocoding, admin API key, database password, or SOPS age private key values
+- **THEN** they SHALL define non-sensitive deployment settings such as image repository, image tag, domain, resources, storage sizes, and secret names
+- **AND** they SHALL NOT contain plaintext SMTP, LINE, Google Geocoding, admin API key, database password, Grafana admin password, or SOPS age private key values
 
 #### Scenario: Helm unit tests cover rendered production resources
 
-- **WHEN** the production Helm chart is added under `/deploy`
-- **THEN** the chart SHALL include helm-unittest test suites under the chart test path
-- **AND** the tests SHALL assert rendered app Deployment, Service, Ingress, ConfigMap, Secret references, readiness probe, and liveness probe behavior
-- **AND** the tests SHALL assert rendered PostgreSQL StatefulSet/PVC/Service, schema initialization Job, and backup CronJob behavior
+- **WHEN** production Helm charts are changed
+- **THEN** chart test suites SHALL assert key rendered resources and safety boundaries
 - **AND** the tests SHALL run locally with `helm unittest` without requiring VPS or Kubernetes cluster access
 - **AND** CI SHALL fail when helm-unittest assertions fail
 
@@ -88,61 +114,68 @@ The repository SHALL provide a deployment path that initializes the production P
 - **THEN** it SHALL verify that core tables from the existing schema exist
 - **AND** `/health` success alone SHALL NOT be treated as proof that the database schema is ready
 
-### Requirement: GitOps Deployment State
+### Requirement: Argo CD Desired State
 
 The repository SHALL provide desired deployment state for Argo CD without storing cluster credentials.
 
-#### Scenario: Argo CD application manifest exists
+#### Scenario: app Application manifest exists
 
-- **WHEN** the repo-owned deployment artifacts are complete
-- **THEN** they SHALL include an Argo CD Application manifest or equivalent bootstrap manifest
-- **AND** the manifest SHALL point to the production deployment path in Git
-- **AND** it SHALL NOT include kubeconfig or cluster-admin credentials
+- **WHEN** repo-owned app deployment artifacts are complete
+- **THEN** the repository SHALL include an Argo CD Application manifest for `deploy/furfriend-finder`
+- **AND** the manifest SHALL point to `main`
+- **AND** it SHALL NOT include kubeconfig, cluster-admin credentials, or GitHub deploy keys
 
-#### Scenario: CI updates image tag through Git
+#### Scenario: secrets Application manifest exists
 
-- **WHEN** CI publishes a valid GHCR image
-- **THEN** CI SHALL update the production image tag in GitOps values
-- **AND** the update SHALL be represented as a Git commit
-- **AND** the image tag SHALL map back to the source commit SHA
+- **WHEN** encrypted production secret manifests are managed through GitOps
+- **THEN** the repository SHALL include an Argo CD Application manifest for `deploy/secrets`
+- **AND** it SHALL use the SOPS Config Management Plugin
+- **AND** it SHALL NOT require plaintext Secret manifests to be committed
+
+#### Scenario: observability Application manifest exists
+
+- **WHEN** the k3s observability stack is repo-owned
+- **THEN** the repository SHALL include an Argo CD Application manifest for `deploy/observability-stack`
+- **AND** it SHALL target the `observability` namespace
+- **AND** it SHALL depend operationally on the Grafana admin Secret being available before Grafana can become ready
 
 ### Requirement: Secret and Operations Templates
 
 The repository SHALL provide templates and runbooks that let the owner operate production without exposing secrets to the agent.
 
-#### Scenario: SOPS template is prepared
+#### Scenario: SOPS templates are prepared
 
-- **WHEN** deployment automation artifacts are complete
-- **THEN** the repo SHALL include SOPS configuration and a production Secret template
-- **AND** the template SHALL be safe to commit without real secret values
+- **WHEN** production secret automation artifacts are complete
+- **THEN** the repository SHALL include SOPS configuration and Secret templates
+- **AND** templates SHALL be safe to commit without real secret values
 - **AND** documentation SHALL explain how the owner encrypts real values locally
 
-#### Scenario: owner-side secret apply workflow is documented
+#### Scenario: encrypted secrets are GitOps-managed
 
 - **WHEN** encrypted production Secret manifests are committed
-- **THEN** documentation SHALL explain that first-version Argo CD does not decrypt SOPS files in repo-server
-- **AND** the owner SHALL have documented commands to decrypt locally and apply the resulting Kubernetes Secret before first sync
+- **THEN** Argo CD SHALL decrypt them through the repo-server SOPS plugin after owner bootstrap
 - **AND** decrypted Secret output SHALL remain untracked and outside Git
+- **AND** the age private key SHALL NOT be stored in the repository
 
 #### Scenario: Runbooks are available
 
 - **WHEN** repo-owned deployment automation is complete
-- **THEN** runbooks SHALL describe rollback, PostgreSQL schema initialization verification, backup verification, restore, off-VPS backup copy options, GitHub/GHCR setup, telemetry configuration, and VPS rebuild workflows
+- **THEN** runbooks SHALL describe VPS GitOps deployment, GitHub/GHCR setup, secrets/SOPS bootstrap, observability bootstrap, rollback, PostgreSQL backup/restore, and VPS rebuild workflows
 - **AND** runbooks SHALL identify which commands are owner-operated and which outputs are safe to share
 
 ### Requirement: Production Telemetry Configuration
 
-The repository SHALL make the first production deployment behavior explicit when the k3s observability stack is not yet deployed.
+The repository SHALL make the production application telemetry dependency explicit.
+
+#### Scenario: Observability stack is installed
+
+- **WHEN** the production app is configured for the k3s observability stack
+- **THEN** `OTEL_SDK_DISABLED` SHALL render as `false`
+- **AND** `OTEL_EXPORTER_OTLP_ENDPOINT` SHALL point to `http://otel-collector.observability:4317`
+- **AND** the app SHALL NOT use `localhost` as the OTLP endpoint in k3s
 
 #### Scenario: Observability stack is absent
 
-- **WHEN** production values are rendered before a k3s observability stack exists
-- **THEN** telemetry environment values SHALL either disable OTLP export or point to an owner-provided reachable endpoint
-- **AND** the app SHALL still start without requiring an in-cluster OTel Collector
-
-#### Scenario: Observability stack is deferred
-
-- **WHEN** the deployment automation change is implemented
-- **THEN** deploying OTel Collector, Prometheus, Grafana, Tempo, or Loki to k3s SHALL remain outside this change unless a later accepted spec adds it
-- **AND** runbooks SHALL state this explicitly
-
+- **WHEN** the observability stack is intentionally disabled or not yet installed
+- **THEN** the app SHALL still start and serve traffic
+- **AND** operators SHALL treat missing telemetry data as a deployment dependency gap, not as proof that application deployment failed

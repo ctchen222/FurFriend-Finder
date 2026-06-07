@@ -19,12 +19,27 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: dev
+          fetch-depth: 0
 
-      - name: Compute issue number
+      - name: Compute issue metadata
         id: branch
+        env:
+          ISSUE_TITLE: ${{ github.event.issue.title }}
         run: |
           ISSUE_NUMBER="${{ github.event.issue.number }}"
+          DATE="$(TZ=Asia/Taipei date +%y%m%d)"
+          SLUG=$(printf '%s' "$ISSUE_TITLE" \
+            | tr '[:upper:]' '[:lower:]' \
+            | sed -E 's/[^a-z0-9]+/-/g; s/^-+//; s/-+$//; s/-+/-/g' \
+            | cut -c1-48)
+          if [ -z "$SLUG" ]; then
+            SLUG="issue-${ISSUE_NUMBER}"
+          fi
+          BRANCH_NAME="fix/${DATE}-${SLUG}-${ISSUE_NUMBER}"
           echo "issue_number=${ISSUE_NUMBER}" >> $GITHUB_OUTPUT
+          echo "branch_name=${BRANCH_NAME}" >> $GITHUB_OUTPUT
 
       - name: Fetch Phase 1 plan comment
         id: plan
@@ -41,6 +56,7 @@ jobs:
           echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Implement approved plan
+        id: minion
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -52,9 +68,113 @@ jobs:
             Implement the following approved plan exactly as described.
             Do NOT deviate from the plan. Do NOT add unrequested features or refactor
             unrelated code. Modify at most 3 files.
+            Do NOT open a pull request manually. This workflow will create and
+            verify the pull request after your implementation step.
 
             ${{ steps.plan.outputs.content != '' && format('Approved plan:{0}{1}', '\n', steps.plan.outputs.content) || format('No plan comment found. Use the issue description as your guide:{0}Title: {1}{0}Body:{0}{2}', '\n', github.event.issue.title, github.event.issue.body) }}
 
-            After implementing, open a pull request targeting dev:
-            - Title: ${{ github.event.issue.title }}
-            - Body must reference: Closes #${{ steps.branch.outputs.issue_number }}
+            After implementing, leave the changes on the Minion branch prepared
+            by this action. The workflow will create a pull request targeting dev
+            with title "${{ github.event.issue.title }}" and body reference
+            "Closes #${{ steps.branch.outputs.issue_number }}".
+
+      - name: Create Minion branch and pull request
+        id: pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH_NAME: ${{ steps.branch.outputs.branch_name }}
+          CLAUDE_BRANCH_NAME: ${{ steps.minion.outputs.branch_name }}
+          ISSUE_NUMBER: ${{ steps.branch.outputs.issue_number }}
+          PR_TITLE: ${{ github.event.issue.title }}
+        run: |
+          case "$BRANCH_NAME" in
+            feature/*|fix/*|chore/*|docs/*|test/*|refactor/*) ;;
+            *)
+              echo "::error::Unexpected workflow branch name: $BRANCH_NAME"
+              exit 1
+              ;;
+          esac
+
+          echo "Claude action branch output: ${CLAUDE_BRANCH_NAME:-<empty>}"
+          echo "Current branch before PR creation: $(git branch --show-current || true)"
+          git status --short
+
+          git fetch origin dev
+          BASE_SHA=$(git rev-parse origin/dev)
+
+          if [ "$(git branch --show-current || true)" != "$BRANCH_NAME" ]; then
+            git switch -C "$BRANCH_NAME"
+          fi
+
+          if ! git diff --quiet || ! git diff --cached --quiet; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add .
+            git commit -m "fix: implement issue #${ISSUE_NUMBER}"
+          elif [ "$(git rev-parse HEAD)" = "$BASE_SHA" ]; then
+            echo "::error::Minion produced no file changes or commits"
+            exit 1
+          fi
+
+          git push --force-with-lease origin "HEAD:refs/heads/${BRANCH_NAME}"
+
+          PR_URL=$(gh pr list \
+            --repo "$GITHUB_REPOSITORY" \
+            --state open \
+            --base dev \
+            --head "$BRANCH_NAME" \
+            --json url \
+            --jq '.[0].url // ""')
+
+          if [ -z "$PR_URL" ]; then
+            PR_URL=$(gh pr create \
+              --repo "$GITHUB_REPOSITORY" \
+              --base dev \
+              --head "$BRANCH_NAME" \
+              --title "$PR_TITLE" \
+              --body "Closes #$ISSUE_NUMBER")
+          fi
+
+          echo "url=$PR_URL" >> "$GITHUB_OUTPUT"
+          echo "Minion PR: $PR_URL"
+
+      - name: Verify Minion pull request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH_NAME: ${{ steps.branch.outputs.branch_name }}
+          ISSUE_NUMBER: ${{ steps.branch.outputs.issue_number }}
+        run: |
+          PR_JSON=$(gh pr list \
+            --repo "$GITHUB_REPOSITORY" \
+            --state open \
+            --base dev \
+            --head "$BRANCH_NAME" \
+            --json number,url,body,baseRefName,headRefName \
+            --jq '.[0] // empty')
+
+          if [ -z "$PR_JSON" ]; then
+            echo "::error::No open pull request found from $BRANCH_NAME to dev"
+            exit 1
+          fi
+
+          BASE_REF=$(echo "$PR_JSON" | jq -r '.baseRefName')
+          HEAD_REF=$(echo "$PR_JSON" | jq -r '.headRefName')
+          BODY=$(echo "$PR_JSON" | jq -r '.body // ""')
+          URL=$(echo "$PR_JSON" | jq -r '.url')
+
+          if [ "$BASE_REF" != "dev" ]; then
+            echo "::error::Minion PR targets $BASE_REF instead of dev"
+            exit 1
+          fi
+
+          if [ "$HEAD_REF" != "$BRANCH_NAME" ]; then
+            echo "::error::Minion PR head is $HEAD_REF instead of $BRANCH_NAME"
+            exit 1
+          fi
+
+          if ! printf '%s' "$BODY" | grep -Fq "Closes #$ISSUE_NUMBER"; then
+            echo "::error::Minion PR body does not reference Closes #$ISSUE_NUMBER"
+            exit 1
+          fi
+
+          echo "Verified Minion PR: $URL"
