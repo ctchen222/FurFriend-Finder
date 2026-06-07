@@ -261,7 +261,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (city_county) (shelter_animals_current) or on() vector(0)",
+          "expr": "sum by (city_county) (last_over_time(shelter_animals_current[24h])) or on() vector(0)",
           "legendFormat": "{{city_county}}",
           "range": true,
           "refId": "A"
@@ -295,7 +295,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (city_county) (lost_animals_current) or on() vector(0)",
+          "expr": "sum by (city_county) (last_over_time(lost_animals_current[24h])) or on() vector(0)",
           "legendFormat": "{{city_county}}",
           "range": true,
           "refId": "A"
