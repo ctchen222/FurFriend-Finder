@@ -110,24 +110,11 @@ The lost-pet report flow SHALL reduce user stress while preserving all required 
 
 The redesigned frontend SHALL preserve the existing EJS + vanilla JavaScript architecture while improving responsive and accessible behavior.
 
-#### Scenario: Visitor uses mobile navigation
-
-- **WHEN** a visitor opens the site on a mobile viewport
-- **THEN** the navigation SHALL expose all primary routes
-- **AND** menu state SHALL be communicated through accessible attributes
-- **AND** links and buttons SHALL remain large enough for touch use
-
-#### Scenario: User navigates by keyboard
-
-- **WHEN** a user navigates interactive UI with the keyboard
-- **THEN** focus state SHALL be visible
-- **AND** animal cards, buttons, form controls, and modal close controls SHALL be reachable
-- **AND** visual focus SHALL not rely only on color
-
 #### Scenario: Images are missing
 
 - **WHEN** an animal record has no photo or a photo fails to load
 - **THEN** the UI SHALL keep stable card dimensions
-- **AND** it SHALL show a quiet fallback surface
+- **AND** it SHALL show a quiet local fallback surface
+- **AND** it SHALL NOT render an external placeholder image containing `No photo`
 - **AND** it SHALL still present the animal metadata needed for discovery or matching
 

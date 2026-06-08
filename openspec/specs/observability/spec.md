@@ -126,17 +126,26 @@ The system SHALL emit three custom OpenTelemetry metrics through the project met
 - **AND** it SHALL NOT introduce new exporters, readers, or collector pipelines beyond those installed in M3
 
 ### Requirement: Grafana Datasource Availability
-The system SHALL provision Prometheus, Tempo, and Loki as Grafana datasources automatically, so that no manual configuration is required after `docker compose up`.
+
+The system SHALL provision Prometheus, Tempo, and Loki as Grafana datasources automatically in both Docker Compose and Helm/k3s deployments, so that no manual configuration is required after the observability stack starts.
 
 #### Scenario: Stack cold start
-- **WHEN** `docker compose up` starts the observability stack from scratch
+
+- **WHEN** the observability stack starts from scratch
 - **THEN** Grafana loads with Prometheus, Tempo, and Loki datasources already configured
 - **AND** each datasource passes its built-in connection test
 
 #### Scenario: Datasource UIDs are stable
+
 - **WHEN** the stack restarts
 - **THEN** the datasource UIDs remain the same (`prometheus`, `tempo`, `loki`)
 - **AND** any saved dashboard or alert that references those UIDs continues to work
+
+#### Scenario: Kubernetes datasource URLs use internal services
+
+- **WHEN** Grafana runs in the k3s observability Helm release
+- **THEN** Prometheus, Tempo, and Loki datasource URLs SHALL point to Kubernetes internal Service DNS names
+- **AND** they SHALL NOT point to Docker Compose hostnames, localhost, or public ingress URLs
 
 ### Requirement: Provisioned Dashboards
 
@@ -181,37 +190,21 @@ The system SHALL provide four Grafana dashboards provisioned as JSON files in th
 - **AND** the error filter panel SHALL show only log lines where level is error or warn
 
 ### Requirement: Optimization Metric Label Safety
+The system SHALL centralize repeated custom metric recording behind shared helpers or wrappers while preserving the existing low-cardinality metric label safety rules.
 
-The system SHALL keep all optimization metrics low-cardinality and SHALL NOT use personally identifiable, location-sensitive, or unbounded free-form values as metric labels.
-
-#### Scenario: metric labels are bounded
-- **WHEN** the application records optimization metrics
-- **THEN** labels SHALL be limited to curated categorical values such as `status`, `operation`, `template`, `reason`, `source`, `table`, `boundary`, or normalized `city_county`
-- **AND** labels SHALL NOT include raw addresses, coordinates, email addresses, user IDs, owner IDs, animal IDs, SQL statements, raw URLs, or exception messages
+#### Scenario: metric recording helpers enforce bounded labels
+- **WHEN** application services record custom optimization metrics
+- **THEN** services SHALL use shared metric helpers or wrappers where a wrapper exists
+- **AND** those helpers SHALL validate labels through the existing safe metric attribute path
+- **AND** services SHALL NOT construct repeated raw metric attributes that bypass label safety
 
 ### Requirement: Matching Optimization Metrics
+The system SHALL record matching request status and matching duration through shared matching metric wrappers without changing matching output or metric names.
 
-The system SHALL emit product matching metrics that explain latency, candidate volume, result count, truncation, and no-result outcomes for both pure matching work and the full user-visible match flow.
-
-#### Scenario: pure matching duration recorded
-- **WHEN** `performMatch()` completes successfully or fails
-- **THEN** the system SHALL record `match_duration_milliseconds` with `boundary="perform_match"`
-- **AND** the duration SHALL include matching logic but exclude caller-side owner lookup and email delivery
-
-#### Scenario: full match flow duration recorded
-- **WHEN** `GET /api/lost-animals/match/:id` completes successfully or fails
-- **THEN** the system SHALL record `match_duration_milliseconds` with `boundary="match_flow"`
-- **AND** the duration SHALL include lost-animal lookup, owner lookup, matching, and optional match-notification email work
-
-#### Scenario: candidate and result counts recorded
-- **WHEN** a match request is processed
-- **THEN** the system SHALL record `match_candidates_total` for the candidate count before geocoding truncation
-- **AND** the system SHALL record `match_results_total` for the number of returned matches
-
-#### Scenario: truncation and no-result outcomes counted
-- **WHEN** a match request exceeds the configured geocoding batch limit
-- **THEN** the system SHALL increment `match_truncated_total`
-- **AND** when a successful match request returns zero results, the system SHALL increment `match_no_result_total`
+#### Scenario: matching metrics use centralized wrappers
+- **WHEN** pure matching or full match-flow work is timed
+- **THEN** the duration and success/error metric recording SHALL be handled by shared matching metric wrappers
+- **AND** matching business output SHALL remain unchanged
 
 ### Requirement: County Inventory Metrics
 
@@ -228,19 +221,12 @@ The system SHALL expose shelter-animal and lost-animal inventory counts grouped 
 - **AND** the metric SHALL use the same normalized Taiwan city/county vocabulary as shelter-animal inventory
 
 ### Requirement: Geocoding Dependency Metrics
+The system SHALL record geocoding request counts and durations through a shared geocoding metric wrapper while preserving bounded status classification.
 
-The system SHALL emit geocoding dependency metrics with bounded status values so operators can distinguish success, no-result, quota, authorization, and generic failure modes.
-
-#### Scenario: geocoding request counted and timed
-- **WHEN** the geocoding service calls the external geocoding API
-- **THEN** the system SHALL increment `geocoding_requests_total`
-- **AND** the system SHALL record `geocoding_duration_milliseconds`
-- **AND** each measurement SHALL include a `status` label from a bounded set such as `ok`, `zero_results`, `over_query_limit`, `request_denied`, or `error`
-
-#### Scenario: matching shelter geocoding workload recorded
-- **WHEN** the matching service deduplicates shelter addresses for geocoding
-- **THEN** the system SHALL record `geocoding_unique_shelter_addresses_total`
-- **AND** when shelter-address geocoding fails during matching, the system SHALL increment `geocoding_failed_shelter_total`
+#### Scenario: geocoding metrics use centralized wrappers
+- **WHEN** geocoding requests complete or fail
+- **THEN** the request counter and duration metric SHALL be handled by a shared geocoding metric wrapper
+- **AND** the geocoding service SHALL still classify outcomes into bounded statuses
 
 ### Requirement: Core Database Operation Metrics
 
@@ -258,48 +244,25 @@ The system SHALL emit database operation duration and error metrics for selected
 - **AND** the metric SHALL NOT include raw SQL text or database error messages as labels
 
 ### Requirement: Email Delivery Optimization Metrics
+The system SHALL record email send attempts, durations, and classified failures through shared email metric wrappers while keeping template failures distinct from mailer send attempts.
 
-The system SHALL emit email delivery metrics grouped by template and classified failure reason while preserving the existing sent/failed status vocabulary.
+#### Scenario: email metrics use centralized wrappers
+- **WHEN** an email send attempt reaches the mailer
+- **THEN** send duration, sent/failed status, and failure reason metrics SHALL be handled by a shared email metric wrapper
+- **AND** the wrapper SHALL rethrow the original send error
 
-#### Scenario: email duration recorded by template
-- **WHEN** an email send attempt completes successfully or fails
-- **THEN** the system SHALL record `email_send_duration_milliseconds`
-- **AND** the metric SHALL include a low-cardinality `template` label such as `verification`, `reset_password`, `match_notice`, or `generic`
-
-#### Scenario: email counter includes template
-- **WHEN** `email_sends_total` is incremented
-- **THEN** the metric SHALL include the existing `status` label with `sent` or `failed`
-- **AND** the metric SHALL include the low-cardinality `template` label
-
-#### Scenario: email failure reason classified
-- **WHEN** an email send attempt fails
-- **THEN** the system SHALL increment `email_failures_total`
-- **AND** the metric SHALL include low-cardinality `template` and `reason` labels
-- **AND** the `reason` label SHALL use classified values rather than raw exception messages
+#### Scenario: template failures remain distinct from send attempts
+- **WHEN** an email template cannot be rendered
+- **THEN** the system SHALL increment `email_failures_total{reason="template"}`
+- **AND** it SHALL NOT increment `email_sends_total` for a send attempt that never reached the mailer
 
 ### Requirement: Animal Data Sync Metrics
+The system SHALL record animal data sync run status, duration, update volume, last success, and API failures through shared sync metric helpers without changing sync business behavior.
 
-The system SHALL emit data-sync metrics that show whether shelter-animal and lost-animal public data is fresh and whether sync jobs are updating rows successfully.
-
-#### Scenario: sync run counted and timed
-- **WHEN** a scheduled or manual animal data sync runs
-- **THEN** the system SHALL increment `animal_sync_runs_total` with a bounded `status` label
-- **AND** the system SHALL record `animal_sync_duration_milliseconds`
-
-#### Scenario: sync update volume recorded
-- **WHEN** a sync job writes shelter-animal or lost-animal rows
-- **THEN** the system SHALL record `animal_sync_updated_rows_total`
-- **AND** the metric SHALL include a low-cardinality `table` label identifying the synced dataset
-
-#### Scenario: last successful sync exposed
-- **WHEN** metrics are collected after a successful sync
-- **THEN** the system SHALL expose `animal_sync_last_success_timestamp`
-- **AND** operators SHALL be able to compare the timestamp with the current time to detect stale data
-
-#### Scenario: sync API failure counted
-- **WHEN** a public-data API request fails during sync
-- **THEN** the system SHALL increment `animal_sync_api_failures_total`
-- **AND** the metric SHALL include a low-cardinality `source` label
+#### Scenario: sync metrics use centralized wrappers
+- **WHEN** shelter-animal or lost-animal sync runs
+- **THEN** run status, duration, update count, last success timestamp, and public API failure metrics SHALL be handled by shared sync metric helpers
+- **AND** sync business behavior SHALL remain unchanged
 
 ### Requirement: Runtime And VPS Readiness Metrics
 
@@ -362,3 +325,64 @@ traces or logs.
   (e.g. `candidates.total`, `city`, `status`)
 - **AND** raw addresses, coordinates (`lat`/`lng`), or user identifiers do NOT appear
   as span attributes
+
+### Requirement: Kubernetes Observability Signal Parity
+
+The system SHALL provide the same traces, metrics, logs, business metrics, datasource provisioning, and baseline dashboards in the Helm/k3s deployment that are available in the local Docker Compose observability stack after `grafana-dashboard-provisioning` is complete. Optimization metrics and dashboards SHALL be included when their provisioning artifacts exist, but they SHALL NOT block the base k3s observability deployment.
+
+#### Scenario: application telemetry reaches the in-cluster Collector
+
+- **WHEN** the production app Helm release has telemetry enabled
+- **THEN** the app SHALL send OTLP traces, metrics, and logs to the in-cluster OTel Collector Service
+- **AND** the app SHALL NOT use `localhost` as its OTLP endpoint in k3s
+
+#### Scenario: metrics are visible in Grafana
+
+- **WHEN** the app receives HTTP traffic and Prometheus scrapes the Collector
+- **THEN** Grafana SHALL show HTTP duration metrics, DB pool metrics, and business metrics including `match_requests_total`, `email_sends_total`, and `db_pool_connections`
+- **AND** Grafana SHALL show optimization metrics and dashboards when those metrics and dashboard JSON files are implemented
+
+#### Scenario: traces are visible in Grafana
+
+- **WHEN** the app handles a traced request
+- **THEN** the trace SHALL be exported through the Collector to Tempo
+- **AND** Grafana SHALL be able to open the trace from the Tempo datasource
+
+#### Scenario: logs are visible in Grafana
+
+- **WHEN** the app emits structured logs
+- **THEN** the logs SHALL be exported through the Collector to Loki
+- **AND** Grafana SHALL be able to query those logs from the Loki datasource
+
+### Requirement: Grafana-Only External Observability Access
+
+The system SHALL expose Grafana as the only externally reachable observability UI in the VPS/k3s deployment.
+
+#### Scenario: Grafana ingress is enabled
+
+- **WHEN** the observability Helm release is installed with ingress enabled
+- **THEN** Grafana SHALL be reachable over HTTPS through the configured host
+- **AND** anonymous Grafana access SHALL be disabled
+- **AND** admin credentials SHALL come from a Kubernetes Secret
+
+#### Scenario: signal stores remain internal
+
+- **WHEN** the observability Helm release is rendered
+- **THEN** OTel Collector, Prometheus, Tempo, and Loki Services SHALL be `ClusterIP`
+- **AND** no Ingress SHALL be created for OTel Collector, Prometheus, Tempo, or Loki
+
+### Requirement: Kubernetes Observability Persistence Boundary
+
+The system SHALL persist Grafana state, Prometheus metrics, Tempo traces, and Loki logs across pod restarts in the VPS/k3s deployment, while clearly distinguishing this from off-VPS disaster recovery.
+
+#### Scenario: pod restart persistence
+
+- **WHEN** Grafana, Prometheus, Tempo, or Loki pods restart
+- **THEN** their PVC-backed data SHALL remain available after the replacement pod becomes ready
+
+#### Scenario: volume loss is not treated as recovery
+
+- **WHEN** an observability PVC is deleted or the VPS disk is lost
+- **THEN** the system SHALL NOT claim historical telemetry recovery unless an object-store-backed hardening implementation is enabled
+- **AND** the operator documentation SHALL point to the production-hardening plan for off-VPS retention
+
