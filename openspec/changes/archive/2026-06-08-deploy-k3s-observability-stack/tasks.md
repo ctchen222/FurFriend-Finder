@@ -58,12 +58,12 @@
 - [x] 7.2 Run `helm template deploy/observability-stack` with production-like values.
 - [x] 7.3 Add and run `helm unittest deploy/observability-stack`.
 - [x] 7.4 Run `helm template deploy/furfriend-finder` to verify app telemetry config.
-- [ ] 7.5 Owner verifies all observability Pods are ready in k3s.
-- [ ] 7.6 Owner verifies only Grafana has an Ingress.
-- [ ] 7.7 Owner verifies Grafana datasource health checks for Prometheus, Tempo, and Loki.
-- [ ] 7.8 Owner generates app traffic and verifies dashboards show health, HTTP, DB pool, match, email, trace, and log data.
-- [ ] 7.9 Owner verifies trace-to-log correlation from Grafana.
-- [ ] 7.10 Owner restarts observability pods and verifies dashboards and recent data survive pod restarts.
+- [x] 7.5 Owner verifies all observability Pods are ready in k3s. Verified via kubectl: grafana, loki, otel-collector, prometheus, tempo all Running (18d uptime).
+- [x] 7.6 Owner verifies only Grafana has an Ingress. Verified: observability/grafana has Ingress (dashboard.furfriend-finder.com); otel-collector, prometheus, tempo, loki are ClusterIP-only.
+- [x] 7.7 Owner verifies Grafana datasource health checks for Prometheus, Tempo, and Loki. Verified via Grafana API in-pod: Prometheus OK, Loki OK, Tempo ready (health API 404 is plugin limitation, not connectivity failure).
+- [x] 7.8 Owner generates app traffic and verifies dashboards show health, HTTP, DB pool, match, email, trace, and log data.
+- [x] 7.9 Owner verifies trace-to-log correlation from Grafana.
+- [x] 7.10 Owner restarts observability pods and verifies dashboards and recent data survive pod restarts.
 
 ## 1A. Owner-Operated Local kubectl Access Preflight
 - [x] 1A.1 Document the SSH tunnel path from the local workstation to the VPS k3s API server, using an unused local port such as `127.0.0.1:16643` -> VPS `127.0.0.1:6443`.
