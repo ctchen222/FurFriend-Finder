@@ -2,6 +2,8 @@ import { NodeSDK } from '@opentelemetry/sdk-node';
 import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-grpc';
 import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-grpc';
+import { OTLPLogExporter } from '@opentelemetry/exporter-logs-otlp-grpc';
+import { BatchLogRecordProcessor } from '@opentelemetry/sdk-logs';
 import { PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics';
 import { resourceFromAttributes } from '@opentelemetry/resources';
 import {
@@ -25,6 +27,11 @@ if (!otelDisabled) {
                 process.env.NODE_ENV || 'development',
         }),
         traceExporter: new OTLPTraceExporter({ url: otlpEndpoint }),
+        logRecordProcessors: [
+            new BatchLogRecordProcessor(
+                new OTLPLogExporter({ url: otlpEndpoint }),
+            ),
+        ],
         metricReader: new PeriodicExportingMetricReader({
             exporter: new OTLPMetricExporter({ url: otlpEndpoint }),
             exportIntervalMillis: 15000,
