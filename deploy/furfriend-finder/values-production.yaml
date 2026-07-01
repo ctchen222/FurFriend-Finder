@@ -1,6 +1,6 @@
 image:
   repository: ghcr.io/ctchen222/furfriend-finder
-  tag: 13844a0bc0f0c67a30625637e3b93d3b5060163f
+  tag: d85d961e51885e0fefe5e000c7fd28a4339843d1
 
 ingress:
   enabled: true
