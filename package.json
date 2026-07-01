@@ -6,7 +6,7 @@
   "packageManager": "pnpm@10.28.0",
   "scripts": {
     "copy-html": "copyfiles -u 1 src/public/*.html dist",
-    "copy-assets": "copyfiles -u 1 \"src/public/css/**\" \"src/public/js/**\" dist",
+    "copy-assets": "copyfiles -u 1 \"src/public/css/**\" \"src/public/js/**\" \"src/public/images/**\" dist",
     "build": "rimraf dist && pnpm run copy-html && pnpm run copy-assets && tsc",
     "prerestart": "pnpm run build",
     "dev": "tsx watch src/main.ts",
