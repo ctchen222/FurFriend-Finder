@@ -27,7 +27,6 @@ secrets:
 postgresql:
   secretName: furfriend-finder-postgres-secret
   storage:
-    storageClassName: "local-path"
     size: 10Gi
 
 backup:
