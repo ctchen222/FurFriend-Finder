@@ -28,6 +28,14 @@ tests:
       - equal:
           path: spec.template.spec.containers[0].env[2].valueFrom.secretKeyRef.name
           value: furfriend-finder-postgres-secret
+  - it: preserves the existing production PVC storage class selection
+    template: templates/postgresql.yaml
+    documentIndex: 1
+    values:
+      - ../values-production.yaml
+    asserts:
+      - notExists:
+          path: spec.volumeClaimTemplates[0].spec.storageClassName
   - it: renders schema configmap and initialization job
     template: templates/schema-configmap.yaml
     asserts:
