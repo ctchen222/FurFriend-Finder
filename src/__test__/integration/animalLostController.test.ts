@@ -17,6 +17,7 @@ jest.mock('../../db', () => ({
 let mockFindAll: jest.Mock;
 let mockFindByUserId: jest.Mock;
 let mockFindByIdForUser: jest.Mock;
+let mockCloseForUser: jest.Mock;
 let mockCreate: jest.Mock;
 let mockStart: jest.Mock;
 let mockCommit: jest.Mock;
@@ -30,6 +31,7 @@ jest.mock('../../repository/animalLost.db', () =>
 		findAll: (...args: any[]) => mockFindAll(...args),
 		findByUserId: (...args: any[]) => mockFindByUserId(...args),
 		findByIdForUser: (...args: any[]) => mockFindByIdForUser(...args),
+		closeForUser: (...args: any[]) => mockCloseForUser(...args),
 		create: (...args: any[]) => mockCreate(...args),
 		start: (...args: any[]) => mockStart(...args),
 		commit: (...args: any[]) => mockCommit(...args),
@@ -100,6 +102,7 @@ describe('AnimalLostController Integration Tests', () => {
 		mockFindAll = jest.fn().mockResolvedValue([]);
 		mockFindByUserId = jest.fn().mockResolvedValue([]);
 		mockFindByIdForUser = jest.fn().mockResolvedValue({ id: '1', user_id: 'test-user' });
+		mockCloseForUser = jest.fn().mockResolvedValue({ id: 1, status: 'REUNITED', revision: 2 });
 		mockCreate = jest.fn().mockResolvedValue({ id: 'new-id' });
 		mockStart = jest.fn().mockResolvedValue(undefined);
 		mockCommit = jest.fn().mockResolvedValue(undefined);
@@ -173,6 +176,18 @@ describe('AnimalLostController Integration Tests', () => {
 
 			const res = await request(app).get('/api/lost-animals/match/999');
 			expect(res.status).toBeGreaterThanOrEqual(400);
+		});
+	});
+
+	describe('POST /api/lost-animals/:id/close', () => {
+		it('closes an owned report with the expected revision', async () => {
+			const res = await request(app)
+				.post('/api/lost-animals/1/close')
+				.send({ status: 'reunited', expectedRevision: 1 });
+
+			expect(res.status).toBe(200);
+			expect(res.body.extras.report.status).toBe('REUNITED');
+			expect(mockCloseForUser).toHaveBeenCalledWith('1', 'test-user', 1, 'REUNITED');
 		});
 	});
 

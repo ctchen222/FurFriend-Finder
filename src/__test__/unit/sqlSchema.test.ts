@@ -41,4 +41,15 @@ describe('SQL schema', () => {
 		expect(migration).toContain('ON DELETE CASCADE');
 		expect(migration).toContain('Existing imported/legacy rows remain nullable');
 	});
+
+	it('adds report lifecycle fields and durable match jobs', () => {
+		const migration = fs.readFileSync(
+			path.join(__dirname, '..', '..', '..', 'sql', 'V6__Lost_report_lifecycle_and_match_jobs.sql'),
+			'utf8',
+		);
+		expect(migration).toContain("DEFAULT 'OPEN'");
+		expect(migration).toContain('revision INTEGER NOT NULL DEFAULT 1');
+		expect(migration).toContain('CREATE TABLE match_jobs');
+		expect(migration).toContain('UNIQUE (report_id, report_revision, engine_version)');
+	});
 });

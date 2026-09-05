@@ -18,4 +18,7 @@ router.route('/quick-match')
 router.route('/match/:id')
 	.get(requireUser, requireSameOrigin, logMatchRequest, catchAsync(animalLostCtrler.matchLostAnimal));
 
+router.route('/:id/close')
+	.post(requireUser, requireSameOrigin, catchAsync(animalLostCtrler.close));
+
 export { router };

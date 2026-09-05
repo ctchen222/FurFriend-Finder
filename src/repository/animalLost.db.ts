@@ -115,6 +115,25 @@ class AnimalLostRepository extends BaseRepository {
 		});
 	}
 
+	async closeForUser(
+		id: number | string,
+		userId: string,
+		expectedRevision: number,
+		status: 'REUNITED' | 'CLOSED',
+	): Promise<{ id: number; status: string; revision: number } | undefined> {
+		return recordDbOperation('find_lost_animal', async () => {
+			const result = await this.db.query<{ id: number; status: string; revision: number }>(
+				`UPDATE ${this.tableName}
+				 SET status = $1, revision = revision + 1,
+				     updated_at = CURRENT_TIMESTAMP, closed_at = CURRENT_TIMESTAMP
+				 WHERE id = $2 AND user_id = $3 AND revision = $4 AND status = 'OPEN'
+				 RETURNING id, status, revision`,
+				[status, id, userId, expectedRevision],
+			);
+			return result.rows[0];
+		});
+	}
+
 	async countLostAnimalsByCounty(): Promise<CountyInventoryCounts> {
 		return recordDbOperation('find_lost_animal', async () => {
 			const query = `

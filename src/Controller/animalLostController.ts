@@ -132,6 +132,32 @@ class AnimalLostController {
         return next();
     };
 
+    close = async (
+        req: express.Request,
+        res: express.Response,
+        next: express.NextFunction,
+    ) => {
+        const id = req.params.id as string;
+        const expectedRevision = Number(req.body?.expectedRevision);
+        const requestedStatus = String(req.body?.status ?? '').toLowerCase();
+        if (!id || !Number.isInteger(expectedRevision) || expectedRevision < 1 ||
+            !['reunited', 'closed'].includes(requestedStatus)) {
+            throw new CustomError(apiMessage.VALIDATION_ERROR);
+        }
+
+        const result = await this.repository.closeForUser(
+            id,
+            String(res.locals.user.id),
+            expectedRevision,
+            requestedStatus === 'reunited' ? 'REUNITED' : 'CLOSED',
+        );
+        if (!result) {
+            throw new CustomError(apiMessage.CONTENT_NOT_FOUND);
+        }
+        res.locals.result = new SuccessResponse('api', { report: result });
+        return next();
+    };
+
     quickMatch = async (
         req: express.Request,
         res: express.Response,
