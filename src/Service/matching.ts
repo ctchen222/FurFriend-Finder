@@ -11,15 +11,11 @@ import {
 	matchCandidatesHistogram,
 	matchNoResultCounter,
 	matchResultsHistogram,
-	matchTruncatedCounter,
 	recordMatchRequest,
 	safeMetricAttributes,
 } from "../config/metrics";
 
-const GEOCODING_BATCH_LIMIT = 200;
-// Shelters farther than this distance (km) from the lost_place are excluded from results.
-// A pet lost in Taipei is unlikely to be found in Kaohsiung (300+ km away).
-const PROXIMITY_LIMIT_KM = 150;
+const GEOCODING_CONCURRENCY = 8;
 
 class MatchingService {
 	private geoService: GeoService;
@@ -66,17 +62,20 @@ class MatchingService {
 		const shelterCoords = new Map<string, { lat: number; lng: number } | null>();
 		const failedShelters = new Set<string>();
 
-		await Promise.all(
-			uniqueShelterAddresses.map((address) =>
-				this.geoService.geocoding(address)
-					.then(coords => shelterCoords.set(address, coords))
-					.catch(err => {
-						logger.warn(`Geocoding failed for shelter "${address}", skipping affected animals: ${err}`);
-						failedShelters.add(address);
-						geocodingFailedShelterCounter.add(1, safeMetricAttributes({ boundary: 'perform_match' }));
-					})
-			)
-		);
+		let nextAddressIndex = 0;
+		const geocodeWorker = async () => {
+			while (nextAddressIndex < uniqueShelterAddresses.length) {
+				const address = uniqueShelterAddresses[nextAddressIndex++];
+				try {
+					shelterCoords.set(address, await this.geoService.geocoding(address));
+				} catch (err) {
+					logger.warn(`Geocoding failed for shelter "${address}", skipping affected animals: ${err}`);
+					failedShelters.add(address);
+					geocodingFailedShelterCounter.add(1, safeMetricAttributes({ boundary: 'perform_match' }));
+				}
+			}
+		};
+		await Promise.all(Array.from({ length: Math.min(GEOCODING_CONCURRENCY, uniqueShelterAddresses.length) }, geocodeWorker));
 
 		const animalsWithDistance: AnimalWithDistance[] = [];
 		for (const animal of candidates) {
@@ -95,7 +94,7 @@ class MatchingService {
 				continue;
 			}
 			const distance = GeoService.calculateDistanceKm(lostAnimalCoordinates, coords);
-			if (distance > PROXIMITY_LIMIT_KM) {
+			if (Number.isNaN(distance)) {
 				// Shelter is too far from the lost location — exclude to avoid irrelevant results
 				continue;
 			}
@@ -117,14 +116,7 @@ class MatchingService {
 			const allCandidates = await this.repository.findMatchingAnimals(colour, kind, sex, variety);
 			matchCandidatesHistogram.record(allCandidates.length, safeMetricAttributes({ boundary: 'perform_match' }));
 
-			const candidates = allCandidates.slice(0, GEOCODING_BATCH_LIMIT);
-			// Guard against unbounded geocoding batches that would exhaust API quota.
-			if (allCandidates.length > GEOCODING_BATCH_LIMIT) {
-				logger.warn(`Candidate count ${allCandidates.length} exceeds geocoding limit ${GEOCODING_BATCH_LIMIT}; truncated to ${candidates.length}.`);
-				matchTruncatedCounter.add(1, safeMetricAttributes({ boundary: 'perform_match' }));
-			}
-
-			const animalsWithDistance = await this.geocodeAndCalculateDistances(lostAnimalCoordinates, candidates);
+			const animalsWithDistance = await this.geocodeAndCalculateDistances(lostAnimalCoordinates, allCandidates);
 
 			const sortedMatches = animalsWithDistance.sort((a, b) => a.distance - b.distance);
 			const top10Matches = sortedMatches.slice(0, 10);

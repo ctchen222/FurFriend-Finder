@@ -123,11 +123,11 @@ describe('MatchingService', () => {
       expect(mockGeocoding).toHaveBeenCalledTimes(1);
     });
 
-    it('should exclude shelters farther than 150km from lost_place', async () => {
+    it('should retain shelters farther than 150km and rank by distance', async () => {
       mockGeocoding.mockResolvedValue({ lat: 25.04, lng: 121.51 });
       (GeoService.calculateDistanceKm as jest.Mock)
         .mockReturnValueOnce(10)   // nearby shelter — included
-        .mockReturnValueOnce(300); // Kaohsiung shelter — excluded (> 150km)
+        .mockReturnValueOnce(300); // Kaohsiung shelter — retained as a lower-ranked candidate
 
       mockFindMatchingAnimals.mockResolvedValue([
         { id: 'a1', shelter_address: '台北市動物之家' },
@@ -136,7 +136,7 @@ describe('MatchingService', () => {
 
       const result = await service.performMatch({ lost_place: '台北市信義區' });
 
-      expect(result.top10Matches).toHaveLength(1);
+      expect(result.top10Matches).toHaveLength(2);
       expect(result.top10Matches[0].id).toBe('a1');
     });
 
@@ -153,7 +153,7 @@ describe('MatchingService', () => {
       expect(result.top10Matches.length).toBeLessThanOrEqual(10);
     });
 
-    it('should only geocode first 200 candidates and report original total in metadata', async () => {
+    it('should geocode every candidate while returning only the top 10', async () => {
       mockGeocoding.mockResolvedValue({ lat: 25.04, lng: 121.51 });
       (GeoService.calculateDistanceKm as jest.Mock).mockReturnValue(5);
 
@@ -165,10 +165,10 @@ describe('MatchingService', () => {
 
       const result = await service.performMatch({ lost_place: '台北市信義區' });
 
-      // metadata.total must reflect the original 250, not the truncated 200
+      // metadata.total must reflect all 250 candidates
       expect(result.metadata.total).toBe(250);
-      // 1 (lost_place) + 200 unique shelter_addresses = 201 total calls
-      expect(mockGeocoding).toHaveBeenCalledTimes(201);
+      // 1 (lost_place) + 250 unique shelter_addresses = 251 total calls
+      expect(mockGeocoding).toHaveBeenCalledTimes(251);
     });
   });
 
