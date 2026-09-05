@@ -19,6 +19,7 @@ import { APP_MESSAGE_KEYS, withMessage } from '../constants/appMessages';
 import { pool } from '../db';
 import { withTransaction } from '../libs/transaction';
 import MatchJobRepository from '../repository/matchJob.db';
+import MatchRunRepository from '../repository/matchRun.db';
 
 class AnimalLostController {
     private repository: AnimalLostRepository;
@@ -188,6 +189,22 @@ class AnimalLostController {
             notified: result.top10Matches.length > 0,
             top10Matches: result.top10Matches,
         });
+        return next();
+    };
+
+    latestMatches = async (
+        req: express.Request,
+        res: express.Response,
+        next: express.NextFunction,
+    ) => {
+        const id = req.params.id as string;
+        if (!id) throw new CustomError(apiMessage.ID_MUST_PROVIDED);
+        const userId = String(res.locals.user.id);
+        const ownedReport = await this.repository.findByIdForUser<AnimalLost>(id, userId);
+        if (!ownedReport) throw new CustomError(apiMessage.CONTENT_NOT_FOUND);
+
+        const latest = await new MatchRunRepository().findLatestForUser(id, userId);
+        res.locals.result = new SuccessResponse('api', { match: latest });
         return next();
     };
 

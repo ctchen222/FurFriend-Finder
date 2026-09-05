@@ -26,6 +26,7 @@ let mockFindOrCreate: jest.Mock;
 let mockFindMatchesAndSendMail: jest.Mock;
 let mockFindMatches: jest.Mock;
 let mockEnqueueJob: jest.Mock;
+let mockFindLatestRun: jest.Mock;
 
 jest.mock('../../repository/animalLost.db', () =>
 	jest.fn().mockImplementation(() => ({
@@ -49,6 +50,11 @@ jest.mock('../../repository/owner.db', () =>
 jest.mock('../../repository/matchJob.db', () =>
 	jest.fn().mockImplementation(() => ({
 		enqueue: (...args: any[]) => mockEnqueueJob(...args),
+	}))
+);
+jest.mock('../../repository/matchRun.db', () =>
+	jest.fn().mockImplementation(() => ({
+		findLatestForUser: (...args: any[]) => mockFindLatestRun(...args),
 	}))
 );
 jest.mock('../../repository/animal.db', () => jest.fn().mockImplementation(() => ({})));
@@ -83,6 +89,7 @@ import { router as animalLostRouter } from '../../router/animalLostRouter';
 import AnimalLostRepository from '../../repository/animalLost.db';
 import OwnerRepository from '../../repository/owner.db';
 import MatchJobRepository from '../../repository/matchJob.db';
+import MatchRunRepository from '../../repository/matchRun.db';
 import CustomError from '../../libs/customError';
 import { CONTENT_NOT_FOUND, LOST_PLACE_NOT_FOUND } from '../../libs/message';
 
@@ -116,6 +123,10 @@ describe('AnimalLostController Integration Tests', () => {
 		(MatchJobRepository as unknown as jest.Mock).mockImplementation(() => ({
 			enqueue: (...args: any[]) => mockEnqueueJob(...args),
 		}));
+		(MatchRunRepository as unknown as jest.Mock).mockImplementation(() => ({
+			findLatestForUser: (...args: any[]) => mockFindLatestRun(...args),
+		}));
+		mockFindLatestRun = jest.fn().mockResolvedValue(null);
 		mockTransactionQuery = jest.fn().mockResolvedValue({ rows: [], rowCount: 0 });
 		(pool.connect as jest.Mock).mockImplementation(async () => ({
 			query: (...args: any[]) => mockTransactionQuery(...args),
@@ -232,6 +243,26 @@ describe('AnimalLostController Integration Tests', () => {
 
 			expect(res.status).toBe(200);
 			expect(res.body.extras.notified).toBe(true);
+		});
+	});
+
+	describe('GET /api/lost-animals/:id/matches/latest', () => {
+		it('returns null when the worker has not completed a run', async () => {
+			const res = await request(app).get('/api/lost-animals/1/matches/latest');
+
+			expect(res.status).toBe(200);
+			expect(res.body.extras.match).toBeNull();
+		});
+
+		it('returns the persisted run and candidate snapshot', async () => {
+			mockFindLatestRun.mockResolvedValue({
+				run: { id: 'run-1', status: 'SUCCEEDED' },
+				candidates: [{ id: 9, distance: 4 }],
+			});
+			const res = await request(app).get('/api/lost-animals/1/matches/latest');
+
+			expect(res.status).toBe(200);
+			expect(res.body.extras.match.candidates[0].id).toBe(9);
 		});
 	});
 
