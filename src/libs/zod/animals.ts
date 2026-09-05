@@ -108,6 +108,7 @@ export const AnimalLostRequestSchema = z.object({
 export type AnimalLostRequest = z.infer<typeof AnimalLostRequestSchema>;
 
 export const AnimalLostSchema = z.object({
+	id: z.number().optional(),
 	chipid: z.string().optional(),
 	name: z.string().optional(),
 	kind: z.string().optional(),
@@ -120,6 +121,7 @@ export const AnimalLostSchema = z.object({
 	lost_place: z.string().optional(),
 	picture: z.string().optional(),
 	owner_id: z.number(),
+	user_id: z.string().optional(),
 })
 export type AnimalLost = z.infer<typeof AnimalLostSchema>;
 

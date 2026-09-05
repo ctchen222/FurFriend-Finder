@@ -11,6 +11,7 @@ jest.mock('../../repository/owner.db', () =>
 jest.mock('../../repository/animalLost.db', () =>
 	jest.fn().mockImplementation(() => ({
 		findByOwnerId: jest.fn().mockResolvedValue([]),
+		findByUserId: jest.fn().mockResolvedValue([]),
 	}))
 );
 

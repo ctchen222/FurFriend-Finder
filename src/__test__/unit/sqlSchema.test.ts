@@ -30,4 +30,15 @@ describe('SQL schema', () => {
 		expect(migration).toContain('RENAME COLUMN createdat TO "createdAt"');
 		expect(migration).toContain('RENAME COLUMN updatedat TO "updatedAt"');
 	});
+
+	it('adds authenticated ownership to lost-pet reports without guessing legacy rows', () => {
+		const migration = fs.readFileSync(
+			path.join(__dirname, '..', '..', '..', 'sql', 'V4__Lost_report_ownership.sql'),
+			'utf8',
+		);
+
+		expect(migration).toContain('ADD COLUMN user_id TEXT REFERENCES "user"(id)');
+		expect(migration).toContain('ON DELETE CASCADE');
+		expect(migration).toContain('Existing imported/legacy rows remain nullable');
+	});
 });

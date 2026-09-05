@@ -9,6 +9,7 @@ import { AnimalCandidate, AnimalLostData } from "../libs/zod/animals";
 import BaseRepository from "./base.db";
 import type { DbExecutor } from '../libs/transaction';
 import { withTransaction } from '../libs/transaction';
+import type { QueryResultRow } from 'pg';
 
 const OPEN_STATUS_FILTER = "status = 'OPEN'";
 
@@ -78,6 +79,39 @@ class AnimalLostRepository extends BaseRepository {
 			const values = [ownerId];
 			const result = await this.db.query(query, values);
 			return result.rows;
+		});
+	}
+
+	async findByUserId<T extends QueryResultRow = AnimalLostData>(
+		userId: string,
+		pageSize: number = 10,
+		cursor?: string,
+	): Promise<T[]> {
+		return recordDbOperation('find_lost_animal', async () => {
+			const values: Array<string | number> = [userId];
+			let cursorClause = '';
+			if (cursor !== undefined) {
+				values.push(cursor);
+				cursorClause = `AND id > $${values.length}`;
+			}
+			values.push(pageSize);
+			const result = await this.db.query<T>(
+				`SELECT * FROM ${this.tableName}
+				 WHERE user_id = $1 ${cursorClause}
+				 ORDER BY id ASC LIMIT $${values.length}`,
+				values,
+			);
+			return result.rows;
+		});
+	}
+
+	async findByIdForUser<T extends QueryResultRow = AnimalLostData>(id: number | string, userId: string): Promise<T | undefined> {
+		return recordDbOperation('find_lost_animal', async () => {
+			const result = await this.db.query<T>(
+				`SELECT * FROM ${this.tableName} WHERE id = $1 AND user_id = $2`,
+				[id, userId],
+			);
+			return result.rows[0];
 		});
 	}
 
