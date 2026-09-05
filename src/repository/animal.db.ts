@@ -5,7 +5,7 @@ import {
     type CountyInventoryCounts,
 } from '../config/metrics';
 import { Animal } from '../libs/zod/animals';
-import { flexibleDateSchema } from '../libs/zod/date';
+import { normalizeSourceDate } from '../libs/animal.utils';
 import BaseRepository from './base.db';
 import type { DbExecutor } from '../libs/transaction';
 import { withTransaction } from '../libs/transaction';
@@ -234,11 +234,9 @@ class AnimalRepository extends BaseRepository {
                         animal.picture,
                         animal.status,
                         animal.animal_shelter_id,
-                        animal.opendate ? animal.opendate : '1970-01-01',
-                        animal.closedate ? animal.closedate : '1970-01-01',
-                        animal.updatedate
-                            ? flexibleDateSchema.parse(animal.updatedate)
-                            : '1970-01-01',
+                        normalizeSourceDate(animal.opendate),
+                        normalizeSourceDate(animal.closedate),
+                        normalizeSourceDate(animal.updatedate),
                     );
                     return `($${baseIdx + 1}, $${baseIdx + 2}, $${baseIdx + 3}, $${baseIdx + 4}, $${baseIdx + 5}, $${baseIdx + 6}, $${baseIdx + 7}, $${baseIdx + 8}, $${baseIdx + 9}, $${baseIdx + 10}, $${baseIdx + 11}, $${baseIdx + 12}, $${baseIdx + 13}, $${baseIdx + 14}, $${baseIdx + 15})`;
                 })
