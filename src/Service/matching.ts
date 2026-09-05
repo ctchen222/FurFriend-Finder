@@ -95,7 +95,8 @@ class MatchingService {
 			}
 			const distance = GeoService.calculateDistanceKm(lostAnimalCoordinates, coords);
 			if (Number.isNaN(distance)) {
-				// Shelter is too far from the lost location — exclude to avoid irrelevant results
+				// Invalid coordinates should not remove a possible match; rank it last.
+				animalsWithDistance.push({ ...animal, distance: Infinity });
 				continue;
 			}
 			animalsWithDistance.push({ ...animal, distance });
