@@ -52,4 +52,15 @@ describe('SQL schema', () => {
 		expect(migration).toContain('CREATE TABLE match_jobs');
 		expect(migration).toContain('UNIQUE (report_id, report_revision, engine_version)');
 	});
+
+	it('defines a deduplicated notification outbox with retry state', () => {
+		const migration = fs.readFileSync(
+			path.join(__dirname, '..', '..', '..', 'sql', 'V7__Notification_outbox.sql'),
+			'utf8',
+		);
+		expect(migration).toContain('CREATE TABLE notification_outbox');
+		expect(migration).toContain('dedupe_key TEXT NOT NULL UNIQUE');
+		expect(migration).toContain("'PENDING'");
+		expect(migration).toContain("'SENT'");
+	});
 });
