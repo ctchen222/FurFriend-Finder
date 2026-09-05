@@ -6,6 +6,7 @@ import { Animal } from '../../libs/zod/animals';
 jest.mock('../../db', () => ({
 	pool: {
 		query: jest.fn(),
+		connect: jest.fn(),
 	},
 }));
 
@@ -15,6 +16,10 @@ describe('AnimalRepository', () => {
 	beforeEach(() => {
 		animalRepository = new AnimalRepository();
 		(pool.query as jest.Mock).mockClear();
+		(pool.connect as jest.Mock).mockImplementation(async () => ({
+			query: (...args: any[]) => (pool.query as jest.Mock)(...args),
+			release: jest.fn(),
+		}));
 	});
 
 	describe('findRandomAnimal', () => {
@@ -212,7 +217,7 @@ describe('AnimalRepository', () => {
 
 			// Should call: START TRANSACTION, INSERT shelter, INSERT animal, COMMIT
 			const queries = (pool.query as jest.Mock).mock.calls.map(c => c[0] as string);
-			expect(queries.some(q => q.includes('START TRANSACTION'))).toBe(true);
+			expect(queries.some(q => q.includes('BEGIN'))).toBe(true);
 			expect(queries.some(q => q.includes('INSERT INTO animal_shelter'))).toBe(true);
 			expect(queries.some(q => q.includes('INSERT INTO animal'))).toBe(true);
 			expect(queries.some(q => q.includes('COMMIT'))).toBe(true);

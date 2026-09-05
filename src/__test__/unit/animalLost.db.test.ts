@@ -9,12 +9,13 @@ import {
 jest.mock('../../db', () => ({
 	pool: {
 		query: jest.fn(),
+		connect: jest.fn(),
 	},
 }));
 
 // Mock formatDate to avoid date parsing issues
 jest.mock('../../libs/animal.utils', () => ({
-	formatDate: jest.fn((date: string) => date),
+	normalizeSourceDate: jest.fn((date: string) => date),
 }));
 
 describe('AnimalLostRepository', () => {
@@ -25,6 +26,10 @@ describe('AnimalLostRepository', () => {
 		repo = new AnimalLostRepository();
 		mockQuery = pool.query as jest.Mock;
 		mockQuery.mockClear();
+		(pool.connect as jest.Mock).mockImplementation(async () => ({
+			query: (...args: any[]) => mockQuery(...args),
+			release: jest.fn(),
+		}));
 	});
 
 	describe('findMatchingAnimals', () => {
@@ -137,11 +142,12 @@ describe('AnimalLostRepository', () => {
 			const unknownOwner = createMockOwner({ id: 99, name: 'Unknown', phone: 'Unknown', email: 'Unknown' });
 			const knownOwner = createMockOwner({ id: 1 });
 
-			// Calls: START TRANSACTION, unknownOwner insert, knownOwner insert, animal insert, COMMIT
+			// Calls: BEGIN, unknownOwner insert, knownOwner insert, owner lookup, animal insert, COMMIT
 			mockQuery
 				.mockResolvedValueOnce({ rows: [], rowCount: 0 })    // START TRANSACTION
 				.mockResolvedValueOnce({ rows: [unknownOwner] })      // unknown owner upsert
 				.mockResolvedValueOnce({ rows: [knownOwner] })        // known owner insert
+				.mockResolvedValueOnce({ rows: [knownOwner] })        // existing owner lookup
 				.mockResolvedValueOnce({ rows: [], rowCount: 1 })     // animal_lost insert
 				.mockResolvedValueOnce({ rows: [], rowCount: 0 });    // COMMIT
 
@@ -167,7 +173,7 @@ describe('AnimalLostRepository', () => {
 			expect(result).toBe(1);
 			// Verify transaction started
 			const firstCall = mockQuery.mock.calls[0][0];
-			expect(firstCall).toContain('START TRANSACTION');
+			expect(firstCall).toContain('BEGIN');
 			// Verify COMMIT at the end
 			const lastCall = mockQuery.mock.calls[mockQuery.mock.calls.length - 1][0];
 			expect(lastCall).toContain('COMMIT');

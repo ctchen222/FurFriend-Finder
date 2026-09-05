@@ -1,5 +1,17 @@
 import request from 'supertest';
 import express from 'express';
+import { pool } from '../../db';
+
+let mockTransactionQuery: jest.Mock;
+
+jest.mock('../../db', () => ({
+	pool: {
+		connect: jest.fn().mockResolvedValue({
+			query: (...args: any[]) => mockTransactionQuery(...args),
+			release: jest.fn(),
+		}),
+	},
+}));
 
 // Closure-based mock functions to survive resetMocks:true
 let mockFindAll: jest.Mock;
@@ -68,6 +80,11 @@ app.use(Handler.errorHandler);
 
 describe('AnimalLostController Integration Tests', () => {
 	beforeEach(() => {
+		mockTransactionQuery = jest.fn().mockResolvedValue({ rows: [], rowCount: 0 });
+		(pool.connect as jest.Mock).mockImplementation(async () => ({
+			query: (...args: any[]) => mockTransactionQuery(...args),
+			release: jest.fn(),
+		}));
 		mockFindAll = jest.fn().mockResolvedValue([]);
 		mockCreate = jest.fn().mockResolvedValue({ id: 'new-id' });
 		mockStart = jest.fn().mockResolvedValue(undefined);
@@ -118,7 +135,8 @@ describe('AnimalLostController Integration Tests', () => {
 			mockCreate = jest.fn().mockRejectedValue(new Error('DB error'));
 
 			const res = await request(app).post('/api/lost-animals').send(validBody);
-			expect(mockRollback).toHaveBeenCalled();
+			expect([200, 302]).toContain(res.status);
+			expect(mockTransactionQuery).toHaveBeenCalledWith('ROLLBACK');
 		});
 	});
 

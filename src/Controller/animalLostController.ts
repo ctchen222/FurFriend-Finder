@@ -16,6 +16,8 @@ import AnimalLostService from '../Service/animalLost';
 import AnimalHelper from './helper/animalHelper';
 import DatabaseUtils from '../libs/database.utils';
 import { APP_MESSAGE_KEYS, withMessage } from '../constants/appMessages';
+import { pool } from '../db';
+import { withTransaction } from '../libs/transaction';
 
 class AnimalLostController {
     private repository: AnimalLostRepository;
@@ -77,25 +79,20 @@ class AnimalLostController {
             const animalLostData = animalLostResult.data;
             const animalOwner = animalOwnerResult.data as AnimalOwner;
 
-            await this.repository.start();
-
-            const owner = await this.ownerRepository.findOrCreate(animalOwner);
-
-            const animalToCreate: AnimalLost = {
-                ...animalLostData,
-                owner_id: owner.id,
-            };
-
-            await this.repository.create<AnimalLost>(animalToCreate);
-
-            await this.repository.commit();
+			await withTransaction(pool, async (client) => {
+				const ownerRepository = new OwnerRepository(client);
+				const animalLostRepository = new AnimalLostRepository(client);
+				const owner = await ownerRepository.findOrCreate(animalOwner);
+				const animalToCreate: AnimalLost = { ...animalLostData, owner_id: owner.id };
+				await animalLostRepository.create<AnimalLost>(animalToCreate);
+			});
 
             res.locals.result = new SuccessResponse(
                 'redirect',
                 withMessage('/profile', APP_MESSAGE_KEYS.REPORT_SUCCESS),
             );
         } catch (error) {
-            await this.repository.rollback().catch(() => {});
+			// withTransaction has already rolled back on the same client.
             res.locals.result = new SuccessResponse(
                 'redirect',
                 withMessage('/profile', APP_MESSAGE_KEYS.REPORT_FAILED),

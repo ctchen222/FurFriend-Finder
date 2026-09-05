@@ -7,10 +7,12 @@ import {
 import { Animal } from '../libs/zod/animals';
 import { flexibleDateSchema } from '../libs/zod/date';
 import BaseRepository from './base.db';
+import type { DbExecutor } from '../libs/transaction';
+import { withTransaction } from '../libs/transaction';
 
 class AnimalRepository extends BaseRepository {
-    constructor() {
-        super('animal');
+    constructor(db?: DbExecutor) {
+        super('animal', db);
     }
 
     private joinedAnimalSelectFields(options?: string[]): string {
@@ -55,7 +57,7 @@ class AnimalRepository extends BaseRepository {
 
             const values = [`%${city}%`];
 
-            const { rows } = await pool.query(query, values);
+            const { rows } = await this.db.query(query, values);
 
             return rows;
         });
@@ -105,7 +107,7 @@ class AnimalRepository extends BaseRepository {
 			LIMIT ${pageSizePlaceholder};
 		`;
 
-            const { rows } = await pool.query(query, values);
+            const { rows } = await this.db.query(query, values);
             return rows;
         });
     }
@@ -123,7 +125,7 @@ class AnimalRepository extends BaseRepository {
 		`;
 
             const values = [animalId];
-            const { rows } = await pool.query(query, values);
+            const { rows } = await this.db.query(query, values);
 
             return rows[0] || null;
         });
@@ -159,6 +161,15 @@ class AnimalRepository extends BaseRepository {
     }
 
     async bulkInsertAnimals(animals: Animal[]): Promise<number> {
+        if (this.db === pool) {
+            return withTransaction(pool, (client) =>
+                new AnimalRepository(client).bulkInsertAnimalsInTransaction(animals),
+            );
+        }
+        return this.bulkInsertAnimalsInTransaction(animals);
+    }
+
+    private async bulkInsertAnimalsInTransaction(animals: Animal[]): Promise<number> {
         return recordDbOperation('bulk_insert_animals', async () => {
             const seen = new Map<string, Animal>();
         const noSubId: Animal[] = [];
@@ -176,8 +187,6 @@ class AnimalRepository extends BaseRepository {
             }
         }
         const uniqueAnimals = [...seen.values(), ...noSubId];
-
-        await pool.query('START TRANSACTION');
 
         let insertedRowCount = 0;
         const batchSize = 100;
@@ -205,7 +214,7 @@ class AnimalRepository extends BaseRepository {
 			    VALUES ${shelterPlaceholders}
 			    ON CONFLICT(id) DO NOTHING;
 				`;
-            await pool.query(insertShelterQuery, shelterValues);
+            await this.db.query(insertShelterQuery, shelterValues);
 
             const values: any[] = [];
             const valuePlaceholders = batch
@@ -246,11 +255,10 @@ class AnimalRepository extends BaseRepository {
 				    picture     = EXCLUDED.picture,
 				    remark      = EXCLUDED.remark;
 			`;
-            const result = await pool.query(insertQuery, values);
+            const result = await this.db.query(insertQuery, values);
             insertedRowCount += result.rowCount ?? 0;
         }
 
-        await pool.query('COMMIT');
         return insertedRowCount;
         });
     }
