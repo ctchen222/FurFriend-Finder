@@ -24,4 +24,7 @@ router.route('/:id/close')
 router.route('/match/:id/notify')
 	.post(requireUser, requireSameOrigin, logMatchRequest, catchAsync(animalLostCtrler.notify));
 
+router.route('/:id/matches/latest')
+	.get(requireUser, catchAsync(animalLostCtrler.latestMatches));
+
 export { router };

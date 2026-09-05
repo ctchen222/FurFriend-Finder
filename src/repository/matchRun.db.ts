@@ -35,6 +35,28 @@ export class MatchRunRepository {
         }
         return runId;
     }
+
+    async findLatestForUser(reportId: number | string, userId: string): Promise<{
+        run: Record<string, unknown>;
+        candidates: any[];
+    } | null> {
+        const result = await this.db.query<Record<string, unknown>>(
+            `SELECT match_runs.*, match_jobs.state AS job_state
+             FROM match_runs
+             JOIN match_jobs ON match_jobs.id = match_runs.job_id
+             JOIN animal_lost ON animal_lost.id = match_runs.report_id
+             WHERE match_runs.report_id = $1 AND animal_lost.user_id = $2
+             ORDER BY match_runs.completed_at DESC LIMIT 1`,
+            [reportId, userId],
+        );
+        const run = result.rows[0];
+        if (!run) return null;
+        const candidates = await this.db.query<{ candidate: any }>(
+            `SELECT candidate FROM match_run_candidates WHERE run_id = $1 ORDER BY rank ASC`,
+            [run.id],
+        );
+        return { run, candidates: candidates.rows.map((row) => row.candidate) };
+    }
 }
 
 export default MatchRunRepository;

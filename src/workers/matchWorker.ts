@@ -4,6 +4,7 @@ import AnimalLostRepository from '../repository/animalLost.db';
 import MatchingService from '../Service/matching';
 import MatchJobRepository from '../repository/matchJob.db';
 import MatchRunRepository from '../repository/matchRun.db';
+import NotificationRepository from '../repository/notification.db';
 
 type TransactionRunner = <T>(work: (db: DbExecutor) => Promise<T>) => Promise<T>;
 
@@ -48,7 +49,7 @@ export class MatchWorker {
 
             const finalized = await this.transaction(async (db) => {
                 const runs = new MatchRunRepository(db);
-                await runs.create({
+                const runId = await runs.create({
                     jobId: job.id,
                     executionNo: job.execution_no,
                     reportId: job.report_id,
@@ -60,6 +61,13 @@ export class MatchWorker {
                         (candidate): candidate is typeof candidate & { id: number } => Number.isInteger(candidate.id),
                     ).map((candidate) => ({ ...candidate, id: Number(candidate.id) })),
                 });
+                if (result.top10Matches.length > 0 && report.user_id) {
+                    await new NotificationRepository(db).enqueue({
+                        runId,
+                        reportId: job.report_id,
+                        userId: String(report.user_id),
+                    });
+                }
                 return new MatchJobRepository(db).succeed(job.id, job.claim_token as string, now);
             });
             return finalized;
