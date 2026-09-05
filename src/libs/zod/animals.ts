@@ -58,6 +58,8 @@ export type Animal = z.infer<typeof AnimalSchema>;
 export type AnimalCandidate = Animal;
 export interface AnimalWithDistance extends Animal {
 	distance: number;
+	score?: number | null;
+	reasons?: string[];
 }
 export interface MatchResult {
 	metadata: Record<string, number>;

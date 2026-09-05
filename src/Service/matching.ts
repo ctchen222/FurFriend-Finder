@@ -14,6 +14,8 @@ import {
 	recordMatchRequest,
 	safeMetricAttributes,
 } from "../config/metrics";
+import { normalizeTraits } from './matchingTraits';
+import { rankCandidate } from './matchingRanker';
 
 const GEOCODING_CONCURRENCY = 8;
 
@@ -119,7 +121,18 @@ class MatchingService {
 
 			const animalsWithDistance = await this.geocodeAndCalculateDistances(lostAnimalCoordinates, allCandidates);
 
-			const sortedMatches = animalsWithDistance.sort((a, b) => a.distance - b.distance);
+			const queryTraits = normalizeTraits({ kind, sex, variety, colour: colour?.join(' ') });
+			const rankedMatches = animalsWithDistance.map((candidate) => {
+				const ranked = rankCandidate({ candidate, query: queryTraits, distanceKm: candidate.distance });
+				return { ...candidate, score: ranked.score, reasons: ranked.reasons };
+			});
+			const sortedMatches = rankedMatches.sort((a, b) => {
+				const scoreA = a.score ?? -1;
+				const scoreB = b.score ?? -1;
+				if (scoreA !== scoreB) return scoreB - scoreA;
+				if (a.distance !== b.distance) return a.distance - b.distance;
+				return String(a.id ?? '').localeCompare(String(b.id ?? ''), 'en', { numeric: true });
+			});
 			const top10Matches = sortedMatches.slice(0, 10);
 			matchResultsHistogram.record(top10Matches.length, safeMetricAttributes({ boundary: 'perform_match' }));
 			if (top10Matches.length === 0) {

@@ -21,25 +21,9 @@ class AnimalLostRepository extends BaseRepository {
 			const filters: string[] = [];
 		const values: any[] = [];
 
-		if (colour && colour.length > 0) {
-			const colorFilters = colour.map((c) => {
-				values.push(`%${c}%`);
-				return `colour LIKE $${values.length}`;
-			});
-			filters.push(`(${colorFilters.join(" OR ")})`);
-		}
-
 		if (kind) {
 			filters.push("kind = $" + (values.length + 1));
 			values.push(kind);
-		}
-		if (sex) {
-			filters.push("sex = $" + (values.length + 1));
-			values.push(sex);
-		}
-		if (variety) {
-			filters.push("variety LIKE $" + (values.length + 1));
-			values.push("%" + variety + "%");
 		}
 
 		const whereClause = filters.length > 0 ? "WHERE " + filters.join(" AND ") : "";
