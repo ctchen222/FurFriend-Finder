@@ -20,7 +20,10 @@ router.get('/register', (req, res) => {
 });
 
 router.get('/login', (req, res) => {
-	res.render('login', { user: res.locals.user });
+	res.render('login', {
+		user: res.locals.user,
+		returnTo: typeof req.query.returnTo === 'string' ? req.query.returnTo : '/profile',
+	});
 });
 
 router.get('/forgot-password', (req, res) => {

@@ -3,7 +3,9 @@
   if (!button) return;
   button.addEventListener('click', async () => {
     button.disabled = true;
-    const returnTo = button.dataset.returnTo || '/profile';
+    const requestedReturnTo = button.dataset.returnTo || '/profile';
+    const allowedReturnTo = new Set(['/','/profile','/report-lost','/quick-use']);
+    const returnTo = allowedReturnTo.has(requestedReturnTo) ? requestedReturnTo : '/profile';
     try {
       const response = await fetch('/api/auth/sign-in/social', {
         method: 'POST',

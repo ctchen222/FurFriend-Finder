@@ -30,4 +30,14 @@ describe('SQL schema', () => {
 		expect(migration).toContain('RENAME COLUMN createdat TO "createdAt"');
 		expect(migration).toContain('RENAME COLUMN updatedat TO "updatedAt"');
 	});
+
+	it('enforces unique OAuth provider identities and links', () => {
+		const migration = fs.readFileSync(
+			path.join(__dirname, '..', '..', '..', 'sql', 'V5__Auth_account_identity.sql'),
+			'utf8',
+		);
+
+		expect(migration).toContain('"providerId", "accountId"');
+		expect(migration).toContain('"userId", "providerId"');
+	});
 });
