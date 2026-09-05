@@ -89,6 +89,15 @@ export class MatchJobRepository {
         );
         return (result.rowCount ?? 0) === 1;
     }
+
+    async cancelForReport(reportId: number | string): Promise<number> {
+        const result = await this.db.query(
+            `UPDATE match_jobs SET state = 'CANCELLED', lease_until = NULL
+             WHERE report_id = $1 AND state IN ('PENDING', 'RUNNING')`,
+            [reportId],
+        );
+        return result.rowCount ?? 0;
+    }
 }
 
 export default MatchJobRepository;

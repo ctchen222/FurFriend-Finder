@@ -155,12 +155,19 @@ class AnimalLostController {
             throw new CustomError(apiMessage.VALIDATION_ERROR);
         }
 
-        const result = await this.repository.closeForUser(
-            id,
-            String(res.locals.user.id),
-            expectedRevision,
-            requestedStatus === 'reunited' ? 'REUNITED' : 'CLOSED',
-        );
+        const result = await withTransaction(pool, async (client) => {
+            const reportRepository = new AnimalLostRepository(client);
+            const closed = await reportRepository.closeForUser(
+                id,
+                String(res.locals.user.id),
+                expectedRevision,
+                requestedStatus === 'reunited' ? 'REUNITED' : 'CLOSED',
+            );
+            if (closed) {
+                await new MatchJobRepository(client).cancelForReport(id);
+            }
+            return closed;
+        });
         if (!result) {
             throw new CustomError(apiMessage.CONTENT_NOT_FOUND);
         }

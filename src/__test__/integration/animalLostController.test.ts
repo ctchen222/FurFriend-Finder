@@ -26,6 +26,7 @@ let mockFindOrCreate: jest.Mock;
 let mockFindMatchesAndSendMail: jest.Mock;
 let mockFindMatches: jest.Mock;
 let mockEnqueueJob: jest.Mock;
+let mockCancelForReport: jest.Mock;
 let mockFindLatestRun: jest.Mock;
 
 jest.mock('../../repository/animalLost.db', () =>
@@ -122,6 +123,7 @@ describe('AnimalLostController Integration Tests', () => {
 		}));
 		(MatchJobRepository as unknown as jest.Mock).mockImplementation(() => ({
 			enqueue: (...args: any[]) => mockEnqueueJob(...args),
+			cancelForReport: (...args: any[]) => mockCancelForReport(...args),
 		}));
 		(MatchRunRepository as unknown as jest.Mock).mockImplementation(() => ({
 			findLatestForUser: (...args: any[]) => mockFindLatestRun(...args),
@@ -151,6 +153,7 @@ describe('AnimalLostController Integration Tests', () => {
 			matchedAnimals: [],
 		});
 		mockEnqueueJob = jest.fn().mockResolvedValue('job-1');
+		mockCancelForReport = jest.fn().mockResolvedValue(1);
 	});
 
 	it('rejects private lost-report endpoints without a session', async () => {
@@ -228,6 +231,7 @@ describe('AnimalLostController Integration Tests', () => {
 			expect(res.status).toBe(200);
 			expect(res.body.extras.report.status).toBe('REUNITED');
 			expect(mockCloseForUser).toHaveBeenCalledWith('1', 'test-user', 1, 'REUNITED');
+			expect(mockCancelForReport).toHaveBeenCalledWith('1');
 		});
 	});
 
