@@ -10,8 +10,8 @@ export function readGoogleOAuthConfig(env: NodeJS.ProcessEnv = process.env): Goo
 
 	const clientId = env.GOOGLE_CLIENT_ID?.trim();
 	const clientSecret = env.GOOGLE_CLIENT_SECRET?.trim();
-	if (!clientId || !clientSecret) {
-		throw new Error('GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are required when GOOGLE_OAUTH_ENABLED=true');
+	if (!clientId || !clientSecret || !env.APP_BASE_URL?.trim() || !env.BETTER_AUTH_SECRET?.trim()) {
+		throw new Error('GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, APP_BASE_URL and BETTER_AUTH_SECRET are required when GOOGLE_OAUTH_ENABLED=true');
 	}
 	return { enabled: true, clientId, clientSecret };
 }
