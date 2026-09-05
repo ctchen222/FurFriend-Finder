@@ -219,7 +219,7 @@ class AnimalRepository extends BaseRepository {
             const values: any[] = [];
             const valuePlaceholders = batch
                 .map((animal, idx) => {
-                    const baseIdx = idx * 15;
+                    const baseIdx = idx * 18;
 
                     values.push(
                         animal.subid,
@@ -237,14 +237,17 @@ class AnimalRepository extends BaseRepository {
                         normalizeSourceDate(animal.opendate),
                         normalizeSourceDate(animal.closedate),
                         normalizeSourceDate(animal.updatedate),
+                        animal.source_system ?? 'moa_shelter_animals',
+                        animal.source_record_id ?? animal.subid ?? null,
+                        animal.source_run_id ?? null,
                     );
-                    return `($${baseIdx + 1}, $${baseIdx + 2}, $${baseIdx + 3}, $${baseIdx + 4}, $${baseIdx + 5}, $${baseIdx + 6}, $${baseIdx + 7}, $${baseIdx + 8}, $${baseIdx + 9}, $${baseIdx + 10}, $${baseIdx + 11}, $${baseIdx + 12}, $${baseIdx + 13}, $${baseIdx + 14}, $${baseIdx + 15})`;
+                    return `(${Array.from({ length: 18 }, (_, offset) => `$${baseIdx + offset + 1}`).join(', ')})`;
                 })
                 .join(', ');
 
             const insertQuery = `
 				INSERT INTO animal(
-			    sub_id, kind, variety, sex, age, body_type, colour, found_place, remark, picture, status, animal_shelter_id, open_date, close_date, update_date )
+			    sub_id, kind, variety, sex, age, body_type, colour, found_place, remark, picture, status, animal_shelter_id, open_date, close_date, update_date, source_system, source_record_id, source_run_id )
 			    VALUES ${valuePlaceholders}
 				ON CONFLICT(sub_id) DO UPDATE SET
 				    status      = EXCLUDED.status,

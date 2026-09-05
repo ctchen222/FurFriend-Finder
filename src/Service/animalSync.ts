@@ -49,6 +49,8 @@ class AnimalSyncService {
 					owner_phone: item.連絡電話,
 					owner_email: item.EMail,
 					picture: item.PICTURE,
+					source_system: 'moa_lost_animals',
+					source_record_id: item.晶片號碼 ?? null,
 				}));
 
 				return this.repository.bulkInsertAnimalLosts(lostAnimals);

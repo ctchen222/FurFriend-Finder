@@ -48,6 +48,9 @@ const AnimalSchema = z.object({
 	opendate: z.string().trim().nullable().optional(),
 	closedate: z.string().trim().nullable().optional(),
 	updatedate: z.string().nullable().optional(),
+	source_system: z.string().optional(),
+	source_record_id: z.string().nullish().optional(),
+	source_run_id: z.string().nullish().optional(),
 	animal_shelter_id: z.number(),
 	shelter_name: z.string().optional(),
 	shelter_address: z.string().trim().optional(),
@@ -88,6 +91,9 @@ export const AnimalLostDataSchema = z.object({
 	owner_name: z.string().nullish().optional(),
 	owner_phone: z.string().nullish().optional(),
 	owner_email: z.string().nullish().optional(),
+	source_system: z.string().optional(),
+	source_record_id: z.string().nullish().optional(),
+	source_run_id: z.string().nullish().optional(),
 })
 export type AnimalLostData = z.infer<typeof AnimalLostDataSchema>;
 

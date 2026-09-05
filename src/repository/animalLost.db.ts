@@ -189,7 +189,7 @@ class AnimalLostRepository extends BaseRepository {
 			// Insert lost animals
 			const animalValues: any[] = [];
 			const animalPlaceholders = batch.map((animal, idx) => {
-				const baseIdx = idx * 12;
+				const baseIdx = idx * 14;
 
 				let ownerId: number;
 				if ((animal.owner_phone && animal.owner_phone.trim() !== "") ||
@@ -212,14 +212,16 @@ class AnimalLostRepository extends BaseRepository {
 					normalizeSourceDate(animal.lost_time),
 					animal.lost_place ?? null,
 					animal.picture ?? null,
-					ownerId
+					ownerId,
+					animal.source_system ?? 'moa_lost_animals',
+					animal.source_record_id ?? animal.chipid ?? null,
 				);
-				return `($${baseIdx + 1}, $${baseIdx + 2}, $${baseIdx + 3}, $${baseIdx + 4}, $${baseIdx + 5}, $${baseIdx + 6}, $${baseIdx + 7}, $${baseIdx + 8}, $${baseIdx + 9}, $${baseIdx + 10}, $${baseIdx + 11}, $${baseIdx + 12})`;
+				return `(${Array.from({ length: 14 }, (_, offset) => `$${baseIdx + offset + 1}`).join(', ')})`;
 			}).join(", ");
 
 			const insertAnimalQuery = `
 				INSERT INTO animal_lost(
-				chip_id, name, kind, variety, sex, colour, outlook, feature, lost_time, lost_place, picture, owner_id)
+				chip_id, name, kind, variety, sex, colour, outlook, feature, lost_time, lost_place, picture, owner_id, source_system, source_record_id)
 				VALUES ${animalPlaceholders}
 				ON CONFLICT(chip_id) DO NOTHING;
 			`;
