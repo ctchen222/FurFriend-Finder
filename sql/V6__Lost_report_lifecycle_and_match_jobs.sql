@@ -18,6 +18,8 @@ CREATE TABLE match_jobs (
     state VARCHAR(20) NOT NULL DEFAULT 'PENDING'
         CHECK (state IN ('PENDING', 'RUNNING', 'SUCCEEDED', 'FAILED', 'CANCELLED')),
     attempts INTEGER NOT NULL DEFAULT 0,
+    execution_no INTEGER NOT NULL DEFAULT 1,
+    source_run_id UUID,
     available_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     lease_until TIMESTAMP,
     claim_token UUID,
@@ -27,3 +29,26 @@ CREATE TABLE match_jobs (
 );
 
 CREATE INDEX match_jobs_claim_idx ON match_jobs (state, available_at, lease_until);
+
+CREATE TABLE match_runs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    job_id UUID NOT NULL REFERENCES match_jobs(id) ON DELETE CASCADE,
+    execution_no INTEGER NOT NULL,
+    report_id INTEGER NOT NULL REFERENCES animal_lost(id) ON DELETE CASCADE,
+    report_revision INTEGER NOT NULL,
+    engine_version TEXT NOT NULL,
+    status VARCHAR(20) NOT NULL CHECK (status IN ('SUCCEEDED', 'FAILED', 'CANCELLED')),
+    metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+    warnings JSONB NOT NULL DEFAULT '[]'::jsonb,
+    completed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (job_id, execution_no)
+);
+
+CREATE TABLE match_run_candidates (
+    run_id UUID NOT NULL REFERENCES match_runs(id) ON DELETE CASCADE,
+    animal_id INTEGER NOT NULL,
+    rank INTEGER NOT NULL,
+    candidate JSONB NOT NULL,
+    PRIMARY KEY (run_id, animal_id),
+    UNIQUE (run_id, rank)
+);
