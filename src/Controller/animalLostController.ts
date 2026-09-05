@@ -18,6 +18,7 @@ import DatabaseUtils from '../libs/database.utils';
 import { APP_MESSAGE_KEYS, withMessage } from '../constants/appMessages';
 import { pool } from '../db';
 import { withTransaction } from '../libs/transaction';
+import MatchJobRepository from '../repository/matchJob.db';
 
 class AnimalLostController {
     private repository: AnimalLostRepository;
@@ -87,7 +88,15 @@ class AnimalLostController {
 				const animalLostRepository = new AnimalLostRepository(client);
 				const owner = await ownerRepository.findOrCreate(animalOwner);
 				const animalToCreate: AnimalLost = { ...animalLostData, owner_id: owner.id, user_id: userId };
-				await animalLostRepository.create<AnimalLost>(animalToCreate);
+				const report = await animalLostRepository.create<AnimalLost>(animalToCreate);
+				if (!report?.id) {
+					throw new Error('Lost report insert did not return an id');
+				}
+				await new MatchJobRepository(client).enqueue({
+					reportId: Number(report.id),
+					reportRevision: 1,
+					engineVersion: 'rules-v1',
+				});
 			});
 
             res.locals.result = new SuccessResponse(
