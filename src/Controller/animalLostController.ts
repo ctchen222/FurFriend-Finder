@@ -158,6 +158,30 @@ class AnimalLostController {
         return next();
     };
 
+    notify = async (
+        req: express.Request,
+        res: express.Response,
+        next: express.NextFunction,
+    ) => {
+        const id = req.params.id as string;
+        if (!id) {
+            throw new CustomError(apiMessage.ID_MUST_PROVIDED);
+        }
+        const userId = String(res.locals.user.id);
+        const ownedReport = await this.repository.findByIdForUser<AnimalLost>(id, userId);
+        if (!ownedReport) {
+            throw new CustomError(apiMessage.CONTENT_NOT_FOUND);
+        }
+
+        const result = await this.animalLostService.findMatchesAndSendMail(id);
+        res.locals.result = new SuccessResponse('api', {
+            metadata: result.metadata,
+            notified: result.top10Matches.length > 0,
+            top10Matches: result.top10Matches,
+        });
+        return next();
+    };
+
     quickMatch = async (
         req: express.Request,
         res: express.Response,

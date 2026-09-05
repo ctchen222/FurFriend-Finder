@@ -191,6 +191,21 @@ describe('AnimalLostController Integration Tests', () => {
 		});
 	});
 
+	describe('POST /api/lost-animals/match/:id/notify', () => {
+		it('runs the explicit notification action for an owned report', async () => {
+			mockFindMatchesAndSendMail.mockResolvedValue({
+				metadata: { total: 1 },
+				top10Matches: [{ id: 'animal-1' }],
+				lostAnimal: { id: '1' },
+			});
+			const res = await request(app)
+				.post('/api/lost-animals/match/1/notify');
+
+			expect(res.status).toBe(200);
+			expect(res.body.extras.notified).toBe(true);
+		});
+	});
+
 	describe('POST /api/lost-animals/quick-match', () => {
 		it('should return quick match results', async () => {
 			const body = { kind: '狗', colour: '黑', sex: 'M', variety: '', lost_place: '台北市' };
