@@ -9,6 +9,7 @@ let mockCommit: jest.Mock;
 let mockRollback: jest.Mock;
 let mockFindOrCreate: jest.Mock;
 let mockFindMatchesAndSendMail: jest.Mock;
+let mockFindMatchesForReport: jest.Mock;
 let mockFindMatches: jest.Mock;
 
 jest.mock('../../repository/animalLost.db', () =>
@@ -31,6 +32,7 @@ jest.mock('../../repository/animal.db', () => jest.fn().mockImplementation(() =>
 jest.mock('../../Service/animalLost', () =>
 	jest.fn().mockImplementation(() => ({
 		findMatchesAndSendMail: (...args: any[]) => mockFindMatchesAndSendMail(...args),
+		findMatchesForReport: (...args: any[]) => mockFindMatchesForReport(...args),
 		findMatches: (...args: any[]) => mockFindMatches(...args),
 		updateTableAnimalLosts: jest.fn().mockResolvedValue(0),
 	}))
@@ -75,6 +77,11 @@ describe('AnimalLostController Integration Tests', () => {
 		mockRollback = jest.fn().mockResolvedValue(undefined);
 		mockFindOrCreate = jest.fn().mockResolvedValue({ id: 'owner-1', name: '王小明' });
 		mockFindMatchesAndSendMail = jest.fn().mockResolvedValue({
+			metadata: { total: 0 },
+			lostAnimal: { id: '1', kind: '狗' },
+			top10Matches: [],
+		});
+		mockFindMatchesForReport = jest.fn().mockResolvedValue({
 			metadata: { total: 0 },
 			lostAnimal: { id: '1', kind: '狗' },
 			top10Matches: [],
@@ -130,7 +137,7 @@ describe('AnimalLostController Integration Tests', () => {
 		});
 
 		it('should return 400 when lost animal not found', async () => {
-			mockFindMatchesAndSendMail = jest.fn().mockRejectedValue(
+			mockFindMatchesForReport = jest.fn().mockRejectedValue(
 				new CustomError(CONTENT_NOT_FOUND)
 			);
 

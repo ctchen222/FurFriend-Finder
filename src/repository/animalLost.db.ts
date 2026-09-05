@@ -8,8 +8,6 @@ import { formatDate } from "../libs/animal.utils";
 import { AnimalCandidate, AnimalLostData } from "../libs/zod/animals";
 import BaseRepository from "./base.db";
 
-const OPEN_STATUS_FILTER = "status = 'OPEN'";
-
 class AnimalLostRepository extends BaseRepository {
 
 	constructor() {
@@ -18,7 +16,9 @@ class AnimalLostRepository extends BaseRepository {
 
 	async findMatchingAnimals(colour?: string[], kind?: string, sex?: string, variety?: string) {
 		return recordDbOperation('find_match_candidates', async () => {
-			const filters: string[] = [OPEN_STATUS_FILTER];
+			// animal_lost has no lifecycle status until the lifecycle migration lands;
+			// do not reference a non-existent column and make every imported row searchable.
+			const filters: string[] = [];
 		const values: any[] = [];
 
 		if (colour && colour.length > 0) {
@@ -42,7 +42,7 @@ class AnimalLostRepository extends BaseRepository {
 			values.push("%" + variety + "%");
 		}
 
-		const whereClause = "WHERE " + filters.join(" AND ");
+		const whereClause = filters.length > 0 ? "WHERE " + filters.join(" AND ") : "";
 		const query = `
 			SELECT
 				animal.*,
