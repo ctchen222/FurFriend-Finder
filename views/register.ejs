@@ -25,6 +25,11 @@
             </div>
             <button type="submit" class="btn btn-primary btn-block btn-submit">註冊</button>
         </form>
+        <% if (process.env.GOOGLE_OAUTH_ENABLED === 'true') { %>
+        <div class="oauth-divider"><span>或</span></div>
+        <button type="button" class="btn btn-secondary btn-block google-sign-in" data-return-to="/profile"><span aria-hidden="true">G</span> 使用 Google 繼續</button>
+        <script src="/js/google-auth.js" defer></script>
+        <% } %>
         <div class="switch-link">
             <p>已經有帳號了？ <a href="/login">點此登入</a></p>
             <p><a href="/">返回首頁</a></p>
