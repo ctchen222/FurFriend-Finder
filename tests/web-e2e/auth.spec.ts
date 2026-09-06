@@ -36,6 +36,9 @@ test('register, verify email, login, persist session, settings, logout and reset
     await page.getByLabel('接收配對 Email 通知').uncheck();
     await expect(page.getByRole('status')).toContainText('通知設定已儲存');
     await expect(page.getByLabel('接收配對 Email 通知')).not.toBeChecked();
+    await page.getByRole('link', { name: '快速比對', exact: true }).click();
+    await page.getByRole('link', { name: '我的協尋', exact: true }).click();
+    await expect(page.getByLabel('接收配對 Email 通知')).not.toBeChecked();
     await page.reload();
     await expect(page.getByLabel('接收配對 Email 通知')).not.toBeChecked();
     await page.getByRole('button', { name: '登出', exact: true }).click();

@@ -5,6 +5,9 @@ export function useResource<T>(path: string, pollMs = 0) {
   const [state, setState] = useState<{ data: T | null; error: Error | null; loading: boolean }>({ data: null, error: null, loading: true });
   const [version, setVersion] = useState(0);
   const reload = useCallback(() => setVersion(value => value + 1), []);
+  const updateData = useCallback((update: (current: T) => T) => {
+    setState(current => current.data === null ? current : { ...current, data: update(current.data) });
+  }, []);
   useEffect(() => {
     let active = true;
     let timer: ReturnType<typeof setTimeout>;
@@ -22,5 +25,5 @@ export function useResource<T>(path: string, pollMs = 0) {
     void load();
     return () => { active = false; controller.abort(); clearTimeout(timer); };
   }, [path, version, pollMs]);
-  return { ...state, reload };
+  return { ...state, reload, updateData };
 }

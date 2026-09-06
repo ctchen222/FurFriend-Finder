@@ -5,7 +5,7 @@ import { useResource } from '../../hooks/useResource';
 import { ApiError, post } from '../../api/client';
 import { Feedback } from '../../ui/Feedback';
 
-type Session = { user: SessionUser | null; loading: boolean; error: Error | null; refresh: () => void; signOut: () => Promise<void> };
+type Session = { user: SessionUser | null; loading: boolean; error: Error | null; refresh: () => void; updateMailPreference: (enabled: boolean) => void; signOut: () => Promise<void> };
 const SessionContext = createContext<Session | null>(null);
 export function SessionProvider({ children }: { children: ReactNode }) {
   const state = useResource<{ user: SessionUser }>('/api/v1/me');
@@ -13,6 +13,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   return <SessionContext.Provider value={{
     user: state.data?.user ?? null, loading: state.loading,
     error: unauthenticated ? null : state.error, refresh: state.reload,
+    updateMailPreference: enabled => state.updateData(current => ({ user: { ...current.user, isLostAnimalMailEnabled: enabled } })),
     signOut: async () => { await post('/api/auth/sign-out'); state.reload(); },
   }}>{children}</SessionContext.Provider>;
 }

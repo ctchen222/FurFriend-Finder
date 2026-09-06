@@ -8,7 +8,7 @@ import { patch } from '../api/client';
 import { Feedback } from '../ui/Feedback';
 
 export function ProfilePage() {
-  const { user, refresh } = useSession();
+  const { user, updateMailPreference } = useSession();
   const result = useResource<{ reports: LostReport[] }>('/api/v1/reports');
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
@@ -18,7 +18,12 @@ export function ProfilePage() {
     const previous = enabled;
     setEnabled(nextEnabled);
     setSaving(true); setMessage(''); setError('');
-    try { await patch('/api/v1/me/settings', { enabled: nextEnabled }); setMessage('通知設定已儲存'); }
+    try {
+      const saved = await patch<{ enabled: boolean }>('/api/v1/me/settings', { enabled: nextEnabled });
+      setEnabled(saved.enabled);
+      updateMailPreference(saved.enabled);
+      setMessage('通知設定已儲存');
+    }
     catch (err) { setEnabled(previous); setError((err as Error).message); } finally { setSaving(false); }
   }
   return <><div className="page-heading"><p className="eyebrow">我的協尋</p><h1>{user?.name}，一起等待好消息。</h1><p>{user?.email}</p></div>
