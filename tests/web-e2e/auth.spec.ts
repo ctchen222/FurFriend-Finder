@@ -30,14 +30,15 @@ test('register, verify email, login, persist session, settings, logout and reset
     await page.getByLabel('密碼', { exact: true }).fill(password);
     await page.getByRole('button', { name: '登入', exact: true }).click();
     await expect(page).toHaveURL(/profile/);
-    await expect(page.getByRole('heading', { name: 'React 驗收，一起等待好消息。' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '個人資料', exact: true })).toBeVisible();
+    await expect(page.locator('.profile-info')).toContainText(email);
     await page.reload();
-    await expect(page.getByRole('heading', { name: 'React 驗收，一起等待好消息。' })).toBeVisible();
+    await expect(page.locator('.profile-info')).toContainText(email);
     await page.getByLabel('接收配對 Email 通知').uncheck();
     await expect(page.getByRole('status')).toContainText('通知設定已儲存');
     await expect(page.getByLabel('接收配對 Email 通知')).not.toBeChecked();
-    await page.getByRole('link', { name: '快速比對', exact: true }).click();
-    await page.getByRole('link', { name: '我的協尋', exact: true }).click();
+    await page.getByRole('navigation', { name: '主要導覽' }).getByRole('link', { name: '快速比對', exact: true }).click();
+    await page.getByRole('navigation', { name: '主要導覽' }).getByRole('link', { name: '個人資料', exact: true }).click();
     await expect(page.getByLabel('接收配對 Email 通知')).not.toBeChecked();
     await page.reload();
     await expect(page.getByLabel('接收配對 Email 通知')).not.toBeChecked();
@@ -57,5 +58,5 @@ test('register, verify email, login, persist session, settings, logout and reset
     await page.getByLabel('Email', { exact: true }).fill(email);
     await page.getByLabel('密碼', { exact: true }).fill('Updated-acceptance-456!');
     await page.getByRole('button', { name: '登入', exact: true }).click();
-    await expect(page.getByRole('heading', { name: 'React 驗收，一起等待好消息。' })).toBeVisible();
+    await expect(page.locator('.profile-info')).toContainText(email);
 });

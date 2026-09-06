@@ -34,6 +34,7 @@ COPY web/package.json web/pnpm-lock.yaml ./web/
 RUN pnpm --dir web install --frozen-lockfile
 COPY web ./web
 COPY src/contracts ./src/contracts
+COPY src/public/css ./src/public/css
 RUN pnpm --dir web build
 
 FROM base AS runtime

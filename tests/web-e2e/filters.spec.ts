@@ -16,6 +16,10 @@ test('species, sex and city filters are retained across cursor pages and clearin
     expect(next.animals.length).toBeGreaterThan(0);
     expect(next.animals.every((animal: any) => animal.kind === '貓' && animal.sex === 'F' && animal.shelter_address.includes('臺北市'))).toBe(true);
     expect(next.animals.some((animal: any) => first.animals.some((previous: any) => previous.id === animal.id))).toBe(false);
+    const previousResponse = page.waitForResponse(response => response.url().includes('/api/animals?') && !response.url().includes('cursor='));
+    await page.getByRole('button', { name: '上一頁', exact: true }).click();
+    const previous = (await (await previousResponse).json()).extras;
+    expect(previous.animals.map((animal: any) => animal.id)).toEqual(first.animals.map((animal: any) => animal.id));
     await page.getByRole('link', { name: '清除條件，回到第一頁' }).click();
     await expect(page.getByRole('combobox', { name: '物種', exact: true })).toHaveValue('');
     await expect(page.getByRole('combobox', { name: '性別', exact: true })).toHaveValue('');

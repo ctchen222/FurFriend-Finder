@@ -7,7 +7,7 @@
 
 前端、API、worker 與 Mailpit 已啟動，PostgreSQL 有 8,282 筆收容動物；若服務仍在執行，不需重複啟動或同步。
 目前 API／worker 使用 **Mailpit 攔信模式**，註冊、重設密碼與配對通知請到 `http://localhost:8025` 查看，不會到外部信箱。
-`.env` 的真實 SMTP 認證已另外重驗成功；Google client ID／secret 尚未設定，真實 Google 登入仍待驗證。
+`.env` 的真實 SMTP 認證已另外重驗成功；Google client ID／secret 已設定，API 已重啟且開關已生效。從 React 註冊頁可進入真正的 Google 帳戶登入畫面；2026-09-07 00:25（台北）資料庫已建立一筆新的 Google 帳號，Email 已驗證且有有效 session。使用者端重新整理、登出及再次登入仍待人工確認。
 以下啟動指令供服務停止後使用；切換真實 SMTP 請依對應章節先停止攔信模式的 API／worker。
 
 ## 安裝與資料庫
@@ -125,6 +125,20 @@ Google OAuth 必須另外配置 provider 並完成真實 callback 驗收；未�
 Google Console 的 Web OAuth client 應允許 `http://localhost:5173`，redirect URI 為 `http://localhost:5173/api/auth/callback/google`。
 重新啟動 API 後，登入／註冊頁才會依設定顯示 Google 選項。請勿將 client secret 提交到 Git 或貼進對話。
 配對流程成功不等於配對準確率已驗證；人工標註品質驗收仍是 Phase C 前的獨立關卡。
+
+## 原版設計恢復驗收
+
+React 直接匯入 `src/public/css/style.css` 作為原版設計來源；`web/src/styles.css` 僅放 React 新增頁面及互動所需的適配樣式。沒有載入舊版 DOM 操作腳本，資料仍透過 API 與 feature hooks 取得。
+
+- 首頁：原版暖色、FF 導覽、三個操作入口、今日推薦動物與流程介紹。
+- 收容列表：原版照片卡片、條件篩選、重置與前後分頁；卡片與詳情標題不顯示編號。
+- 收容編號：保留於詳細頁次要資訊並提供複製，不顯示內部 DB ID 作為缺值替代。
+- 帳號頁：原版置中卡片，Email 與 Google 入口並存。
+- 個人頁：資訊卡、Email 通知開關與案件表格；未實作的簡訊功能不展示。
+- 新案件詳細頁保留必要的配對狀態、重試、編輯與結案操作，沿用原版樣式。
+
+Google 人工驗收請使用尚未在本站註冊的 Google 帳號：註冊頁 → 使用 Google 繼續 → 自行登入／同意 → 回到個人資料 → 重新整理仍登入 → 登出 → 再以 Google 登入。
+不需先填寫本站 Email／密碼表單；不要分享 Google 密碼、授權碼、cookie 或完整回呼網址。
 
 ## 建置後入口
 

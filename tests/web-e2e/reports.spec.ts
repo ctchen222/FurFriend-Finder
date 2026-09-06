@@ -69,9 +69,9 @@ test('create report, match in real DB, send mail, edit, close and reject another
 test('public pages, pagination, quick matching and responsive layout', async ({ page }) => {
     await page.goto('/shelter-animals');
     await expect(page.locator('.pet-card')).toHaveCount(12);
-    const first = await page.locator('.pet-card h3').first().textContent();
+    const first = await page.locator('.pet-card h3 a').first().getAttribute('href');
     await page.getByRole('button', { name: '下一頁' }).click();
-    await expect(page.locator('.pet-card h3').first()).not.toHaveText(first!);
+    await expect(page.locator('.pet-card h3 a').first()).not.toHaveAttribute('href', first!);
     await page.locator('.pet-card h3 a').first().click();
     await expect(page.getByRole('heading', { name: '辨識資訊' })).toBeVisible();
     await page.goto('/quick-use');
