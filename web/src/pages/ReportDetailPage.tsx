@@ -25,12 +25,13 @@ export function ReportDetailPage() {
   }
   const active = report.status === 'OPEN';
   const pending = job?.state === 'RUNNING' || job?.state === 'PENDING';
+  const showingPreviousResult = Boolean(match && job?.state !== 'SUCCEEDED');
   const initial = Object.fromEntries(Object.keys(emptyReport).map(key => [key, report[key as keyof typeof report] ?? emptyReport[key as keyof ReportInput]])) as unknown as ReportInput;
   return <><div className="page-heading"><Link to="/profile">← 我的協尋</Link><h1>{report.name || '未命名寵物'}的協尋案件</h1><p>{reportStatusLabel(report.status)} · {report.kind} · {report.lost_place}</p></div>
     <Feedback error={result.error} retry={result.reload} />
     {error && <p role="alert" className="notice error">{error}</p>}{message && <p role="status" className="notice">{message}</p>}
     <section className="panel"><h2>配對與通知</h2><p role="status">{job ? jobLabels[job.state] || job.state : '尚未建立配對工作'}</p>
-      {notification && <p>{mailLabels[notification.state] || notification.state}</p>}
+      {notification && <p>{showingPreviousResult ? '上次配對的通知：' : ''}{mailLabels[notification.state] || notification.state}</p>}
       {!notification && job?.state === 'SUCCEEDED' && <p>本次沒有待送通知。</p>}
       <p className="muted">結果是可能線索，並不代表已確認為同一隻寵物。請聯絡收容單位核對。</p>
       {active && <div className="actions"><button disabled={busy || pending} onClick={() => void action(() => reportsApi.match(report.id), '已排入配對；如有結果，將依通知偏好寄信。')}>重新配對並依設定通知</button><button disabled={busy} onClick={() => setEditing(value => !value)}>{editing ? '取消編輯' : '編輯案件'}</button>
@@ -39,6 +40,6 @@ export function ReportDetailPage() {
       </div>}
     </section>
     {editing && active && <section className="panel"><h2>編輯線索</h2><ReportForm initial={initial} onSubmit={async input => { await reportsApi.edit(report.id, report.revision, input); setEditing(false); result.reload(); }} submitLabel="儲存並重新配對" /></section>}
-    {match && <section><h2>{pending ? '上次配對結果' : '可能的匹配'}</h2><PetGrid pets={match.candidates} /></section>}
+    {match && <section><h2>{showingPreviousResult ? '上次配對結果' : '可能的匹配'}</h2><PetGrid pets={match.candidates} /></section>}
   </>;
 }
