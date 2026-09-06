@@ -80,7 +80,9 @@
                             <td><%= animal.lost_time ? new Date(animal.lost_time).toLocaleDateString('zh-TW') : '—' %></td>
                             <td><%= animal.lost_place %></td>
                             <td>
-                                <span class="badge status-badge pending" data-id="<%= animal.id %>-status">待配對</span>
+                                <span class="badge status-badge <%= animal.status === 'REUNITED' || animal.status === 'CLOSED' ? 'notified' : 'pending' %>" data-id="<%= animal.id %>-status" data-report-status="<%= animal.status || 'OPEN' %>">
+                                    <%= animal.status === 'REUNITED' ? '已找回' : animal.status === 'CLOSED' ? '已結案' : '配對中' %>
+                                </span>
                             </td>
                             <td>
                                 <button class="btn btn-sm btn-primary match-btn" data-id="<%= animal.id %>">
@@ -104,11 +106,20 @@
 
     <script>
     document.addEventListener('DOMContentLoaded', () => {
-        document.querySelectorAll('.status-badge[data-id]').forEach(badge => {
+        document.querySelectorAll('.status-badge[data-id]').forEach(async badge => {
             const id = badge.dataset.id.replace('-status', '');
-            if (sessionStorage.getItem(`matched_${id}`)) {
-                badge.textContent = '已通知';
-                badge.className = 'badge status-badge notified';
+            try {
+                const response = await fetch(`/api/lost-animals/${id}/matches/latest`);
+                if (!response.ok) return;
+                const latest = (await response.json()).extras?.match;
+                if (latest?.run?.status === 'SUCCEEDED') {
+                    badge.textContent = '已有配對結果';
+                    badge.className = 'badge status-badge notified';
+                } else if (latest?.run?.status === 'FAILED') {
+                    badge.textContent = '配對失敗，可重試';
+                }
+            } catch {
+                // The report status rendered by the server remains authoritative.
             }
         });
 
@@ -139,7 +150,10 @@
                 const original = btn.textContent;
                 setButtonLoading(btn, '發送中...');
                 try {
-                    const res = await fetch(`/api/lost-animals/match/${id}`);
+                    const res = await fetch(`/api/lost-animals/match/${id}/notify`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                    });
                     if (!res.ok) throw new Error();
                     const result = await res.json();
                     const found = result.extras?.top10Matches?.length > 0;
@@ -147,7 +161,6 @@
                     if (found && badge) {
                         badge.textContent = '已通知';
                         badge.className = 'badge status-badge notified';
-                        sessionStorage.setItem(`matched_${id}`, '1');
                         btn.textContent = '已發送';
                         btn.classList.add('btn-success');
                     } else {

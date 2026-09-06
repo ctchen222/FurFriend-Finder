@@ -1,8 +1,6 @@
 import express from 'express';
-import OwnerRepository from '../repository/owner.db';
 import AnimalLostRepository from '../repository/animalLost.db';
 
-const ownerRepository = new OwnerRepository();
 const animalLostRepository = new AnimalLostRepository();
 
 const router = express.Router();
@@ -20,7 +18,10 @@ router.get('/register', (req, res) => {
 });
 
 router.get('/login', (req, res) => {
-	res.render('login', { user: res.locals.user });
+	res.render('login', {
+		user: res.locals.user,
+		returnTo: typeof req.query.returnTo === 'string' ? req.query.returnTo : '/profile',
+	});
 });
 
 router.get('/forgot-password', (req, res) => {
@@ -51,13 +52,10 @@ router.get('/report-lost', requireAuth, (req, res) => {
 });
 
 router.get('/profile', requireAuth, async (req, res) => {
-	let lostAnimals: any[] = [];
-	if (res.locals.user && res.locals.user.email) {
-		const owner = await ownerRepository.findByEmail(res.locals.user.email);
-		if (owner) {
-			lostAnimals = await animalLostRepository.findByOwnerId(owner.id);
-		}
-	}
+	const lostAnimals = await animalLostRepository.findByUserId(
+		String(res.locals.user.id),
+		100,
+	);
 
 	res.render('profile', {
 		user: res.locals.user,

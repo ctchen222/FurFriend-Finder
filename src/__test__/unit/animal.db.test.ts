@@ -6,6 +6,7 @@ import { Animal } from '../../libs/zod/animals';
 jest.mock('../../db', () => ({
 	pool: {
 		query: jest.fn(),
+		connect: jest.fn(),
 	},
 }));
 
@@ -15,6 +16,10 @@ describe('AnimalRepository', () => {
 	beforeEach(() => {
 		animalRepository = new AnimalRepository();
 		(pool.query as jest.Mock).mockClear();
+		(pool.connect as jest.Mock).mockImplementation(async () => ({
+			query: (...args: any[]) => (pool.query as jest.Mock)(...args),
+			release: jest.fn(),
+		}));
 	});
 
 	describe('findRandomAnimal', () => {
@@ -210,12 +215,17 @@ describe('AnimalRepository', () => {
 
 			const count = await animalRepository.bulkInsertAnimals(animals as Animal[]);
 
-			// Should call: START TRANSACTION, INSERT shelter, INSERT animal, COMMIT
+			// Should call: transaction, INSERT shelter, INSERT animal, commit
 			const queries = (pool.query as jest.Mock).mock.calls.map(c => c[0] as string);
-			expect(queries.some(q => q.includes('START TRANSACTION'))).toBe(true);
+			expect(queries.some(q => q.includes('BEGIN'))).toBe(true);
 			expect(queries.some(q => q.includes('INSERT INTO animal_shelter'))).toBe(true);
 			expect(queries.some(q => q.includes('INSERT INTO animal'))).toBe(true);
 			expect(queries.some(q => q.includes('COMMIT'))).toBe(true);
+			const animalInsertCall = (pool.query as jest.Mock).mock.calls.find(
+				call => String(call[0]).includes('INSERT INTO animal('),
+			);
+			// Empty source dates are stored as NULL, never as a fake epoch date.
+			expect(animalInsertCall?.[1]).toContain(null);
 		});
 
 		it('should upsert mutable fields and not overwrite immutable fields on duplicate sub_id', async () => {

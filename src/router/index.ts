@@ -11,7 +11,7 @@ export default function routes(app: express.Express) {
 	app.use('/health', healthRoute);
 
 	app.use("/api/animals", animalRoute)
-	app.use("/api/lost-animals", animalLostRoute)
+	app.use("/api/lost-animals", addUserToLocals, animalLostRoute)
 	app.use("/api/auth", addUserToLocals, authRoute)
 
 	app.use("/webhook", webhookRoute)

@@ -4,45 +4,32 @@ import {
 	recordDbOperation,
 	type CountyInventoryCounts,
 } from "../config/metrics";
-import { formatDate } from "../libs/animal.utils";
+import { normalizeSourceDate } from "../libs/animal.utils";
 import { AnimalCandidate, AnimalLostData } from "../libs/zod/animals";
 import BaseRepository from "./base.db";
-
-const OPEN_STATUS_FILTER = "status = 'OPEN'";
+import type { DbExecutor } from '../libs/transaction';
+import { withTransaction } from '../libs/transaction';
+import type { QueryResultRow } from 'pg';
 
 class AnimalLostRepository extends BaseRepository {
 
-	constructor() {
-		super("animal_lost");
+	constructor(db?: DbExecutor) {
+		super("animal_lost", db);
 	}
 
 	async findMatchingAnimals(colour?: string[], kind?: string, sex?: string, variety?: string) {
 		return recordDbOperation('find_match_candidates', async () => {
-			const filters: string[] = [OPEN_STATUS_FILTER];
+			// animal_lost has no lifecycle status until the lifecycle migration lands;
+			// do not reference a non-existent column and make every imported row searchable.
+			const filters: string[] = [];
 		const values: any[] = [];
-
-		if (colour && colour.length > 0) {
-			const colorFilters = colour.map((c) => {
-				values.push(`%${c}%`);
-				return `colour LIKE $${values.length}`;
-			});
-			filters.push(`(${colorFilters.join(" OR ")})`);
-		}
 
 		if (kind) {
 			filters.push("kind = $" + (values.length + 1));
 			values.push(kind);
 		}
-		if (sex) {
-			filters.push("sex = $" + (values.length + 1));
-			values.push(sex);
-		}
-		if (variety) {
-			filters.push("variety LIKE $" + (values.length + 1));
-			values.push("%" + variety + "%");
-		}
 
-		const whereClause = "WHERE " + filters.join(" AND ");
+		const whereClause = filters.length > 0 ? "WHERE " + filters.join(" AND ") : "";
 		const query = `
 			SELECT
 				animal.*,
@@ -55,7 +42,7 @@ class AnimalLostRepository extends BaseRepository {
 			${whereClause};
 		`;
 
-		const { rows } = await pool.query<AnimalCandidate>(query, values);
+		const { rows } = await this.db.query<AnimalCandidate>(query, values);
 		return rows;
 		});
 	}
@@ -74,8 +61,60 @@ class AnimalLostRepository extends BaseRepository {
 			WHERE owner_id = $1
 		`;
 			const values = [ownerId];
-			const result = await pool.query(query, values);
+			const result = await this.db.query(query, values);
 			return result.rows;
+		});
+	}
+
+	async findByUserId<T extends QueryResultRow = AnimalLostData>(
+		userId: string,
+		pageSize: number = 10,
+		cursor?: string,
+	): Promise<T[]> {
+		return recordDbOperation('find_lost_animal', async () => {
+			const values: Array<string | number> = [userId];
+			let cursorClause = '';
+			if (cursor !== undefined) {
+				values.push(cursor);
+				cursorClause = `AND id > $${values.length}`;
+			}
+			values.push(pageSize);
+			const result = await this.db.query<T>(
+				`SELECT * FROM ${this.tableName}
+				 WHERE user_id = $1 ${cursorClause}
+				 ORDER BY id ASC LIMIT $${values.length}`,
+				values,
+			);
+			return result.rows;
+		});
+	}
+
+	async findByIdForUser<T extends QueryResultRow = AnimalLostData>(id: number | string, userId: string): Promise<T | undefined> {
+		return recordDbOperation('find_lost_animal', async () => {
+			const result = await this.db.query<T>(
+				`SELECT * FROM ${this.tableName} WHERE id = $1 AND user_id = $2`,
+				[id, userId],
+			);
+			return result.rows[0];
+		});
+	}
+
+	async closeForUser(
+		id: number | string,
+		userId: string,
+		expectedRevision: number,
+		status: 'REUNITED' | 'CLOSED',
+	): Promise<{ id: number; status: string; revision: number } | undefined> {
+		return recordDbOperation('find_lost_animal', async () => {
+			const result = await this.db.query<{ id: number; status: string; revision: number }>(
+				`UPDATE ${this.tableName}
+				 SET status = $1, revision = revision + 1,
+				     updated_at = CURRENT_TIMESTAMP, closed_at = CURRENT_TIMESTAMP
+				 WHERE id = $2 AND user_id = $3 AND revision = $4 AND status = 'OPEN'
+				 RETURNING id, status, revision`,
+				[status, id, userId, expectedRevision],
+			);
+			return result.rows[0];
 		});
 	}
 
@@ -103,11 +142,18 @@ class AnimalLostRepository extends BaseRepository {
 	}
 
 	async bulkInsertAnimalLosts(animalLosts: AnimalLostData[]): Promise<number> {
+		if (this.db === pool) {
+			return withTransaction(pool, (client) =>
+				new AnimalLostRepository(client).bulkInsertAnimalLostsInTransaction(animalLosts),
+			);
+		}
+		return this.bulkInsertAnimalLostsInTransaction(animalLosts);
+	}
+
+	private async bulkInsertAnimalLostsInTransaction(animalLosts: AnimalLostData[]): Promise<number> {
 		return recordDbOperation('bulk_insert_lost_animals', async () => {
 			let insertedRowCount = 0;
 		const batchSize = 100;
-
-		await pool.query("START TRANSACTION");
 
 		// First, ensure the global "Unknown" owner exists
 		const unknownOwnerQuery = `
@@ -117,7 +163,7 @@ class AnimalLostRepository extends BaseRepository {
 				name = EXCLUDED.name
 			RETURNING id;
 			`;
-		const unknownOwnerResult = await pool.query(unknownOwnerQuery);
+			const unknownOwnerResult = await this.db.query(unknownOwnerQuery);
 		const unknownOwnerId = unknownOwnerResult.rows[0].id;
 
 		for (let i = 0; i < animalLosts.length; i += batchSize) {
@@ -149,20 +195,38 @@ class AnimalLostRepository extends BaseRepository {
 					ON CONFLICT(phone, email) DO NOTHING
 					RETURNING id, phone, email;
 				`;
-				const ownerResult = await pool.query(insertOwnerQuery, ownerValues);
+				const ownerResult = await this.db.query(insertOwnerQuery, ownerValues);
 
 				// Map known owners
 				ownerResult.rows.forEach(row => {
 					const key = `${row.phone}_${row.email}`;
-					// console.log('Mapping owner:', key, 'to ID:', row.id);
 					ownerMap.set(key, row.id);
 				});
+
+				// ON CONFLICT DO NOTHING does not return existing rows. Load those
+				// owners before assigning animal_lost.owner_id, otherwise a repeat
+				// import silently attaches the animal to the Unknown owner.
+				const ownerLookupValues: string[] = [];
+				const ownerLookupPairs = knownOwnerAnimals.map((animal, idx) => {
+					const phone = animal.owner_phone && animal.owner_phone.trim() !== '' ? animal.owner_phone.trim() : 'Unknown';
+					const email = animal.owner_email && animal.owner_email.trim() !== '' ? animal.owner_email.trim() : 'Unknown';
+					ownerLookupValues.push(phone, email);
+					const baseIdx = idx * 2;
+					return `(phone = $${baseIdx + 1} AND email = $${baseIdx + 2})`;
+				}).join(' OR ');
+				if (ownerLookupPairs) {
+					const existingOwners = await this.db.query<{ id: number; phone: string; email: string }>(
+						`SELECT id, phone, email FROM owner WHERE ${ownerLookupPairs}`,
+						ownerLookupValues,
+					);
+					existingOwners.rows.forEach(row => ownerMap.set(`${row.phone}_${row.email}`, row.id));
+				}
 			}
 
 			// Insert lost animals
 			const animalValues: any[] = [];
 			const animalPlaceholders = batch.map((animal, idx) => {
-				const baseIdx = idx * 12;
+				const baseIdx = idx * 14;
 
 				let ownerId: number;
 				if ((animal.owner_phone && animal.owner_phone.trim() !== "") ||
@@ -182,25 +246,25 @@ class AnimalLostRepository extends BaseRepository {
 					animal.colour ?? null,
 					animal.outlook ?? null,
 					animal.feature ?? null,
-					animal.lost_time ? formatDate(animal.lost_time) : '1970-01-01',
+					normalizeSourceDate(animal.lost_time),
 					animal.lost_place ?? null,
 					animal.picture ?? null,
-					ownerId
+					ownerId,
+					animal.source_system ?? 'moa_lost_animals',
+					animal.source_record_id ?? animal.chipid ?? null,
 				);
-				return `($${baseIdx + 1}, $${baseIdx + 2}, $${baseIdx + 3}, $${baseIdx + 4}, $${baseIdx + 5}, $${baseIdx + 6}, $${baseIdx + 7}, $${baseIdx + 8}, $${baseIdx + 9}, $${baseIdx + 10}, $${baseIdx + 11}, $${baseIdx + 12})`;
+				return `(${Array.from({ length: 14 }, (_, offset) => `$${baseIdx + offset + 1}`).join(', ')})`;
 			}).join(", ");
 
 			const insertAnimalQuery = `
 				INSERT INTO animal_lost(
-				chip_id, name, kind, variety, sex, colour, outlook, feature, lost_time, lost_place, picture, owner_id)
+				chip_id, name, kind, variety, sex, colour, outlook, feature, lost_time, lost_place, picture, owner_id, source_system, source_record_id)
 				VALUES ${animalPlaceholders}
 				ON CONFLICT(chip_id) DO NOTHING;
 			`;
-			const result = await pool.query(insertAnimalQuery, animalValues);
+			const result = await this.db.query(insertAnimalQuery, animalValues);
 			insertedRowCount += result.rowCount ?? 0;
 		}
-
-		await pool.query("COMMIT");
 
 		return insertedRowCount;
 		});

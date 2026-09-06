@@ -48,6 +48,9 @@ const AnimalSchema = z.object({
 	opendate: z.string().trim().nullable().optional(),
 	closedate: z.string().trim().nullable().optional(),
 	updatedate: z.string().nullable().optional(),
+	source_system: z.string().optional(),
+	source_record_id: z.string().nullish().optional(),
+	source_run_id: z.string().nullish().optional(),
 	animal_shelter_id: z.number(),
 	shelter_name: z.string().optional(),
 	shelter_address: z.string().trim().optional(),
@@ -58,6 +61,8 @@ export type Animal = z.infer<typeof AnimalSchema>;
 export type AnimalCandidate = Animal;
 export interface AnimalWithDistance extends Animal {
 	distance: number;
+	score?: number | null;
+	reasons?: string[];
 }
 export interface MatchResult {
 	metadata: Record<string, number>;
@@ -88,6 +93,9 @@ export const AnimalLostDataSchema = z.object({
 	owner_name: z.string().nullish().optional(),
 	owner_phone: z.string().nullish().optional(),
 	owner_email: z.string().nullish().optional(),
+	source_system: z.string().optional(),
+	source_record_id: z.string().nullish().optional(),
+	source_run_id: z.string().nullish().optional(),
 })
 export type AnimalLostData = z.infer<typeof AnimalLostDataSchema>;
 
@@ -108,6 +116,9 @@ export const AnimalLostRequestSchema = z.object({
 export type AnimalLostRequest = z.infer<typeof AnimalLostRequestSchema>;
 
 export const AnimalLostSchema = z.object({
+	id: z.number().optional(),
+	status: z.enum(['OPEN', 'REUNITED', 'CLOSED']).optional(),
+	revision: z.number().optional(),
 	chipid: z.string().optional(),
 	name: z.string().optional(),
 	kind: z.string().optional(),
@@ -120,6 +131,7 @@ export const AnimalLostSchema = z.object({
 	lost_place: z.string().optional(),
 	picture: z.string().optional(),
 	owner_id: z.number(),
+	user_id: z.string().optional(),
 })
 export type AnimalLost = z.infer<typeof AnimalLostSchema>;
 

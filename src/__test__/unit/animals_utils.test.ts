@@ -1,4 +1,4 @@
-import { formatDate, convertMinguoToGregorian } from "../../libs/animal.utils";
+import { formatDate, convertMinguoToGregorian, normalizeSourceDate } from "../../libs/animal.utils";
 import { getMetadata } from "../../repository/utils/dataTransform";
 
 describe('getMetadata', () => {
@@ -54,5 +54,19 @@ describe('convertMinguoToGregorian', () => {
 
 	it('should convert boundary "0890101" to "2000-01-01"', () => {
 		expect(convertMinguoToGregorian('0890101')).toBe('2000-01-01');
+	});
+});
+
+describe('normalizeSourceDate', () => {
+	it('normalizes ISO, slash, and ROC dates', () => {
+		expect(normalizeSourceDate('2023-1-5')).toBe('2023-01-05');
+		expect(normalizeSourceDate('2023/01/15')).toBe('2023-01-15');
+		expect(normalizeSourceDate('1120115')).toBe('2023-01-15');
+	});
+
+	it('returns null for empty or invalid dates', () => {
+		expect(normalizeSourceDate('')).toBeNull();
+		expect(normalizeSourceDate('2023-02-31')).toBeNull();
+		expect(normalizeSourceDate('not-a-date')).toBeNull();
 	});
 });

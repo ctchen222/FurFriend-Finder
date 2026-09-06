@@ -9,12 +9,13 @@ import {
 jest.mock('../../db', () => ({
 	pool: {
 		query: jest.fn(),
+		connect: jest.fn(),
 	},
 }));
 
 // Mock formatDate to avoid date parsing issues
 jest.mock('../../libs/animal.utils', () => ({
-	formatDate: jest.fn((date: string) => date),
+	normalizeSourceDate: jest.fn((date: string) => date),
 }));
 
 describe('AnimalLostRepository', () => {
@@ -25,6 +26,10 @@ describe('AnimalLostRepository', () => {
 		repo = new AnimalLostRepository();
 		mockQuery = pool.query as jest.Mock;
 		mockQuery.mockClear();
+		(pool.connect as jest.Mock).mockImplementation(async () => ({
+			query: (...args: any[]) => mockQuery(...args),
+			release: jest.fn(),
+		}));
 	});
 
 	describe('findMatchingAnimals', () => {
@@ -41,22 +46,19 @@ describe('AnimalLostRepository', () => {
 			expect(query).toContain('shelter_name');
 			expect(query).toContain('shelter_address');
 			expect(query).toContain('shelter_tel');
-			expect(query).toContain("status = 'OPEN'");
+			expect(query).not.toContain("status = 'OPEN'");
 			expect(values).toEqual([]);
 			expect(result).toEqual(mockAnimals);
 		});
 
-		it('should add colour LIKE filters when colours provided', async () => {
+		it('does not hard-filter on colour because unknown colour must remain searchable', async () => {
 			mockQuery.mockResolvedValue({ rows: [] });
 
 			await repo.findMatchingAnimals(['黑', '白']);
 
 			const [query, values] = mockQuery.mock.calls[0];
-			expect(query).toContain('colour LIKE $1');
-			expect(query).toContain('colour LIKE $2');
-			expect(query).toContain('OR');
-			expect(values).toContain('%黑%');
-			expect(values).toContain('%白%');
+			expect(query).not.toContain('colour LIKE');
+			expect(values).toEqual([]);
 		});
 
 		it('should filter by kind when provided', async () => {
@@ -70,15 +72,14 @@ describe('AnimalLostRepository', () => {
 			expect(values).toContain('狗');
 		});
 
-		it('should filter by sex when provided', async () => {
+		it('does not hard-filter on sex because unknown sex must remain searchable', async () => {
 			mockQuery.mockResolvedValue({ rows: [] });
 
 			await repo.findMatchingAnimals(undefined, undefined, 'M');
 
 			const [query, values] = mockQuery.mock.calls[0];
-			expect(query).toContain('WHERE');
-			expect(query).toContain('sex = $1');
-			expect(values).toContain('M');
+			expect(query).not.toContain('sex =');
+			expect(values).toEqual([]);
 		});
 	});
 
@@ -137,11 +138,12 @@ describe('AnimalLostRepository', () => {
 			const unknownOwner = createMockOwner({ id: 99, name: 'Unknown', phone: 'Unknown', email: 'Unknown' });
 			const knownOwner = createMockOwner({ id: 1 });
 
-			// Calls: START TRANSACTION, unknownOwner insert, knownOwner insert, animal insert, COMMIT
+			// Calls: BEGIN, unknownOwner insert, knownOwner insert, owner lookup, animal insert, COMMIT
 			mockQuery
 				.mockResolvedValueOnce({ rows: [], rowCount: 0 })    // START TRANSACTION
 				.mockResolvedValueOnce({ rows: [unknownOwner] })      // unknown owner upsert
 				.mockResolvedValueOnce({ rows: [knownOwner] })        // known owner insert
+				.mockResolvedValueOnce({ rows: [knownOwner] })        // existing owner lookup
 				.mockResolvedValueOnce({ rows: [], rowCount: 1 })     // animal_lost insert
 				.mockResolvedValueOnce({ rows: [], rowCount: 0 });    // COMMIT
 
@@ -167,7 +169,7 @@ describe('AnimalLostRepository', () => {
 			expect(result).toBe(1);
 			// Verify transaction started
 			const firstCall = mockQuery.mock.calls[0][0];
-			expect(firstCall).toContain('START TRANSACTION');
+			expect(firstCall).toContain('BEGIN');
 			// Verify COMMIT at the end
 			const lastCall = mockQuery.mock.calls[mockQuery.mock.calls.length - 1][0];
 			expect(lastCall).toContain('COMMIT');
