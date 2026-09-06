@@ -8,7 +8,6 @@ const mockMatchRequestCounterAdd = jest.fn();
 const mockMatchDurationRecord = jest.fn();
 const mockMatchCandidatesRecord = jest.fn();
 const mockMatchResultsRecord = jest.fn();
-const mockMatchTruncatedAdd = jest.fn();
 const mockMatchNoResultAdd = jest.fn();
 const mockUniqueShelterRecord = jest.fn();
 const mockFailedShelterAdd = jest.fn();
@@ -32,7 +31,6 @@ jest.mock('../../../config/metrics', () => ({
     matchDurationHistogram: { record: mockMatchDurationRecord },
     matchCandidatesHistogram: { record: mockMatchCandidatesRecord },
     matchResultsHistogram: { record: mockMatchResultsRecord },
-    matchTruncatedCounter: { add: mockMatchTruncatedAdd },
     matchNoResultCounter: { add: mockMatchNoResultAdd },
     geocodingUniqueShelterAddressesHistogram: { record: mockUniqueShelterRecord },
     geocodingFailedShelterCounter: { add: mockFailedShelterAdd },
@@ -49,14 +47,12 @@ import {
     matchNoResultCounter,
     matchRequestCounter,
     matchResultsHistogram,
-    matchTruncatedCounter,
 } from '../../../config/metrics';
 
 const mockAdd = matchRequestCounter.add as jest.Mock;
 const mockDurationRecord = matchDurationHistogram.record as jest.Mock;
 const mockCandidatesRecord = matchCandidatesHistogram.record as jest.Mock;
 const mockResultsRecord = matchResultsHistogram.record as jest.Mock;
-const mockTruncatedAdd = matchTruncatedCounter.add as jest.Mock;
 const mockNoResultAdd = matchNoResultCounter.add as jest.Mock;
 
 describe('MatchingService — matchRequestCounter', () => {
@@ -71,7 +67,6 @@ describe('MatchingService — matchRequestCounter', () => {
         mockDurationRecord.mockClear();
         mockCandidatesRecord.mockClear();
         mockResultsRecord.mockClear();
-        mockTruncatedAdd.mockClear();
         mockNoResultAdd.mockClear();
         mockUniqueShelterRecord.mockClear();
         mockFailedShelterAdd.mockClear();
@@ -125,7 +120,7 @@ describe('MatchingService — matchRequestCounter', () => {
         expect(mockDurationRecord).toHaveBeenCalledWith(expect.any(Number), { boundary: 'perform_match' });
     });
 
-    it('should record truncation when candidates exceed geocoding batch limit', async () => {
+    it('should retain all candidates before ranking', async () => {
         mockGeocoding.mockResolvedValue({ lat: 25.04, lng: 121.51 });
         mockFindMatchingAnimals.mockResolvedValue(
             Array.from({ length: 201 }, (_, index) => ({
@@ -137,7 +132,7 @@ describe('MatchingService — matchRequestCounter', () => {
         await service.performMatch({ lost_place: '台北市信義區' });
 
         expect(mockCandidatesRecord).toHaveBeenCalledWith(201, { boundary: 'perform_match' });
-        expect(mockTruncatedAdd).toHaveBeenCalledWith(1, { boundary: 'perform_match' });
+        expect(mockUniqueShelterRecord).toHaveBeenCalledWith(1, { boundary: 'perform_match' });
         expect(mockResultsRecord).toHaveBeenCalledWith(10, { boundary: 'perform_match' });
     });
 

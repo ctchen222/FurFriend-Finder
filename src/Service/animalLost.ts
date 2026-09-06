@@ -27,6 +27,30 @@ class AnimalLostService {
 		this.matchingService = deps?.matchingService ?? new MatchingService();
 	}
 
+	/** Search candidates for a report without any notification side effect. */
+	findMatchesForReport = async (animalId: string) => {
+		return recordMatchFlow(async () => {
+			const lostAnimal = await this.repository.findById<AnimalLost>(animalId);
+			if (!lostAnimal) {
+				throw new CustomError(apiMessage.CONTENT_NOT_FOUND);
+			}
+
+			const matchInput: MatchInput = {
+				name: lostAnimal.name,
+				colour: lostAnimal.colour,
+				sex: lostAnimal.sex,
+				kind: lostAnimal.kind,
+				variety: lostAnimal.variety,
+				lost_place: lostAnimal.lost_place,
+			};
+			const { metadata, top10Matches, allCandidates } =
+				await this.matchingService.performMatch(matchInput);
+
+			logger.info(`Found ${allCandidates.length} potential matches for lost animal ID ${animalId}. Returning top ${top10Matches.length} closest matches.`);
+			return { metadata, lostAnimal, top10Matches };
+		});
+	}
+
 	findMatchesAndSendMail = async (animalId: string) => {
 		return recordMatchFlow(async () => {
 			const lostAnimal = await this.repository.findById<AnimalLost>(animalId);

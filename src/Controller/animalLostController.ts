@@ -130,7 +130,7 @@ class AnimalLostController {
             throw new CustomError(apiMessage.CONTENT_NOT_FOUND);
         }
 
-        const result = await this.animalLostService.findMatchesAndSendMail(id);
+        const result = await this.animalLostService.findMatchesForReport(id);
 
         const { metadata, lostAnimal, top10Matches } = result;
 

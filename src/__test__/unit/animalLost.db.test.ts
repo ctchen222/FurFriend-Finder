@@ -46,22 +46,19 @@ describe('AnimalLostRepository', () => {
 			expect(query).toContain('shelter_name');
 			expect(query).toContain('shelter_address');
 			expect(query).toContain('shelter_tel');
-			expect(query).toContain("status = 'OPEN'");
+			expect(query).not.toContain("status = 'OPEN'");
 			expect(values).toEqual([]);
 			expect(result).toEqual(mockAnimals);
 		});
 
-		it('should add colour LIKE filters when colours provided', async () => {
+		it('does not hard-filter on colour because unknown colour must remain searchable', async () => {
 			mockQuery.mockResolvedValue({ rows: [] });
 
 			await repo.findMatchingAnimals(['黑', '白']);
 
 			const [query, values] = mockQuery.mock.calls[0];
-			expect(query).toContain('colour LIKE $1');
-			expect(query).toContain('colour LIKE $2');
-			expect(query).toContain('OR');
-			expect(values).toContain('%黑%');
-			expect(values).toContain('%白%');
+			expect(query).not.toContain('colour LIKE');
+			expect(values).toEqual([]);
 		});
 
 		it('should filter by kind when provided', async () => {
@@ -75,15 +72,14 @@ describe('AnimalLostRepository', () => {
 			expect(values).toContain('狗');
 		});
 
-		it('should filter by sex when provided', async () => {
+		it('does not hard-filter on sex because unknown sex must remain searchable', async () => {
 			mockQuery.mockResolvedValue({ rows: [] });
 
 			await repo.findMatchingAnimals(undefined, undefined, 'M');
 
 			const [query, values] = mockQuery.mock.calls[0];
-			expect(query).toContain('WHERE');
-			expect(query).toContain('sex = $1');
-			expect(values).toContain('M');
+			expect(query).not.toContain('sex =');
+			expect(values).toEqual([]);
 		});
 	});
 

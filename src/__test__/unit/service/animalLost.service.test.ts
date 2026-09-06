@@ -179,6 +179,19 @@ describe('AnimalLostService', () => {
     });
   });
 
+  describe('findMatchesForReport', () => {
+    it('searches a report without sending email', async () => {
+      mockFindById.mockResolvedValue(buildMockAnimalLost());
+
+      const result = await service.findMatchesForReport('1');
+
+      expect(result.lostAnimal).toBeDefined();
+      expect(result.top10Matches).toHaveLength(1);
+      expect(mockSendMatchedMail).not.toHaveBeenCalled();
+      expect(mockOwnerFindById).not.toHaveBeenCalled();
+    });
+  });
+
   describe('findMatches', () => {
     it('should delegate to matchingService.performMatch and return matchedAnimals', async () => {
       const result = await service.findMatches({ lost_place: '台北市信義區' });
