@@ -266,6 +266,57 @@ textarea {
 .profile-info span {
     overflow-wrap: anywhere;
 }
+.organization-list {
+    list-style: none;
+    padding: 0;
+}
+.organization-heading h1,
+.organization-list h2 {
+    overflow-wrap: anywhere;
+}
+.organization-form {
+    max-width: 720px;
+    margin-inline: auto;
+}
+.organization-details {
+    display: grid;
+    grid-template-columns: minmax(100px, 1fr) minmax(0, 3fr);
+    gap: 14px;
+}
+.organization-details dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+.preserve-lines {
+    white-space: pre-wrap;
+}
+.shelter-filter-bar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+}
+.shelter-picker {
+    min-width: 0;
+}
+.shelter-picker p {
+    font-size: 0.85rem;
+    margin-top: 8px;
+    overflow-wrap: anywhere;
+}
+.shelter-filter-bar .filter-actions {
+    align-self: end;
+}
+@media (max-width: 560px) {
+    .shelter-filter-bar {
+        grid-template-columns: minmax(0, 1fr);
+    }
+    .organization-details {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 6px;
+    }
+    .organization-details dd {
+        margin-bottom: 12px;
+    }
+}
 @media (max-width: 860px) {
     .nav-toggle {
         display: flex;

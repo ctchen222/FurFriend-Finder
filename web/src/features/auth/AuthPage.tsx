@@ -32,7 +32,7 @@ export function AuthPage({ mode }: { mode: Mode }) {
     const [message, setMessage] = useState('');
     const [title, description, submitText] = copy[mode];
     const requestedPath = params.get('returnTo') ?? '/profile';
-    const returnTo = /^\/(profile|report-lost|quick-use|reports\/\d+)$/.test(
+    const returnTo = /^\/(profile|report-lost|quick-use|reports\/\d+|organizations(?:\/new)?|orgs\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/.test(
         requestedPath,
     )
         ? requestedPath

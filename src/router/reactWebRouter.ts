@@ -1,7 +1,7 @@
 import express from 'express';
 import path from 'path';
 
-const pagePath = /^(?:\/|\/(?:login|register|forgot-password|reset-password|profile|report-lost|quick-use|shelter-animals)\/?|\/(?:reports|shelter-animals)\/\d+\/?)$/;
+const pagePath = /^(?:\/|\/(?:login|register|forgot-password|reset-password|profile|report-lost|quick-use|shelter-animals|organizations(?:\/new)?)\/?|\/(?:reports|shelter-animals)\/\d+\/?|\/orgs\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/?)$/;
 const reservedPath = /^\/(?:api|assets|health|webhook|images|css|js)(?:\/|$)/;
 
 /** Serves the built client without intercepting API responses or missing assets. */

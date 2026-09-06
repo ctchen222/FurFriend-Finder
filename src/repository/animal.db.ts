@@ -67,7 +67,7 @@ class AnimalRepository extends BaseRepository {
         pageSize: number = 10,
         cursor?: { id?: number; update_date?: string | null; open_date?: string | null } | undefined,
         options?: string[],
-        filters: { kind?: string; sex?: string; city?: string } = {},
+        filters: { kind?: string; sex?: string; city?: string; shelterId?: number } = {},
     ) {
         return recordDbOperation('find_shelter_animals', async () => {
             const selectFields = this.joinedAnimalSelectFields(options);
@@ -76,6 +76,7 @@ class AnimalRepository extends BaseRepository {
             const filterClauses: string[] = [];
             if (filters.kind) { values.push(filters.kind); filterClauses.push(`animal.kind = $${values.length}`); }
             if (filters.sex) { values.push(filters.sex); filterClauses.push(`animal.sex = $${values.length}`); }
+            if (filters.shelterId) { values.push(filters.shelterId); filterClauses.push(`animal.animal_shelter_id = $${values.length}`); }
             if (filters.city) {
                 values.push(`%${filters.city.replace(/[\\%_]/g, '\\$&')}%`);
                 filterClauses.push(`animal_shelter.address LIKE $${values.length}`);
@@ -138,6 +139,13 @@ class AnimalRepository extends BaseRepository {
 
             return rows[0] || null;
         });
+    }
+
+    async listShelters() {
+        const result = await this.db.query<{ id: number; name: string; address: string; tel: string }>(
+            'SELECT id,name,address,tel FROM animal_shelter ORDER BY name,id LIMIT 501',
+        );
+        return result.rows;
     }
 
     async countShelterAnimalsByCounty(): Promise<CountyInventoryCounts> {

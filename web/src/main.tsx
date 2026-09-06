@@ -10,6 +10,8 @@ import { CreateReportPage } from './pages/CreateReportPage';
 import { ReportDetailPage } from './pages/ReportDetailPage';
 import { QuickMatchPage } from './pages/QuickMatchPage';
 import { AnimalsPage, AnimalDetailPage } from './pages/AnimalsPage';
+import { OrganizationsPage, OrganizationWorkspacePage } from './features/organizations/OrganizationPages';
+import { CreateOrganizationPage } from './features/organizations/CreateOrganizationPage';
 import './styles.css';
 
 createRoot(document.getElementById('root')!).render(<React.StrictMode><BrowserRouter><SessionProvider><Routes>
@@ -20,6 +22,9 @@ createRoot(document.getElementById('root')!).render(<React.StrictMode><BrowserRo
     <Route path="forgot-password" element={<AuthPage key="forgot" mode="forgot" />} />
     <Route path="reset-password" element={<AuthPage key="reset" mode="reset" />} />
     <Route path="profile" element={<Protected><ProfilePage /></Protected>} />
+    <Route path="organizations" element={<Protected><OrganizationsPage /></Protected>} />
+    <Route path="organizations/new" element={<Protected><CreateOrganizationPage /></Protected>} />
+    <Route path="orgs/:id" element={<Protected><OrganizationWorkspacePage /></Protected>} />
     <Route path="report-lost" element={<Protected><CreateReportPage /></Protected>} />
     <Route path="reports/:id" element={<Protected><ReportDetailPage /></Protected>} />
     <Route path="quick-use" element={<QuickMatchPage />} />

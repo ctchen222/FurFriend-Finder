@@ -91,6 +91,7 @@ export function Layout() {
                             {session.user ? (
                                 <>
                                     <NavLink to="/profile">個人資料</NavLink>
+                                    <NavLink to="/organizations">我的中途之家</NavLink>
                                     <button
                                         disabled={signingOut}
                                         onClick={logout}

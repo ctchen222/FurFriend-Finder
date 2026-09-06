@@ -8,7 +8,7 @@ describe('built React web entry', () => {
     app.use(createReactWebRouter(path.join(__dirname, '../fixtures/react-web')));
     app.use((_req, res) => res.status(404).json({ message: 'Not found' }));
 
-    it.each(['/', '/login', '/register', '/reports/42', '/shelter-animals/42'])(
+    it.each(['/', '/login', '/register', '/reports/42', '/shelter-animals/42', '/organizations', '/organizations/new', '/orgs/11111111-1111-4111-8111-111111111111'])(
         'serves the built shell for direct navigation to %s', async url => {
             const response = await request(app).get(url).set('Accept', 'text/html');
             expect(response.status).toBe(200);

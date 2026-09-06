@@ -15,6 +15,7 @@ const listFilters = z.object({
 	kind: z.enum(['狗', '貓', '其他']).optional(),
 	sex: z.enum(['M', 'F', 'N']).optional(),
 	city: z.string().trim().max(100).transform(value => value.replace(/台/g, '臺')).optional(),
+	shelterId: z.string().regex(/^\d+$/).pipe(z.coerce.number().int().positive().max(2147483647)).optional(),
 });
 
 class AnimalController {
@@ -73,6 +74,12 @@ class AnimalController {
 
 		res.locals.result = new SuccessResponse('api', { animal });
 		next()
+	}
+
+	fetchShelters = async (_req: express.Request, res: express.Response, next: express.NextFunction) => {
+		const rows = await this.repository.listShelters();
+		res.locals.result = new SuccessResponse('api', { shelters: rows.slice(0, 500), truncated: rows.length > 500 });
+		next();
 	}
 
 	fetchByCity = async (
