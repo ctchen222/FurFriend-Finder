@@ -14,7 +14,8 @@ test('shelter filter is shareable, clears on region change, and remains responsi
     await expect(page).toHaveURL(/shelterId=42/);
     await page.reload();
     await expect(page.getByLabel('收容所', { exact: true })).toHaveValue('42');
-    await expect(page.getByText('排序：資料更新日由新到舊')).toBeVisible();
+    await expect(page.getByText('排序：資料更新日由新到舊')).toHaveCount(0);
+    await expect(page.getByText(/目前未依你的定位或距離排序/)).toHaveCount(0);
     await page.getByLabel('縣市／地址').fill('臺南');
     await expect(page.getByLabel('收容所', { exact: true })).toHaveValue('');
     await page.getByRole('button', { name: '查詢', exact: true }).click();

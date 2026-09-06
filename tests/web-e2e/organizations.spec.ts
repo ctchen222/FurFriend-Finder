@@ -31,7 +31,8 @@ test('creates an organization, preserves retry identity, and shows private works
     expect(requests[0].requestId).toBe(requests[1].requestId);
     expect(requests[0]).not.toHaveProperty('ownerId');
     await expect(page.getByRole('heading', { name: '小橘中途之家', exact: true })).toBeVisible();
-    await expect(page.getByText('尚未公開', { exact: true })).toBeVisible();
+    await expect(page.getByText(/公開介紹與動物刊登會在/)).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: '組織狀態' })).toHaveCount(0);
     await expect(page.getByText('待審核', { exact: true })).toBeVisible();
     await expect(page.getByText('負責人', { exact: true })).toBeVisible();
 });
@@ -69,4 +70,16 @@ test('workspace stays within mobile viewport', async ({ page }) => {
         await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     }
+});
+
+test('compact workspace keeps actionable status without empty-field noise', async ({ page }) => {
+    let status = 'SUSPENDED';
+    await page.route(`**/api/v1/organizations/${id}`, route => route.fulfill({ json: { organization: { ...organization, description: '', city: '', publicContact: '', operationalStatus: status } } }));
+    await page.goto(`/orgs/${id}`);
+    await expect(page.getByText('已停權', { exact: true })).toBeVisible();
+    await expect(page.getByText('待審核', { exact: true })).toHaveCount(0);
+    await expect(page.getByText('尚未填寫', { exact: true })).toHaveCount(0);
+    status = 'CLOSED';
+    await page.reload();
+    await expect(page.getByText('已關閉', { exact: true })).toBeVisible();
 });

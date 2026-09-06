@@ -60,9 +60,7 @@ function CreateForm() {
     return (
         <>
             <header className="page-heading">
-                <p className="eyebrow">Create organization</p>
                 <h1>建立中途之家</h1>
-                <p>先建立管理空間，準備好資料後再公開。個人與團隊都適用。</p>
             </header>
             <section className="panel organization-form">
                 {!user?.emailVerified && (

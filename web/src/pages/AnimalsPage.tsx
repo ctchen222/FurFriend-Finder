@@ -32,11 +32,7 @@ export function AnimalsPage() {
     return (
         <>
             <div className="page-hero page-hero--compact">
-                <p className="eyebrow">Shelter catalog</p>
                 <h1 className="page-title">收容所動物</h1>
-                <p className="page-subtitle">
-                    先找你方便前往的地區與收容所，再依物種、性別查看公開收容資料。
-                </p>
             </div>
             <form
                 className="filter-bar shelter-filter-bar"
@@ -86,39 +82,36 @@ export function AnimalsPage() {
                     </button>
                 </div>
             </form>
-            <p className="muted">排序：資料更新日由新到舊</p>
-            <p className="muted">地區指收容所地址，不是動物拾獲地點；目前未依你的定位或距離排序。前往前請先聯絡收容所。</p>
-            <div className="catalog-toolbar">
-                <p className="result-info">
-                    {result.data
-                        ? `本頁 ${result.data.extras.animals.length} 筆收容資料`
-                        : ''}
-                </p>
-                <div className="active-filters">
-                    {city && <span className="filter-chip">{city}</span>}
-                    {kind && <span className="filter-chip">{kind}</span>}
-                    {sex && (
-                        <span className="filter-chip">
-                            {sex === 'M'
-                                ? '公'
-                                : sex === 'F'
-                                  ? '母'
-                                  : '性別未提供'}
-                        </span>
-                    )}
-                    {shelterId && <span className="filter-chip">已指定收容所</span>}
-                    {(city || kind || sex || shelterId || cursor) && (
-                        <Link
-                            to="/shelter-animals"
-                            onClick={() =>
-                                setHistory({ filters: '', cursors: [] })
-                            }
-                        >
-                            清除條件，回到第一頁
-                        </Link>
-                    )}
+            {(city || kind || sex || shelterId || cursor) && (
+                <div className="catalog-toolbar">
+                    <div className="active-filters">
+                        {city && <span className="filter-chip">{city}</span>}
+                        {kind && <span className="filter-chip">{kind}</span>}
+                        {sex && (
+                            <span className="filter-chip">
+                                {sex === 'M'
+                                    ? '公'
+                                    : sex === 'F'
+                                      ? '母'
+                                      : '性別未提供'}
+                            </span>
+                        )}
+                        {shelterId && (
+                            <span className="filter-chip">已指定收容所</span>
+                        )}
+                        {(city || kind || sex || shelterId || cursor) && (
+                            <Link
+                                to="/shelter-animals"
+                                onClick={() =>
+                                    setHistory({ filters: '', cursors: [] })
+                                }
+                            >
+                                清除條件，回到第一頁
+                            </Link>
+                        )}
+                    </div>
                 </div>
-            </div>
+            )}
             <Feedback
                 loading={result.loading}
                 error={result.error}

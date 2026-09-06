@@ -56,26 +56,35 @@ export function ShelterLocationFields({
             </label>
             <div className="shelter-picker">
                 <label htmlFor="shelter-select">收容所</label>
-                    <select
-                        id="shelter-select"
-                        name="shelterId"
-                        value={selected}
-                        onChange={(event) => setSelected(event.target.value)}
-                        aria-describedby="shelter-help"
-                    >
-                        <option value="">全部收容所</option>
-                        {selected && !current && (
-                            <option value={selected}>
-                                指定收容所（名稱暫無法取得）
-                            </option>
-                        )}
-                        {available.map((shelter) => (
-                            <option key={shelter.id} value={shelter.id}>
-                                {shelter.name}
-                            </option>
-                        ))}
-                    </select>
-                <p id="shelter-help" className="muted">
+                <select
+                    id="shelter-select"
+                    name="shelterId"
+                    value={selected}
+                    onChange={(event) => setSelected(event.target.value)}
+                    aria-describedby="shelter-help"
+                >
+                    <option value="">全部收容所</option>
+                    {selected && !current && (
+                        <option value={selected}>
+                            指定收容所（名稱暫無法取得）
+                        </option>
+                    )}
+                    {available.map((shelter) => (
+                        <option key={shelter.id} value={shelter.id}>
+                            {shelter.name}
+                        </option>
+                    ))}
+                </select>
+                <p
+                    id="shelter-help"
+                    className="muted"
+                    hidden={
+                        !result.loading &&
+                        !result.error &&
+                        available.length > 0 &&
+                        !current
+                    }
+                >
                     {result.loading
                         ? '正在取得收容所清單…'
                         : result.error
@@ -84,7 +93,7 @@ export function ShelterLocationFields({
                             ? '此地區沒有收容所選項，可修改地址再查詢。'
                             : current
                               ? current.address
-                              : '先選地區，可縮小收容所清單。'}
+                              : ''}
                 </p>
                 {result.error && (
                     <button type="button" onClick={result.reload}>

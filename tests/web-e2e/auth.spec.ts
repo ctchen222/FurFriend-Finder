@@ -41,7 +41,7 @@ test('register, verify email, login, persist session, settings, logout and reset
     await expect(page).toHaveURL(/\/orgs\/[0-9a-f-]+$/);
     await expect(page.getByRole('heading', { name: 'React 驗收中途之家', exact: true })).toBeVisible();
     await page.reload();
-    await expect(page.getByText('尚未公開', { exact: true })).toBeVisible();
+    await expect(page.getByText('待審核', { exact: true })).toBeVisible();
     await page.getByRole('link', { name: '個人空間', exact: true }).click();
     await page.getByLabel('接收配對 Email 通知').uncheck();
     await expect(page.getByRole('status')).toContainText('通知設定已儲存');
