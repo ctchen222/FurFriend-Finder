@@ -8,9 +8,11 @@ import { router as healthRoute } from './healthRouter';
 import { addUserToLocals } from '../middleware/userSession';
 import { createWebApiRouter } from './webApiRouter';
 import { createReactWebRouter } from './reactWebRouter';
+import { createOrganizationRouter } from './organizationRouter';
 
 export default function routes(app: express.Express) {
 	app.use('/health', healthRoute);
+    app.use('/api/v1/organizations', createOrganizationRouter());
     app.use('/api/v1', createWebApiRouter());
 
 	app.use("/api/animals", animalRoute)
