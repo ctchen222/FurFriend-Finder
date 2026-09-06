@@ -48,7 +48,7 @@ describe('SQL schema', () => {
 			'utf8',
 		);
 
-		expect(migration).toContain('CREATE TABLE IF NOT EXISTS import_runs');
+		expect(migration).toContain('CREATE TABLE import_runs');
 		expect(migration).toContain('source_record_id TEXT');
 		expect(migration).toContain('CREATE UNIQUE INDEX');
 	});
