@@ -8,7 +8,7 @@ describe('MigrationRunner', () => {
         const client = { query: jest.fn(async (sql: string, params?: any[]) => {
             if (sql.includes('SELECT checksum')) return { rows: rows.has(params![0]) ? [{ checksum: rows.get(params![0]) }] : [] };
             if (sql.startsWith('INSERT INTO schema_migrations')) rows.set(params![0], params![2]);
-            if (sql.startsWith('SELECT ')) appliedSql.push(sql);
+            if (/^SELECT \d+$/.test(sql)) appliedSql.push(sql);
             return { rows: [], rowCount: 1 };
         }), release: jest.fn() } as any;
         const pool = { query: jest.fn().mockResolvedValue({ rows: [] }), connect: jest.fn().mockResolvedValue(client) } as any;
@@ -16,6 +16,9 @@ describe('MigrationRunner', () => {
         await expect(runner.migrate()).resolves.toBe(2);
         await expect(runner.migrate()).resolves.toBe(0);
         expect(appliedSql).toEqual(['SELECT 1', 'SELECT 2']);
+        expect(pool.query).not.toHaveBeenCalled();
+        expect(pool.connect).toHaveBeenCalledTimes(2);
+        expect(client.release).toHaveBeenCalledTimes(2);
     });
 
     it('fails closed when an applied migration is edited', async () => {
