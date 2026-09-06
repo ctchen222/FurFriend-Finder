@@ -6,6 +6,7 @@ import { createReportService } from '../Service/reports/service';
 import MatchingService from '../Service/matching';
 import AnimalLostRepository from '../repository/animalLost.db';
 import MatchJobRepository from '../repository/matchJob.db';
+import NotificationRepository from '../repository/notification.db';
 import MatchWorker from '../workers/matchWorker';
 import { withTransaction } from '../libs/transaction';
 
@@ -41,9 +42,17 @@ async function verify() {
         assert.deepEqual(result.match?.candidates, []);
         assert.equal(result.notification, null);
         assert.equal((await client.query('SELECT count(*) AS count FROM notification_outbox')).rows[0].count, '0');
+        // Seed a pending notification deliberately to verify cancellation independently of matching.
+        await new NotificationRepository(client).enqueue({ runId: String(result.match!.run.id), reportId: report.id, userId: user.id });
+        await service.retry(user.id, report.id);
+        await service.close(user.id, report.id, 1, 'CLOSED');
+        assert.equal((await client.query('SELECT state FROM match_jobs WHERE report_id=$1', [report.id])).rows[0].state, 'CANCELLED');
+        assert.equal((await client.query('SELECT state FROM notification_outbox WHERE report_id=$1', [report.id])).rows[0].state, 'DISABLED');
+        assert.equal(await new NotificationRepository(client).claim(), null);
         const after = await client.query('SELECT count(*) AS count FROM public.animal');
         assert.equal(after.rows[0].count, before.rows[0].count);
         console.log('Empty DB -> durable match success -> empty snapshot -> no notification: PASS');
+        console.log('Closing report cancels pending matching and disables pending notification: PASS');
         console.log(`Public animal rows unchanged: ${after.rows[0].count}`);
     } finally {
         // Destroy this test connection so its temporary tables cannot escape into the pool.

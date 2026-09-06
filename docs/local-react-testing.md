@@ -3,6 +3,13 @@
 本機前端為 `http://localhost:5173`，API 為 `http://localhost:2486`。
 這份流程不會部署 VPS，也不會建立或合併 PR。Phase C 與原生 App 不在本輪範圍。
 
+## 本次交接狀態（2026-09-07）
+
+前端、API、worker 與 Mailpit 已啟動，PostgreSQL 有 8,282 筆收容動物；若服務仍在執行，不需重複啟動或同步。
+目前 API／worker 使用 **Mailpit 攔信模式**，註冊、重設密碼與配對通知請到 `http://localhost:8025` 查看，不會到外部信箱。
+`.env` 的真實 SMTP 認證已另外重驗成功；Google client ID／secret 尚未設定，真實 Google 登入仍待驗證。
+以下啟動指令供服務停止後使用；切換真實 SMTP 請依對應章節先停止攔信模式的 API／worker。
+
 ## 安裝與資料庫
 
 在專案根目錄，使用 Node.js 22.22.2 與專案指定的 pnpm：

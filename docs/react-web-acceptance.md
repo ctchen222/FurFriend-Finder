@@ -8,16 +8,18 @@
 
 ## 必須通過
 
-- [ ] PostgreSQL migration 與再次執行 no-op；不覆寫既有 DB。
-- [ ] 真實 SMTP 認證與指定測試信發送；收件匣到信由使用者確認。
+- [x] PostgreSQL migration 與再次執行 no-op；7 筆已套用，再次執行為 0 筆；既有 DB 保留。
+- [x] 真實 SMTP 連線認證；2026-09-07 重驗通過，這次未重複寄信。
+- [ ] 外部收件匣到信由使用者確認；SMTP 接受不等於投遞成功。
 - [x] 註冊 → 本機 Mailpit 收到驗證信 → 驗證 → 登入 → 刷新仍登入 → 登出。外部收件匣待人工確認。
 - [x] 忘記密碼 → Mailpit 收到重設信 → 重設 → 新密碼可登入。
 - [ ] Google 登入依設定顯示；無 credentials 時明確列為未驗證。
-- [ ] 建立案件 → worker 配對 → 結果頁 → 通知；無候選與失敗區分。
-- [ ] 手動通知遵守使用者偏好與 ownership；關閉案件不再送待送通知。
-- [ ] 快速比對、收容動物列表、分頁、詳情、通知設定可用。
-- [ ] 手機寬度、鍵盤操作、loading/error/empty state 驗證。
-- [ ] TypeScript、build、單元/API 測試與真實瀏覽器端到端測試。
+- [x] 建立案件 → worker 配對 → 結果頁 → Mailpit 通知；隔離 SQL 驗證無候選，介面測試區分成功、等待與失敗。
+- [x] 手動通知遵守使用者偏好與 ownership；關閉案件取消待處理工作／待送通知。已交付 SMTP 或正在寄送的郵件不保證撤回。
+- [x] 快速比對、收容動物列表、物種／性別／縣市篩選、分頁、詳情、通知設定可用。
+- [x] 320／768／1024／1440 寬度無水平溢出；鍵盤註冊、loading/error/empty state 驗證。這不是完整 WCAG 認證。
+- [x] 2026-09-07：完整後端 lint、TypeScript、前後端 build、322 個 Jest 測試與 11 個瀏覽器案例通過。
+- [x] 前次 Docker build 與完整 runtime 健康／DB 查詢通過；最後 migration 錯誤處理修正尚未重建映像。本機驗收使用目前原始碼程序。
 
 ## 後續 roadmap
 
@@ -29,6 +31,17 @@
 - `tests/web-e2e/reports.spec.ts`：真實 DB 建案、worker 配對、Mailpit 通知、編輯、找回、跨帳號拒絕；舊手動通知遵守拒收偏好、舊結案更新 revision。公開列表／分頁／詳情／快速配對，以及 320、768、1024、1440 寬度無水平溢出。
 - `src/__test__/integration/reactWebRouter.test.ts`：React 建置入口、深層網址、HTML 404，以及 API／靜態資產邊界。
 - `src/__test__/unit/service/matching.service.test.ts`：收容所地理編碼失敗保留候選，距離未知不冒充零距離。
-- 單一成功建案案例不等於完整匹配品質；無候選、故障恢復、人工標註品質、Google 真實 callback、完整無障礙與容器 runtime 仍須分別核對。上方未勾選項目不得視為已完成。
+- `src/scripts/verify-empty-matching.ts`：隔離的 PostgreSQL 暫存表，真實 service／worker／repository 完成空結果並不建立通知；結案取消待處理匹配、停用待送通知，且通知無法再被領取；public 收容動物仍為 8,282 筆。
+- `src/__test__/unit/migrationRunner.test.ts`：解鎖失敗會銷毀連線；migration 與解鎖同時失敗時保留原始 migration 錯誤。修正後本機 migration 再執行為 0 筆。
+- `tests/web-e2e/states.spec.ts`：受控 API 的 loading、error/retry、空資料、鍵盤表單，以及等待／失敗時明確標示舊配對結果與舊通知。
+- `src/__test__/unit/auth.oauth.test.ts`：Google provider profile 驗證與既有未驗證帳號拒絕綁定；不能代替真實 Google callback。
+- `tests/web-e2e/filters.spec.ts`：真實篩選與 cursor 下一頁維持條件、無重複資料、清除條件同步更新欄位。
+- 單一成功建案案例不等於完整匹配品質。真實 Google callback、外部收件匣到信、SMTP 接受後程序崩潰的重寄風險與人工標註品質仍需另行驗收；不得宣稱 exactly-once 寄信或保證找回率。
+
+## 人工關卡與邊界
+
+目前 Google credentials 尚未配置，因此真實 Google 註冊／登入仍未驗證。Email 註冊登入可先在本機驗收；Google 憑證請自行填入 `.env`，不要貼出 secret。
+使用者驗收前不開 PR、不 merge；C 必須等待 A/B 驗收、經批准合併，以及走失匹配品質關卡通過。
+現有 EJS 以 `LEGACY_WEB_ENABLED=true` 作明確回退選項，待使用者驗收後再決定退役，不影響預設 React 路徑。
 
 本機啟動、SMTP 模式與人工操作順序見 [local-react-testing.md](local-react-testing.md)。
