@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 export const organizationIdSchema = z.string().uuid();
+export const userIdSchema = z.string().min(1).max(255);
 export const tokenSchema = z
     .string()
     .min(32)
@@ -22,7 +23,7 @@ export const memberRoleSchema = z
     .object({ role: assignableRoleSchema })
     .strict();
 export const ownershipTransferSchema = z
-    .object({ toUserId: z.string().min(1).max(255) })
+    .object({ toUserId: userIdSchema })
     .strict();
 export const createOrganizationSchema = z
     .object({

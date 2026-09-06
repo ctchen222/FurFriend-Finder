@@ -26,6 +26,7 @@ import {
     organizationIdSchema,
     ownershipTransferSchema,
     tokenSchema,
+    userIdSchema,
 } from './validation';
 
 const unavailable = () =>
@@ -254,7 +255,9 @@ export function createOrganizationMembershipService(db: Pool) {
             actorId: string,
             rawToken: string,
         ): Promise<OrganizationInvitationDetail> {
-            const token = tokenSchema.parse(rawToken);
+            const parsed = tokenSchema.safeParse(rawToken);
+            if (!parsed.success) throw unavailable();
+            const token = parsed.data;
             const id = parseOrganizationToken('invite', token);
             if (!id) throw unavailable();
             return withTransaction(db, async (client) => {
@@ -289,7 +292,9 @@ export function createOrganizationMembershipService(db: Pool) {
             rawToken: string,
             action: 'ACCEPTED' | 'DECLINED',
         ) {
-            const token = tokenSchema.parse(rawToken);
+            const parsed = tokenSchema.safeParse(rawToken);
+            if (!parsed.success) throw unavailable();
+            const token = parsed.data;
             const id = parseOrganizationToken('invite', token);
             if (!id) throw unavailable();
             return withTransaction(db, async (client) => {
@@ -388,6 +393,7 @@ export function createOrganizationMembershipService(db: Pool) {
         ) {
             const organizationId =
                 organizationIdSchema.parse(rawOrganizationId);
+            targetUserId = userIdSchema.parse(targetUserId);
             const input = memberRoleSchema.parse(raw);
             return withTransaction(db, async (client) => {
                 const repository = new OrganizationMembershipRepository(client);
@@ -442,6 +448,7 @@ export function createOrganizationMembershipService(db: Pool) {
         ): Promise<void> {
             const organizationId =
                 organizationIdSchema.parse(rawOrganizationId);
+            targetUserId = userIdSchema.parse(targetUserId);
             await withTransaction(db, async (client) => {
                 const repository = new OrganizationMembershipRepository(client);
                 requireAccount(await repository.account(actorId, true), true);
@@ -470,6 +477,10 @@ export function createOrganizationMembershipService(db: Pool) {
                         '你沒有權限移除此成員',
                     );
                 }
+                await repository.revokeTransfersToMember(
+                    organizationId,
+                    targetUserId,
+                );
                 await repository.removeMember(organizationId, targetUserId);
                 await repository.audit(
                     organizationId,
@@ -582,7 +593,9 @@ export function createOrganizationMembershipService(db: Pool) {
             actorId: string,
             rawToken: string,
         ): Promise<OrganizationOwnershipTransferDetail> {
-            const token = tokenSchema.parse(rawToken);
+            const parsed = tokenSchema.safeParse(rawToken);
+            if (!parsed.success) throw transferUnavailable();
+            const token = parsed.data;
             const id = parseOrganizationToken('transfer', token);
             if (!id) throw transferUnavailable();
             return withTransaction(db, async (client) => {
@@ -614,7 +627,9 @@ export function createOrganizationMembershipService(db: Pool) {
             rawToken: string,
             action: 'ACCEPTED' | 'DECLINED',
         ) {
-            const token = tokenSchema.parse(rawToken);
+            const parsed = tokenSchema.safeParse(rawToken);
+            if (!parsed.success) throw transferUnavailable();
+            const token = parsed.data;
             const id = parseOrganizationToken('transfer', token);
             if (!id) throw transferUnavailable();
             return withTransaction(db, async (client) => {

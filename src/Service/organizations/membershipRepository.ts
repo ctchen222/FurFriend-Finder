@@ -62,7 +62,8 @@ export class OrganizationMembershipRepository {
         return (
             await this.db.query<any>(
                 `SELECT id,email,role,status,expires_at AS "expiresAt" FROM organization_invitations
-             WHERE organization_id=$1 AND status='PENDING' ORDER BY created_at DESC,id`,
+             WHERE organization_id=$1 AND status='PENDING' AND expires_at>CURRENT_TIMESTAMP
+             ORDER BY created_at DESC,id`,
                 [organizationId],
             )
         ).rows;
@@ -73,7 +74,7 @@ export class OrganizationMembershipRepository {
             await this.db.query<any>(
                 `SELECT t.id,t.to_user_id AS "toUserId",u.name AS "toName",t.status,t.expires_at AS "expiresAt"
              FROM organization_ownership_transfers t JOIN "user" u ON u.id=t.to_user_id
-             WHERE t.organization_id=$1 AND t.status='PENDING'`,
+             WHERE t.organization_id=$1 AND t.status='PENDING' AND t.expires_at>CURRENT_TIMESTAMP`,
                 [organizationId],
             )
         ).rows[0];
@@ -196,6 +197,14 @@ export class OrganizationMembershipRepository {
         await this.db.query(
             `UPDATE organization_memberships SET status='REMOVED',updated_at=CURRENT_TIMESTAMP
              WHERE organization_id=$1 AND user_id=$2 AND status='ACTIVE'`,
+            [organizationId, userId],
+        );
+    }
+
+    async revokeTransfersToMember(organizationId: string, userId: string) {
+        await this.db.query(
+            `UPDATE organization_ownership_transfers SET status='REVOKED',updated_at=CURRENT_TIMESTAMP
+             WHERE organization_id=$1 AND to_user_id=$2 AND status='PENDING'`,
             [organizationId, userId],
         );
     }
