@@ -5,9 +5,12 @@ import { Pool } from 'pg';
 import { loadMigrationFiles, MigrationRunner } from '../libs/migrationRunner';
 import { withTransaction } from '../libs/transaction';
 import { createOrganizationService } from '../Service/organizations/service';
+import { createOrganizationMembershipService } from '../Service/organizations/membershipService';
+import { createOrganizationToken } from '../Service/organizations/token';
 
 /** Real DB verification, isolated from public data; never requires real user credentials. */
 async function main() {
+    process.env.BETTER_AUTH_SECRET ??= 'local-organization-verifier-secret-32-chars';
     const connectionString = process.env.DATABASE_URL;
     if (!connectionString || !['localhost', '127.0.0.1', '[::1]'].includes(new URL(connectionString).hostname)) {
         throw new Error('Organization verification requires a localhost DATABASE_URL');
@@ -22,7 +25,7 @@ async function main() {
         const migrations = loadMigrationFiles();
         assert.equal(await new MigrationRunner(db, migrations).migrate(), migrations.length);
         assert.equal(await new MigrationRunner(db, migrations).migrate(), 0);
-        for (const id of ['owner', 'other', 'editor', 'unverified']) {
+        for (const id of ['owner', 'other', 'editor', 'admin', 'wrong', 'unverified']) {
             await db.query(`INSERT INTO "user" (id,name,email,"emailVerified","updatedAt") VALUES ($1,$1,$2,$3,NOW())`,
                 [id, `${id}@organization.test`, id !== 'unverified']);
         }
@@ -78,7 +81,50 @@ async function main() {
         assert.equal((await db.query('SELECT COUNT(*)::int AS count FROM organizations')).rows[0].count, before);
         await db.query('DROP TRIGGER reject_audit ON organization_audit_events');
         await service.create('owner', failedInput);
-        console.log('PASS: migrations, safe retries/concurrency, pagination, tenant isolation, revocation, Owner constraints, rollback.');
+
+        const memberships = createOrganizationMembershipService(db);
+        const editorInvite = await memberships.invite('owner', organization.id, {
+            email: 'editor@organization.test', role: 'EDITOR',
+        });
+        const editorToken = createOrganizationToken('invite', editorInvite.id);
+        assert.equal((await memberships.invitationDetail('wrong', editorToken)).accountMatches, false);
+        await assert.rejects(memberships.respondInvitation('wrong', editorToken, 'ACCEPTED'), { code: 'INVITATION_EMAIL_MISMATCH' });
+        assert.deepEqual(await memberships.respondInvitation('editor', editorToken, 'ACCEPTED'), { organizationId: organization.id });
+        assert.equal((await service.detail('editor', organization.id)).role, 'EDITOR');
+        assert.equal((await memberships.list('editor', organization.id)).members[0].email, undefined);
+
+        const adminInvite = await memberships.invite('owner', organization.id, {
+            email: 'admin@organization.test', role: 'ADMIN',
+        });
+        await memberships.respondInvitation('admin', createOrganizationToken('invite', adminInvite.id), 'ACCEPTED');
+        await assert.rejects(memberships.invite('admin', organization.id, {
+            email: 'other@organization.test', role: 'ADMIN',
+        }), { code: 'MEMBER_MANAGEMENT_FORBIDDEN' });
+
+        const revoked = await memberships.invite('owner', organization.id, {
+            email: 'other@organization.test', role: 'EDITOR',
+        });
+        await memberships.revokeInvitation('owner', organization.id, revoked.id);
+        await assert.rejects(
+            memberships.respondInvitation('other', createOrganizationToken('invite', revoked.id), 'ACCEPTED'),
+            { code: 'INVITATION_NOT_FOUND' },
+        );
+
+        const transfer = await memberships.createTransfer('owner', organization.id, { toUserId: 'admin' });
+        const transferToken = createOrganizationToken('transfer', transfer.id);
+        assert.equal((await memberships.transferDetail('wrong', transferToken)).accountMatches, false);
+        await memberships.respondTransfer('admin', transferToken, 'ACCEPTED');
+        assert.equal((await service.detail('admin', organization.id)).role, 'OWNER');
+        assert.equal((await service.detail('owner', organization.id)).role, 'ADMIN');
+        assert.equal((await db.query(
+            `SELECT COUNT(*)::int AS count FROM organization_memberships
+             WHERE organization_id=$1 AND role='OWNER' AND status='ACTIVE'`, [organization.id],
+        )).rows[0].count, 1);
+        await assert.rejects(memberships.removeMember('owner', organization.id, 'admin'), { code: 'MEMBER_MANAGEMENT_FORBIDDEN' });
+        await memberships.removeMember('admin', organization.id, 'editor');
+        await assert.rejects(service.detail('editor', organization.id), { status: 404 });
+        assert.equal((await db.query(`SELECT COUNT(*)::int AS count FROM organization_mail_outbox`)).rows[0].count, 4);
+        console.log('PASS: organization creation, invitation, revocation, role isolation, Owner transfer, outbox, and DB invariants.');
     } finally {
         try {
             if (created) {

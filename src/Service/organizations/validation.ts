@@ -5,7 +5,7 @@ export const tokenSchema = z
     .string()
     .min(32)
     .max(256)
-    .regex(/^[A-Za-z0-9_-]+$/);
+    .regex(/^[A-Za-z0-9_.-]+$/);
 export const assignableRoleSchema = z.enum(['ADMIN', 'EDITOR']);
 export const createInvitationSchema = z
     .object({
