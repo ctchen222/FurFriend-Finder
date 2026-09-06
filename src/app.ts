@@ -7,6 +7,7 @@ import logger from './config/logger';
 import { cronSchedule as fetchDataSchedule } from './libs/dataSchedule.utils';
 import { runStartupChecks } from './libs/healthCheck';
 import appHandler from './middleware/handler';
+import { nativeAuth } from './middleware/nativeAuth';
 
 const app = express();
 
@@ -25,6 +26,7 @@ app.use(
         credentials: true,
     }),
 );
+app.use('/api/auth', nativeAuth);
 app.use(express.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, './public/')));
@@ -38,7 +40,7 @@ async function bootstrap() {
         process.exit(1);
     }
 
-    fetchDataSchedule.start();
+    if (process.env.DISABLE_DATA_CRON !== 'true') fetchDataSchedule.start();
 
     const port = process.env.PORT || 2486;
     app.listen(port, () => {

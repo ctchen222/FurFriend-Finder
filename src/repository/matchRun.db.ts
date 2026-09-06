@@ -46,6 +46,7 @@ export class MatchRunRepository {
              JOIN match_jobs ON match_jobs.id = match_runs.job_id
              JOIN animal_lost ON animal_lost.id = match_runs.report_id
              WHERE match_runs.report_id = $1 AND animal_lost.user_id = $2
+               AND match_runs.report_revision = animal_lost.revision
              ORDER BY match_runs.completed_at DESC LIMIT 1`,
             [reportId, userId],
         );

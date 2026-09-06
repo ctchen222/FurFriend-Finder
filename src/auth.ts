@@ -11,6 +11,7 @@ const googleOAuth = readGoogleOAuthConfig();
 
 export const auth = betterAuth({
     baseURL: getBetterAuthBaseUrl(),
+    trustedOrigins: (process.env.CORS_ALLOWED_ORIGINS || process.env.APP_BASE_URL || '').split(',').map(origin => origin.trim()).filter(Boolean),
     database: pool,
     session: {
         expiresIn: 60 * 60 * 24 * 7, // 7 days
