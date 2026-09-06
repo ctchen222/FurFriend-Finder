@@ -8,12 +8,39 @@ export function AnimalsPage() {
   const [params, setParams] = useSearchParams();
   const cursor = params.get('cursor');
   const city = params.get('city') ?? '';
-  const path = city ? `/api/animals/city/${encodeURIComponent(city)}` : `/api/animals?pageSize=12${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`;
+  const kind = params.get('kind') ?? '';
+  const sex = params.get('sex') ?? '';
+  const query = new URLSearchParams({ pageSize: '12' });
+  for (const key of ['city', 'kind', 'sex', 'cursor']) {
+    const value = params.get(key);
+    if (value) query.set(key, value);
+  }
+  const path = `/api/animals?${query}`;
   const result = useResource<{ extras: { animals: PetCardData[]; cursors?: { nextCursor?: string } } }>(path);
   return <><div className="page-heading"><p className="eyebrow">收容資訊</p><h1>留意熟悉的身影</h1><p>資料來自公開收容資訊，實際狀態請向收容單位確認。</p></div>
-    <form className="panel" onSubmit={event => { event.preventDefault(); const city = String(new FormData(event.currentTarget).get('city') ?? '').trim(); setParams(city ? { city } : {}); }}><label>縣市／地址<input name="city" defaultValue={city} placeholder="例如：臺北市" /></label><button>查詢</button>{(city || cursor) && <Link to="/shelter-animals">清除條件，回到第一頁</Link>}</form>
+    <form className="panel" key={`${city}:${kind}:${sex}`} onSubmit={event => {
+      event.preventDefault();
+      const data = new FormData(event.currentTarget);
+      const next = new URLSearchParams();
+      for (const key of ['city', 'kind', 'sex']) {
+        const value = String(data.get(key) ?? '').trim();
+        if (value) next.set(key, value);
+      }
+      setParams(next);
+    }}>
+      <div className="form-grid">
+        <label>縣市／地址<input name="city" defaultValue={city} placeholder="例如：臺北市" maxLength={100} /></label>
+        <label>物種<select name="kind" defaultValue={kind}><option value="">全部物種</option><option>狗</option><option>貓</option><option>其他</option></select></label>
+        <label>性別<select name="sex" defaultValue={sex}><option value="">全部性別</option><option value="M">公</option><option value="F">母</option><option value="N">未提供</option></select></label>
+      </div>
+      <button>查詢</button>
+      {(city || kind || sex || cursor) && <Link to="/shelter-animals">清除條件，回到第一頁</Link>}
+    </form>
     <Feedback loading={result.loading} error={result.error} retry={result.reload} />
-    {result.data && <><PetGrid pets={result.data.extras.animals} /><nav className="actions" aria-label="分頁">{cursor && <Link to="/shelter-animals">回第一頁</Link>}{result.data.extras.cursors?.nextCursor && <button onClick={() => setParams({ cursor: result.data!.extras.cursors!.nextCursor! })}>下一頁</button>}</nav></>}
+    {result.data && <><PetGrid pets={result.data.extras.animals} /><nav className="actions" aria-label="分頁">
+      {cursor && <button onClick={() => { const next = new URLSearchParams(params); next.delete('cursor'); setParams(next); }}>回第一頁</button>}
+      {result.data.extras.cursors?.nextCursor && <button onClick={() => { const next = new URLSearchParams(params); next.set('cursor', result.data!.extras.cursors!.nextCursor!); setParams(next); }}>下一頁</button>}
+    </nav></>}
   </>;
 }
 export function AnimalDetailPage() {
