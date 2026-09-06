@@ -6,6 +6,7 @@ import type {
 } from '../../../../src/contracts/organizations';
 import { useResource } from '../../hooks/useResource';
 import { Feedback } from '../../ui/Feedback';
+import { OrganizationMembers } from './OrganizationMembers';
 import { useSession } from '../auth/SessionProvider';
 
 const roles = { OWNER: '負責人', ADMIN: '管理員', EDITOR: '編輯者' };
@@ -171,6 +172,7 @@ function Workspace({ id }: { id: string }) {
                             )}
                         </dl>
                     </section>
+                    <OrganizationMembers organizationId={org.id} />
                 </>
             )}
         </>

@@ -290,6 +290,57 @@ textarea {
 .preserve-lines {
     white-space: pre-wrap;
 }
+.section-heading,
+.member-row,
+.member-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.section-heading,
+.member-row {
+    justify-content: space-between;
+}
+.member-invite {
+    grid-template-columns: minmax(0, 2fr) minmax(140px, 1fr) auto;
+    align-items: end;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--color-hairline);
+}
+.member-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.member-row {
+    padding: 18px 0;
+    border-bottom: 1px solid var(--color-hairline);
+}
+.member-row > div:first-child {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+.member-actions {
+    justify-content: flex-end;
+    flex-wrap: wrap;
+}
+.member-actions label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.member-actions select {
+    min-height: 44px;
+}
+.pending-members,
+.ownership-transfer {
+    margin-top: 24px;
+}
+.organization-action-page {
+    margin-block: 64px;
+}
 .shelter-filter-bar {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: start;
@@ -315,6 +366,17 @@ textarea {
     }
     .organization-details dd {
         margin-bottom: 12px;
+    }
+    .member-invite {
+        grid-template-columns: minmax(0, 1fr);
+    }
+    .member-row {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+    .member-actions {
+        justify-content: flex-start;
+        width: 100%;
     }
 }
 @media (max-width: 860px) {

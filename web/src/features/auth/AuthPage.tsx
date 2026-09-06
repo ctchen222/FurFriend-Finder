@@ -32,11 +32,12 @@ export function AuthPage({ mode }: { mode: Mode }) {
     const [message, setMessage] = useState('');
     const [title, description, submitText] = copy[mode];
     const requestedPath = params.get('returnTo') ?? '/profile';
-    const returnTo = /^\/(profile|report-lost|quick-use|reports\/\d+|organizations(?:\/new)?|orgs\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/.test(
-        requestedPath,
-    )
-        ? requestedPath
-        : '/profile';
+    const returnTo =
+        /^\/(profile|report-lost|quick-use|reports\/\d+|organizations(?:\/new)?|orgs\/[0-9a-f-]{36}|organization-(?:invitations|ownership-transfers)\/[A-Za-z0-9_.-]{32,256})$/.test(
+            requestedPath,
+        )
+            ? requestedPath
+            : '/profile';
     const callbackURL = `${window.location.origin}/login?verified=1`;
 
     async function submit(event: FormEvent<HTMLFormElement>) {

@@ -74,17 +74,17 @@ pnpm build
 - 新增 focused tests 34 個通過；全套 Jest 56 suites / 356 tests 通過。
 - Type-check、lint、backend build 通過；未更動 React，因此本批不宣稱 UI 驗收。
 - 真實 PostgreSQL 隔離 schema 驗證通過；測試 schema 已清理，public 動物及使用者資料未被測試改寫。
-- 本機開發 DB 已套用 V8（Applied 1）；migration checksum 由既有 runner 記錄。
+- 本機開發 DB 已套用至 V9；migration checksum 由既有 runner 記錄。
 - API 的 create/list/detail service 已完成；HTTP 測試隔離認證與 service，DB service 另以真實 DB 驗證，不把 mock 結果視為完整瀏覽器證據。
 - 建立請求重試回傳目前有權限的工作空間投影；requestId 必須每次新意圖重新產生，同一意圖的重試沿用。HTTP POST 重試仍回 201，但不再建立資料。
 - 本批暫時保留 CLOSED 組織的 Owner 與建立者參照；完整關閉／帳號刪除政策必須在開放相關操作前完成。
 
-## 後續 C 批次（不宣稱已完成）
+## C 批次進度
 
 | 批次 | 交付 |
 | --- | --- |
-| C1.2 | 邀請、撤權、Owner 移轉、組織邀請寄信及稽核 |
+| C1.2 | ✅ 邀請、撤權、角色管理、Owner 雙方確認移轉、durable 組織 Email、稽核及 React 管理 UI |
 | C1.3 | 平台審核、公開資料投影、發布／停權 |
-| C1.4 | React 公開名錄與介紹、建立組織、後台切換及 OAuth 深連結 |
+| C1.4 | 建立組織、後台切換及 OAuth 深連結已完成；公開名錄與介紹隨 C1.3 尚未完成 |
 | C2 | 動物刊登、圖片、來源區分、條件／別名／pg_trgm 搜尋 |
 | C3 | 認養申請、審核、結案及通知 |
