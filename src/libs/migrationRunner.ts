@@ -22,6 +22,7 @@ export class MigrationRunner {
     async migrate(): Promise<number> {
         const client = await this.pool.connect();
         let applied = 0;
+        let failure: { error: unknown } | undefined;
         try {
             await client.query("SELECT pg_advisory_lock(hashtext('furfriend-finder-schema'))");
             await client.query(`CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -46,15 +47,18 @@ export class MigrationRunner {
                     throw error;
                 }
             }
-            return applied;
+        } catch (error) {
+            failure = { error };
         } finally {
             try {
                 await client.query("SELECT pg_advisory_unlock(hashtext('furfriend-finder-schema'))");
                 client.release();
             } catch (error) {
                 client.release(true);
-                throw error;
+                failure ??= { error };
             }
         }
+        if (failure) throw failure.error;
+        return applied;
     }
 }

@@ -3,6 +3,22 @@ import { MigrationRunner, type MigrationFile } from '../../libs/migrationRunner'
 function migration(version: number): MigrationFile { return { version, name: `migration-${version}`, sql: `SELECT ${version}`, checksum: `checksum-${version}` }; }
 
 describe('MigrationRunner', () => {
+    it.each([false, true])('destroys the connection on unlock failure and preserves migration failure: %s', async (migrationFails) => {
+        const migrationError = new Error('migration failed');
+        const unlockError = new Error('unlock failed');
+        const client = { query: jest.fn(async (sql: string) => {
+            if (sql.includes('pg_advisory_unlock')) throw unlockError;
+            if (sql === 'SELECT 1' && migrationFails) throw migrationError;
+            return { rows: [] };
+        }), release: jest.fn() } as any;
+        const pool = { query: jest.fn(), connect: jest.fn().mockResolvedValue(client) } as any;
+
+        await expect(new MigrationRunner(pool, [migration(1)]).migrate())
+            .rejects.toBe(migrationFails ? migrationError : unlockError);
+        expect(client.release).toHaveBeenCalledTimes(1);
+        expect(client.release).toHaveBeenCalledWith(true);
+    });
+
     it('applies pending migrations in order and is idempotent', async () => {
         const rows = new Map<number, string>(); const appliedSql: string[] = [];
         const client = { query: jest.fn(async (sql: string, params?: any[]) => {
