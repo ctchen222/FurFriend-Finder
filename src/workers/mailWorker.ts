@@ -11,7 +11,7 @@ export class MailWorker {
     async runOnce(now: Date = new Date()): Promise<boolean> {
         const notification = await this.notifications.claim(now);
         if (!notification) return false;
-        if (!notification.mail_enabled || !notification.email) {
+        if (!notification.mail_enabled || !notification.email || notification.report_active === false) {
             await this.notifications.markDisabled(notification.id, notification.claim_token as string);
             return true;
         }

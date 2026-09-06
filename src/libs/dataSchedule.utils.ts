@@ -25,7 +25,7 @@ export const cronSchedule = cron.schedule(
 		}
 	},
 	{
-		scheduled: true, // 是否立即執行
+		scheduled: process.env.DISABLE_DATA_CRON !== 'true',
 		timezone: 'Asia/Taipei', // 時區
 	},
 );

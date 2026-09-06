@@ -67,11 +67,19 @@ class AnimalRepository extends BaseRepository {
         pageSize: number = 10,
         cursor?: { id?: number; update_date?: string | null; open_date?: string | null } | undefined,
         options?: string[],
+        filters: { kind?: string; sex?: string; city?: string } = {},
     ) {
         return recordDbOperation('find_shelter_animals', async () => {
             const selectFields = this.joinedAnimalSelectFields(options);
 
             const values: any[] = [];
+            const filterClauses: string[] = [];
+            if (filters.kind) { values.push(filters.kind); filterClauses.push(`animal.kind = $${values.length}`); }
+            if (filters.sex) { values.push(filters.sex); filterClauses.push(`animal.sex = $${values.length}`); }
+            if (filters.city) {
+                values.push(`%${filters.city.replace(/[\\%_]/g, '\\$&')}%`);
+                filterClauses.push(`animal_shelter.address LIKE $${values.length}`);
+            }
             let cursorClause = '';
             if (cursor?.id !== undefined) {
                 values.push(cursor.update_date ?? '0001-01-01');
@@ -81,7 +89,7 @@ class AnimalRepository extends BaseRepository {
                 values.push(cursor.id);
                 const idPlaceholder = `$${values.length}`;
                 cursorClause = `
-            WHERE (
+            ${filterClauses.length ? 'AND' : 'WHERE'} (
                 COALESCE(animal.update_date, DATE '0001-01-01'),
                 COALESCE(animal.open_date, DATE '0001-01-01'),
                 animal.id
@@ -99,6 +107,7 @@ class AnimalRepository extends BaseRepository {
 			FROM ${this.tableName}
 			LEFT JOIN animal_shelter
 			ON animal.animal_shelter_id = animal_shelter.id
+			${filterClauses.length ? `WHERE ${filterClauses.join(' AND ')}` : ''}
 			${cursorClause}
 			ORDER BY
                 COALESCE(animal.update_date, DATE '0001-01-01') DESC,

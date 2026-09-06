@@ -46,7 +46,7 @@ describe('AnimalLostRepository', () => {
 			expect(query).toContain('shelter_name');
 			expect(query).toContain('shelter_address');
 			expect(query).toContain('shelter_tel');
-			expect(query).not.toContain("status = 'OPEN'");
+			expect(query).toContain("animal.status = 'OPEN'");
 			expect(values).toEqual([]);
 			expect(result).toEqual(mockAnimals);
 		});

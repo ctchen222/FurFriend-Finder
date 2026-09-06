@@ -62,7 +62,6 @@ class MatchingService {
 		geocodingUniqueShelterAddressesHistogram.record(uniqueShelterAddresses.length, safeMetricAttributes({ boundary: 'perform_match' }));
 
 		const shelterCoords = new Map<string, { lat: number; lng: number } | null>();
-		const failedShelters = new Set<string>();
 
 		let nextAddressIndex = 0;
 		const geocodeWorker = async () => {
@@ -71,8 +70,8 @@ class MatchingService {
 				try {
 					shelterCoords.set(address, await this.geoService.geocoding(address));
 				} catch (err) {
-					logger.warn(`Geocoding failed for shelter "${address}", skipping affected animals: ${err}`);
-					failedShelters.add(address);
+					logger.warn(`Geocoding failed for shelter "${address}"; retaining candidates with unknown distance.`);
+					shelterCoords.set(address, null);
 					geocodingFailedShelterCounter.add(1, safeMetricAttributes({ boundary: 'perform_match' }));
 				}
 			}
@@ -85,19 +84,15 @@ class MatchingService {
 				animalsWithDistance.push({ ...animal, distance: Infinity });
 				continue;
 			}
-			if (failedShelters.has(animal.shelter_address)) {
-				// API error — drop animal to avoid showing unreachable candidates
-				continue;
-			}
 			const coords = shelterCoords.get(animal.shelter_address);
 			if (!coords) {
-				// ZERO_RESULTS — keep but rank last
+				// Unknown location must not discard identity evidence or imply zero distance.
 				animalsWithDistance.push({ ...animal, distance: Infinity });
 				continue;
 			}
 			const distance = GeoService.calculateDistanceKm(lostAnimalCoordinates, coords);
 			if (Number.isNaN(distance)) {
-				// Invalid coordinates should not remove a possible match; rank it last.
+				// Invalid coordinates should not remove a possible match.
 				animalsWithDistance.push({ ...animal, distance: Infinity });
 				continue;
 			}

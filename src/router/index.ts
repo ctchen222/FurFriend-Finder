@@ -6,9 +6,12 @@ import { router as authRoute } from './authRouter';
 import { router as webhookRoute } from './webhookRouter';
 import { router as healthRoute } from './healthRouter';
 import { addUserToLocals } from '../middleware/userSession';
+import { createWebApiRouter } from './webApiRouter';
+import { createReactWebRouter } from './reactWebRouter';
 
 export default function routes(app: express.Express) {
 	app.use('/health', healthRoute);
+    app.use('/api/v1', createWebApiRouter());
 
 	app.use("/api/animals", animalRoute)
 	app.use("/api/lost-animals", addUserToLocals, animalLostRoute)
@@ -16,6 +19,10 @@ export default function routes(app: express.Express) {
 
 	app.use("/webhook", webhookRoute)
 
-	// View rendering
-	app.use("/", addUserToLocals, viewRoute)
+	// Explicit temporary rollback path while React is under user acceptance.
+	if (process.env.LEGACY_WEB_ENABLED === 'true') {
+		app.use('/', addUserToLocals, viewRoute);
+	} else {
+		app.use('/', createReactWebRouter());
+	}
 }

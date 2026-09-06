@@ -20,11 +20,13 @@ import { pool } from '../db';
 import { withTransaction } from '../libs/transaction';
 import MatchJobRepository from '../repository/matchJob.db';
 import MatchRunRepository from '../repository/matchRun.db';
+import { createReportService } from '../Service/reports/service';
 
 class AnimalLostController {
     private repository: AnimalLostRepository;
     private animalLostService: AnimalLostService;
     private ownerRepository: OwnerRepository;
+    private readonly reportService = createReportService();
 
     constructor(deps?: {
         repository?: AnimalLostRepository;
@@ -155,22 +157,12 @@ class AnimalLostController {
             throw new CustomError(apiMessage.VALIDATION_ERROR);
         }
 
-        const result = await withTransaction(pool, async (client) => {
-            const reportRepository = new AnimalLostRepository(client);
-            const closed = await reportRepository.closeForUser(
-                id,
-                String(res.locals.user.id),
-                expectedRevision,
-                requestedStatus === 'reunited' ? 'REUNITED' : 'CLOSED',
-            );
-            if (closed) {
-                await new MatchJobRepository(client).cancelForReport(id);
-            }
-            return closed;
-        });
-        if (!result) {
-            throw new CustomError(apiMessage.CONTENT_NOT_FOUND);
-        }
+        const numericId = Number(id);
+        if (!Number.isSafeInteger(numericId) || numericId < 1) throw new CustomError(apiMessage.VALIDATION_ERROR);
+        const result = await this.reportService.close(
+            String(res.locals.user.id), numericId, expectedRevision,
+            requestedStatus === 'reunited' ? 'REUNITED' : 'CLOSED',
+        );
         res.locals.result = new SuccessResponse('api', { report: result });
         return next();
     };
@@ -184,19 +176,10 @@ class AnimalLostController {
         if (!id) {
             throw new CustomError(apiMessage.ID_MUST_PROVIDED);
         }
-        const userId = String(res.locals.user.id);
-        const ownedReport = await this.repository.findByIdForUser<AnimalLost>(id, userId);
-        if (!ownedReport) {
-            throw new CustomError(apiMessage.CONTENT_NOT_FOUND);
-        }
-
-        const result = await this.animalLostService.findMatchesAndSendMail(id);
-        res.locals.result = new SuccessResponse('api', {
-            metadata: result.metadata,
-            notified: result.top10Matches.length > 0,
-            top10Matches: result.top10Matches,
-        });
-        return next();
+        const numericId = Number(id);
+        if (!Number.isSafeInteger(numericId) || numericId < 1) throw new CustomError(apiMessage.VALIDATION_ERROR);
+        const result = await this.reportService.retry(String(res.locals.user.id), numericId);
+        res.status(202).json(new SuccessResponse('api', result));
     };
 
     latestMatches = async (

@@ -9,6 +9,13 @@ import AnimalHelper from './helper/animalHelper';
 import { Animal } from '../libs/zod/animals';
 import AnimalSyncService from '../Service/animalSync';
 import AnimalService from '../Service/animal';
+import { z } from 'zod';
+
+const listFilters = z.object({
+	kind: z.enum(['狗', '貓', '其他']).optional(),
+	sex: z.enum(['M', 'F', 'N']).optional(),
+	city: z.string().trim().max(100).transform(value => value.replace(/台/g, '臺')).optional(),
+});
 
 class AnimalController {
 	repository: AnimalRepository
@@ -31,7 +38,9 @@ class AnimalController {
 	) => {
 		const { parsedPageSize, cursorData, parsedCursor } = AnimalHelper.getQueryString(req)
 
-		const animals = await this.repository.findAllWithShelter(parsedPageSize, cursorData)
+		const filters = listFilters.safeParse(req.query);
+		if (!filters.success) throw new CustomError(apiMessage.VALIDATION_ERROR);
+		const animals = await this.repository.findAllWithShelter(parsedPageSize, cursorData, undefined, filters.data)
 		const { prevCursor, nextCursor } = DatabaseUtils.cursorPairGenerate(animals, parsedCursor, parsedPageSize)
 
 		res.locals.result = new SuccessResponse('api',

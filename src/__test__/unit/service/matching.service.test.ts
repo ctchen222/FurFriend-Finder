@@ -72,7 +72,7 @@ describe('MatchingService', () => {
       expect(mockGeocoding).toHaveBeenCalledTimes(3);
     });
 
-    it('should exclude animals whose shelter_address geocoding throws an error', async () => {
+    it('keeps possible matches with unknown distance when shelter geocoding fails', async () => {
       mockGeocoding
         .mockResolvedValueOnce({ lat: 25.04, lng: 121.51 }) // lost_place
         .mockRejectedValueOnce(new Error('API error'))       // shelter A geocoding fails
@@ -87,9 +87,12 @@ describe('MatchingService', () => {
 
       const result = await service.performMatch({ lost_place: '台北市信義區' });
 
-      // a1 (shelter A failed) is dropped; a2 is kept
-      expect(result.top10Matches).toHaveLength(1);
+      expect(result.top10Matches).toHaveLength(2);
       expect(result.top10Matches[0].id).toBe('a2');
+      expect(result.top10Matches.find(animal => animal.id === 'a1')).toMatchObject({
+        distance: Infinity,
+        reasons: expect.arrayContaining(['距離未知，未納入距離評分']),
+      });
     });
 
     it('should assign Infinity distance when shelter_address geocoding returns null (ZERO_RESULTS)', async () => {

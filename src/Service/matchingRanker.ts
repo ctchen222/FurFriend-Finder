@@ -49,5 +49,6 @@ export function rankCandidate(input: {
     if (signals.colour !== null && signals.colour > 0) reasons.push('毛色包含相同特徵');
     if (signals.sex === 1) reasons.push('性別相同');
     if (signals.location !== null) reasons.push('距離以收容所位置計算');
+    else reasons.push('距離未知，未納入距離評分');
     return { score: combineSignals(signals), reasons };
 }

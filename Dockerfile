@@ -27,6 +27,16 @@ FROM deps AS prod-deps
 RUN pnpm install --prod --frozen-lockfile --offline \
     && pnpm store prune
 
+FROM base AS web-build
+
+COPY package.json ./
+COPY web/package.json web/pnpm-lock.yaml ./web/
+RUN pnpm --dir web install --frozen-lockfile
+COPY web ./web
+COPY src/contracts ./src/contracts
+COPY src/public/css ./src/public/css
+RUN pnpm --dir web build
+
 FROM base AS runtime
 
 ENV NODE_ENV=production
@@ -35,6 +45,7 @@ ENV PORT=2486
 COPY package.json pnpm-lock.yaml ./
 COPY --from=prod-deps /usr/src/app/node_modules ./node_modules
 COPY --from=build /usr/src/app/dist ./dist
+COPY --from=web-build /usr/src/app/web/dist ./web/dist
 COPY views ./views
 COPY sql ./sql
 

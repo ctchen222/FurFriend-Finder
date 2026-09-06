@@ -20,15 +20,16 @@ export class MigrationRunner {
     constructor(private readonly pool: Pick<Pool, 'query' | 'connect'>, private readonly migrations: MigrationFile[]) {}
 
     async migrate(): Promise<number> {
-        await this.pool.query(`CREATE TABLE IF NOT EXISTS schema_migrations (
-            version INTEGER PRIMARY KEY, name TEXT NOT NULL, checksum TEXT NOT NULL,
-            applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-        )`);
-        await this.pool.query("SELECT pg_advisory_lock(hashtext('furfriend-finder-schema'))");
+        const client = await this.pool.connect();
         let applied = 0;
+        let failure: { error: unknown } | undefined;
         try {
+            await client.query("SELECT pg_advisory_lock(hashtext('furfriend-finder-schema'))");
+            await client.query(`CREATE TABLE IF NOT EXISTS schema_migrations (
+                version INTEGER PRIMARY KEY, name TEXT NOT NULL, checksum TEXT NOT NULL,
+                applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )`);
             for (const migration of [...this.migrations].sort((left, right) => left.version - right.version)) {
-                const client = await this.pool.connect();
                 try {
                     await client.query('BEGIN');
                     const existing = await client.query<{ checksum: string }>(
@@ -44,11 +45,20 @@ export class MigrationRunner {
                 } catch (error) {
                     try { await client.query('ROLLBACK'); } catch { /* preserve original error */ }
                     throw error;
-                } finally { client.release(); }
+                }
             }
-            return applied;
+        } catch (error) {
+            failure = { error };
         } finally {
-            await this.pool.query("SELECT pg_advisory_unlock(hashtext('furfriend-finder-schema'))");
+            try {
+                await client.query("SELECT pg_advisory_unlock(hashtext('furfriend-finder-schema'))");
+                client.release();
+            } catch (error) {
+                client.release(true);
+                failure ??= { error };
+            }
         }
+        if (failure) throw failure.error;
+        return applied;
     }
 }

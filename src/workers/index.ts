@@ -16,14 +16,18 @@ export function startWorkers(deps?: {
     const mail = deps?.mail ?? new MailWorker();
     const intervalMs = deps?.intervalMs ?? 5_000;
     let stopped = false;
+    let running = false;
 
     const tick = async () => {
-        if (stopped) return;
+        if (stopped || running) return;
+        running = true;
         try {
             await match.runOnce();
             await mail.runOnce();
         } catch (error) {
             logger.error('Background worker tick failed', { error });
+        } finally {
+            running = false;
         }
     };
 

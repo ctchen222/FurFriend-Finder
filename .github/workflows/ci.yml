@@ -29,6 +29,12 @@ jobs:
           filters: |
             app:
               - 'src/**'
+              - 'web/**'
+              - 'tests/web-e2e/**'
+              - 'playwright.web.config.ts'
+              - '.github/workflows/ci.yml'
+              - 'Dockerfile'
+              - '.dockerignore'
               - 'package.json'
               - 'tsconfig.json'
               - 'pnpm-lock.yaml'
@@ -72,6 +78,31 @@ jobs:
 
       - name: Build application
         run: pnpm run build
+
+  web:
+    name: React checks
+    needs: [changes]
+    if: needs.changes.outputs.app == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - name: Install React dependencies
+        run: pnpm --dir web install --frozen-lockfile
+      - name: Lint React
+        run: pnpm exec eslint web/src
+      - name: Type check and build React
+        run: pnpm build:web
+      - name: Install browser
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Verify controlled UI states
+        run: pnpm test:web:e2e tests/web-e2e/states.spec.ts
+      - name: Preserve failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: react-browser-failures
+          path: test-results/
 
   test-unit:
     name: Unit tests
@@ -126,7 +157,17 @@ jobs:
   status-gate:
     name: CI status gate
     runs-on: ubuntu-latest
-    needs: [changes, lint, type-check, build, test-unit, test-integration, helm-validate]
+    needs:
+      [
+        changes,
+        lint,
+        type-check,
+        build,
+        web,
+        test-unit,
+        test-integration,
+        helm-validate,
+      ]
     if: always()
     steps:
       - name: Evaluate job results
@@ -144,6 +185,7 @@ jobs:
           lint=${{ needs.lint.result }}
           type-check=${{ needs.type-check.result }}
           build=${{ needs.build.result }}
+          web=${{ needs.web.result }}
           test-unit=${{ needs.test-unit.result }}
           test-integration=${{ needs.test-integration.result }}
           helm-validate=${{ needs.helm-validate.result }}

@@ -4,6 +4,7 @@ import AnimalLostController from '../Controller/animalLostController';
 import { logMatchRequest } from '../middleware/logMatchRequests';
 import { requireUser } from '../middleware/requireUser';
 import { requireSameOrigin } from '../middleware/requireSameOrigin';
+import { ReportError } from '../Service/reports/service';
 
 const animalLostCtrler = new AnimalLostController();
 const router = express.Router();
@@ -26,5 +27,13 @@ router.route('/match/:id/notify')
 
 router.route('/:id/matches/latest')
 	.get(requireUser, catchAsync(animalLostCtrler.latestMatches));
+
+router.use((error: unknown, _req: express.Request, res: express.Response, next: express.NextFunction) => {
+	if (error instanceof ReportError) {
+		res.status(error.status).json({ success: false, message: error.message });
+		return;
+	}
+	next(error);
+});
 
 export { router };

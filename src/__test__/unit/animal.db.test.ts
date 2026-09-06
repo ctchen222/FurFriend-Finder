@@ -125,6 +125,17 @@ describe('AnimalRepository', () => {
 	});
 
 	describe('findAllWithShelter', () => {
+		it('applies species, sex and city before cursor pagination using parameters', async () => {
+			(pool.query as jest.Mock).mockResolvedValue({ rows: [] });
+			await animalRepository.findAllWithShelter(12, undefined, undefined, {
+				kind: '貓', sex: 'F', city: '臺北市',
+			});
+			const [sql, values] = (pool.query as jest.Mock).mock.calls[0];
+			expect(sql).toContain('animal.kind = $1');
+			expect(sql).toContain('animal.sex = $2');
+			expect(sql).toContain('animal_shelter.address LIKE $3');
+			expect(values).toEqual(['貓', 'F', '%臺北市%', 12]);
+		});
 		it('should execute JOIN query with default page size', async () => {
 			const mockRows = [{ id: 1, kind: '狗' }];
 			(pool.query as jest.Mock).mockResolvedValue({ rows: mockRows });
