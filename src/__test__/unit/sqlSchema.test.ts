@@ -30,4 +30,15 @@ describe('SQL schema', () => {
 		expect(migration).toContain('RENAME COLUMN createdat TO "createdAt"');
 		expect(migration).toContain('RENAME COLUMN updatedat TO "updatedAt"');
 	});
+
+	it('tracks source identity and import runs for repeatable API ingestion', () => {
+		const migration = fs.readFileSync(
+			path.join(__dirname, '..', '..', '..', 'sql', 'V3__Source_identity_and_import_runs.sql'),
+			'utf8',
+		);
+		expect(migration).toContain('CREATE TABLE import_runs');
+		expect(migration).toContain('source_record_id TEXT');
+		expect(migration).toContain('animal_source_identity_uidx');
+		expect(migration).toContain('animal_lost_source_identity_uidx');
+	});
 });

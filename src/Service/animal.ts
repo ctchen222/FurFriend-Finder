@@ -59,6 +59,8 @@ class AnimalService {
                     shelter_name: item.shelter_name,
                     shelter_address: item.shelter_address,
                     shelter_tel: item.shelter_tel,
+                    source_system: 'moa_shelter_animals',
+                    source_record_id: item.animal_subid ?? null,
                 }));
 
                 return this.repository.bulkInsertAnimals(animals);

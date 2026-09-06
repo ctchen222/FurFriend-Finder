@@ -5,12 +5,14 @@ import {
     type CountyInventoryCounts,
 } from '../config/metrics';
 import { Animal } from '../libs/zod/animals';
-import { flexibleDateSchema } from '../libs/zod/date';
+import { normalizeSourceDate } from '../libs/animal.utils';
 import BaseRepository from './base.db';
+import type { DbExecutor } from '../libs/transaction';
+import { withTransaction } from '../libs/transaction';
 
 class AnimalRepository extends BaseRepository {
-    constructor() {
-        super('animal');
+    constructor(db?: DbExecutor) {
+        super('animal', db);
     }
 
     private joinedAnimalSelectFields(options?: string[]): string {
@@ -55,7 +57,7 @@ class AnimalRepository extends BaseRepository {
 
             const values = [`%${city}%`];
 
-            const { rows } = await pool.query(query, values);
+            const { rows } = await this.db.query(query, values);
 
             return rows;
         });
@@ -105,7 +107,7 @@ class AnimalRepository extends BaseRepository {
 			LIMIT ${pageSizePlaceholder};
 		`;
 
-            const { rows } = await pool.query(query, values);
+            const { rows } = await this.db.query(query, values);
             return rows;
         });
     }
@@ -123,7 +125,7 @@ class AnimalRepository extends BaseRepository {
 		`;
 
             const values = [animalId];
-            const { rows } = await pool.query(query, values);
+            const { rows } = await this.db.query(query, values);
 
             return rows[0] || null;
         });
@@ -159,6 +161,15 @@ class AnimalRepository extends BaseRepository {
     }
 
     async bulkInsertAnimals(animals: Animal[]): Promise<number> {
+        if (this.db === pool) {
+            return withTransaction(pool, (client) =>
+                new AnimalRepository(client).bulkInsertAnimalsInTransaction(animals),
+            );
+        }
+        return this.bulkInsertAnimalsInTransaction(animals);
+    }
+
+    private async bulkInsertAnimalsInTransaction(animals: Animal[]): Promise<number> {
         return recordDbOperation('bulk_insert_animals', async () => {
             const seen = new Map<string, Animal>();
         const noSubId: Animal[] = [];
@@ -176,8 +187,6 @@ class AnimalRepository extends BaseRepository {
             }
         }
         const uniqueAnimals = [...seen.values(), ...noSubId];
-
-        await pool.query('START TRANSACTION');
 
         let insertedRowCount = 0;
         const batchSize = 100;
@@ -205,12 +214,12 @@ class AnimalRepository extends BaseRepository {
 			    VALUES ${shelterPlaceholders}
 			    ON CONFLICT(id) DO NOTHING;
 				`;
-            await pool.query(insertShelterQuery, shelterValues);
+            await this.db.query(insertShelterQuery, shelterValues);
 
             const values: any[] = [];
             const valuePlaceholders = batch
                 .map((animal, idx) => {
-                    const baseIdx = idx * 15;
+                    const baseIdx = idx * 18;
 
                     values.push(
                         animal.subid,
@@ -225,19 +234,20 @@ class AnimalRepository extends BaseRepository {
                         animal.picture,
                         animal.status,
                         animal.animal_shelter_id,
-                        animal.opendate ? animal.opendate : '1970-01-01',
-                        animal.closedate ? animal.closedate : '1970-01-01',
-                        animal.updatedate
-                            ? flexibleDateSchema.parse(animal.updatedate)
-                            : '1970-01-01',
+                        normalizeSourceDate(animal.opendate),
+                        normalizeSourceDate(animal.closedate),
+                        normalizeSourceDate(animal.updatedate),
+                        animal.source_system ?? 'moa_shelter_animals',
+                        animal.source_record_id ?? animal.subid ?? null,
+                        animal.source_run_id ?? null,
                     );
-                    return `($${baseIdx + 1}, $${baseIdx + 2}, $${baseIdx + 3}, $${baseIdx + 4}, $${baseIdx + 5}, $${baseIdx + 6}, $${baseIdx + 7}, $${baseIdx + 8}, $${baseIdx + 9}, $${baseIdx + 10}, $${baseIdx + 11}, $${baseIdx + 12}, $${baseIdx + 13}, $${baseIdx + 14}, $${baseIdx + 15})`;
+                    return `(${Array.from({ length: 18 }, (_, offset) => `$${baseIdx + offset + 1}`).join(', ')})`;
                 })
                 .join(', ');
 
             const insertQuery = `
 				INSERT INTO animal(
-			    sub_id, kind, variety, sex, age, body_type, colour, found_place, remark, picture, status, animal_shelter_id, open_date, close_date, update_date )
+			    sub_id, kind, variety, sex, age, body_type, colour, found_place, remark, picture, status, animal_shelter_id, open_date, close_date, update_date, source_system, source_record_id, source_run_id )
 			    VALUES ${valuePlaceholders}
 				ON CONFLICT(sub_id) DO UPDATE SET
 				    status      = EXCLUDED.status,
@@ -246,11 +256,10 @@ class AnimalRepository extends BaseRepository {
 				    picture     = EXCLUDED.picture,
 				    remark      = EXCLUDED.remark;
 			`;
-            const result = await pool.query(insertQuery, values);
+            const result = await this.db.query(insertQuery, values);
             insertedRowCount += result.rowCount ?? 0;
         }
 
-        await pool.query('COMMIT');
         return insertedRowCount;
         });
     }

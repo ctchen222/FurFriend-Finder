@@ -1,27 +1,30 @@
 import { pool } from "../db";
+import type { DbExecutor } from "../libs/transaction";
 
 class BaseRepository {
 	protected tableName: string;
-	constructor(tableName: string) {
+	protected db: DbExecutor;
+	constructor(tableName: string, db: DbExecutor = pool) {
 		this.tableName = tableName;
+		this.db = db;
 	}
 
 	async start(): Promise<void> {
 		const queryStartTransaction = 'START TRANSACTION;'
 
-		await pool.query(queryStartTransaction)
+		await this.db.query(queryStartTransaction)
 	}
 
 	async commit(): Promise<void> {
 		const queryCommit = 'COMMIT;'
 
-		await pool.query(queryCommit)
+		await this.db.query(queryCommit)
 	}
 
 	async rollback(): Promise<void> {
 		const queryRollback = 'ROLLBACK;'
 
-		await pool.query(queryRollback)
+		await this.db.query(queryRollback)
 	}
 
 	async findAll<T>(
@@ -50,7 +53,7 @@ class BaseRepository {
 			LIMIT ${pageSizePlaceholder};
 		`;
 
-		const result = await pool.query(query, values)
+		const result = await this.db.query(query, values)
 		return result.rows;
 	}
 
@@ -62,7 +65,7 @@ class BaseRepository {
 		`;
 
 		const values = [id];
-		const result = await pool.query(query, values);
+		const result = await this.db.query(query, values);
 
 		return result.rows[0];
 	}
@@ -86,7 +89,7 @@ class BaseRepository {
 		`;
 
 		const values = Object.values(conditions);
-		const result = await pool.query(query, values);
+		const result = await this.db.query(query, values);
 
 		return result.rows[0] || null;
 	}
@@ -102,7 +105,7 @@ class BaseRepository {
 			RETURNING ${options ? options.join(", ") : "*"};
 		`;
 
-		const result = await pool.query(query, values);
+		const result = await this.db.query(query, values);
 		return result.rows[0];
 	}
 
@@ -121,7 +124,7 @@ class BaseRepository {
 		`;
 
 		const values = [id, ...Object.values(data)];
-		const result = await pool.query(query, values);
+		const result = await this.db.query(query, values);
 
 		return result.rows[0] || null;
 	}
