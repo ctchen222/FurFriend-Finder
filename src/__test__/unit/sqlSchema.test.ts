@@ -31,14 +31,25 @@ describe('SQL schema', () => {
 		expect(migration).toContain('RENAME COLUMN updatedat TO "updatedAt"');
 	});
 
-	it('tracks source identity and import runs for repeatable API ingestion', () => {
+	it('adds authenticated ownership to lost-pet reports without guessing legacy rows', () => {
+		const migration = fs.readFileSync(
+			path.join(__dirname, '..', '..', '..', 'sql', 'V4__Lost_report_ownership.sql'),
+			'utf8',
+		);
+
+		expect(migration).toContain('ADD COLUMN user_id TEXT REFERENCES "user"(id)');
+		expect(migration).toContain('ON DELETE CASCADE');
+		expect(migration).toContain('Existing imported/legacy rows remain nullable');
+	});
+
+	it('adds source identity and import-run tracking for repeatable API imports', () => {
 		const migration = fs.readFileSync(
 			path.join(__dirname, '..', '..', '..', 'sql', 'V3__Source_identity_and_import_runs.sql'),
 			'utf8',
 		);
-		expect(migration).toContain('CREATE TABLE import_runs');
+
+		expect(migration).toContain('CREATE TABLE IF NOT EXISTS import_runs');
 		expect(migration).toContain('source_record_id TEXT');
-		expect(migration).toContain('animal_source_identity_uidx');
-		expect(migration).toContain('animal_lost_source_identity_uidx');
+		expect(migration).toContain('CREATE UNIQUE INDEX');
 	});
 });

@@ -41,8 +41,10 @@ class AnimalLostController {
         next: express.NextFunction,
     ) => {
         const { parsedPageSize, id, parsedCursor } = AnimalHelper.getQueryString(req);
+        const userId = String(res.locals.user.id);
 
-        const animals = await this.repository.findAll<AnimalLost>(
+        const animals = await this.repository.findByUserId<AnimalLost>(
+            userId,
             parsedPageSize,
             id,
         );
@@ -78,12 +80,13 @@ class AnimalLostController {
 
             const animalLostData = animalLostResult.data;
             const animalOwner = animalOwnerResult.data as AnimalOwner;
+            const userId = String(res.locals.user.id);
 
 			await withTransaction(pool, async (client) => {
 				const ownerRepository = new OwnerRepository(client);
 				const animalLostRepository = new AnimalLostRepository(client);
 				const owner = await ownerRepository.findOrCreate(animalOwner);
-				const animalToCreate: AnimalLost = { ...animalLostData, owner_id: owner.id };
+				const animalToCreate: AnimalLost = { ...animalLostData, owner_id: owner.id, user_id: userId };
 				await animalLostRepository.create<AnimalLost>(animalToCreate);
 			});
 
@@ -109,6 +112,12 @@ class AnimalLostController {
         const id = req.params.id as string;
         if (!id) {
             throw new CustomError(apiMessage.ID_MUST_PROVIDED);
+        }
+
+        const userId = String(res.locals.user.id);
+        const ownedReport = await this.repository.findByIdForUser<AnimalLost>(id, userId);
+        if (!ownedReport) {
+            throw new CustomError(apiMessage.CONTENT_NOT_FOUND);
         }
 
         const result = await this.animalLostService.findMatchesAndSendMail(id);

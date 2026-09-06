@@ -15,6 +15,8 @@ jest.mock('../../db', () => ({
 
 // Closure-based mock functions to survive resetMocks:true
 let mockFindAll: jest.Mock;
+let mockFindByUserId: jest.Mock;
+let mockFindByIdForUser: jest.Mock;
 let mockCreate: jest.Mock;
 let mockStart: jest.Mock;
 let mockCommit: jest.Mock;
@@ -26,6 +28,8 @@ let mockFindMatches: jest.Mock;
 jest.mock('../../repository/animalLost.db', () =>
 	jest.fn().mockImplementation(() => ({
 		findAll: (...args: any[]) => mockFindAll(...args),
+		findByUserId: (...args: any[]) => mockFindByUserId(...args),
+		findByIdForUser: (...args: any[]) => mockFindByIdForUser(...args),
 		create: (...args: any[]) => mockCreate(...args),
 		start: (...args: any[]) => mockStart(...args),
 		commit: (...args: any[]) => mockCommit(...args),
@@ -73,10 +77,18 @@ import { CONTENT_NOT_FOUND, LOST_PLACE_NOT_FOUND } from '../../libs/message';
 
 const app = express();
 app.use(express.json());
+app.use((req, res, next) => {
+	res.locals.user = { id: 'test-user', email: 'owner@example.com', name: '王小明' };
+	next();
+});
 app.use('/api/lost-animals', animalLostRouter);
 app.use(Handler.completeHandler);
 app.use(Handler.notFoundHandler);
 app.use(Handler.errorHandler);
+
+const unauthenticatedApp = express();
+unauthenticatedApp.use(express.json());
+unauthenticatedApp.use('/api/lost-animals', animalLostRouter);
 
 describe('AnimalLostController Integration Tests', () => {
 	beforeEach(() => {
@@ -86,6 +98,8 @@ describe('AnimalLostController Integration Tests', () => {
 			release: jest.fn(),
 		}));
 		mockFindAll = jest.fn().mockResolvedValue([]);
+		mockFindByUserId = jest.fn().mockResolvedValue([]);
+		mockFindByIdForUser = jest.fn().mockResolvedValue({ id: '1', user_id: 'test-user' });
 		mockCreate = jest.fn().mockResolvedValue({ id: 'new-id' });
 		mockStart = jest.fn().mockResolvedValue(undefined);
 		mockCommit = jest.fn().mockResolvedValue(undefined);
@@ -102,6 +116,11 @@ describe('AnimalLostController Integration Tests', () => {
 		});
 	});
 
+	it('rejects private lost-report endpoints without a session', async () => {
+		const res = await request(unauthenticatedApp).get('/api/lost-animals');
+		expect(res.status).toBe(401);
+	});
+
 	describe('GET /api/lost-animals', () => {
 		it('should return empty list', async () => {
 			const res = await request(app).get('/api/lost-animals');
@@ -111,7 +130,7 @@ describe('AnimalLostController Integration Tests', () => {
 
 		it('should return lost animals', async () => {
 			const animals = [{ id: '1', kind: '狗', name: '小黑' }];
-			mockFindAll = jest.fn().mockResolvedValue(animals);
+			mockFindByUserId = jest.fn().mockResolvedValue(animals);
 
 			const res = await request(app).get('/api/lost-animals');
 			expect(res.status).toBe(200);
