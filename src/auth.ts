@@ -3,8 +3,11 @@ import MailService from './Service/mail';
 import { pool } from './db';
 import logger from './config/logger';
 import { getBetterAuthBaseUrl } from './config/url';
+import { readGoogleOAuthConfig } from './config/oauth';
+import { assertGoogleAccountLinkAllowed } from './Service/oauthPolicy';
 
 const mailService = new MailService();
+const googleOAuth = readGoogleOAuthConfig();
 
 export const auth = betterAuth({
     baseURL: getBetterAuthBaseUrl(),
@@ -39,19 +42,46 @@ export const auth = betterAuth({
             logger.info('Password reset completed', { userId: user.id });
         },
     },
-    // socialProviders: {
-    // 	github: {
-    // 		clientId: process.env.GITHUB_CLIENT_ID as string,
-    // 		clientSecret: process.env.GITHUB_CLIENT_SECRET as string,
-    // 	},
-    // },
+    ...(googleOAuth.enabled ? {
+        socialProviders: {
+            google: {
+                clientId: googleOAuth.clientId,
+                clientSecret: googleOAuth.clientSecret,
+            },
+        },
+        account: {
+            accountLinking: {
+                enabled: true,
+                allowDifferentEmails: false,
+            },
+        },
+    } : {}),
+    ...(googleOAuth.enabled ? {
+        databaseHooks: {
+            account: {
+                create: {
+                    before: async (account: { providerId?: string; userId?: string }) => {
+                        if (account.providerId !== 'google' || !account.userId) return;
+                        const result = await pool.query<{ emailVerified: boolean }>(
+                            'SELECT "emailVerified" FROM "user" WHERE id = $1',
+                            [account.userId],
+                        );
+                        assertGoogleAccountLinkAllowed({
+                            providerEmailVerified: true,
+                            existingEmailVerified: result.rows[0]?.emailVerified ?? null,
+                        });
+                    },
+                },
+            },
+        },
+    } : {}),
     advanced: {
         // Add this section
         cookies: {
             session_token: {
                 attributes: {
                     sameSite: 'Lax',
-                    secure: true,
+                    secure: process.env.NODE_ENV === 'production',
                 },
             },
         },

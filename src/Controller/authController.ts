@@ -14,6 +14,7 @@ import {
 	getAuthErrorCode,
 	withMessage,
 } from '../constants/appMessages';
+import { safeReturnTo } from '../libs/safeReturnTo';
 
 class AuthController {
 	private userRepository: UserRepository
@@ -102,9 +103,7 @@ class AuthController {
 					res.setHeader('Set-Cookie', cookies);
 				}
 
-				const dest = (returnTo && returnTo.startsWith('/')) ?
-					returnTo :
-					withMessage('/', APP_MESSAGE_KEYS.LOGIN_SUCCESS);
+				const dest = withMessage(safeReturnTo(returnTo), APP_MESSAGE_KEYS.LOGIN_SUCCESS);
 				res.locals.result = new SuccessResponse("redirect", dest);
 			}
 		} catch (error) {
