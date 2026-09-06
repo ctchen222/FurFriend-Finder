@@ -51,6 +51,8 @@ describe('MatchWorker', () => {
             }),
         } as any;
         const query = jest.fn()
+            .mockResolvedValueOnce({ rows: [{ status: 'OPEN', revision: 1 }] })
+            .mockResolvedValueOnce({ rows: [], rowCount: 1 })
             .mockResolvedValueOnce({ rows: [{ id: 'run-1' }] })
             .mockResolvedValueOnce({ rows: [], rowCount: 1 })
             .mockResolvedValueOnce({ rows: [], rowCount: 1 });
@@ -63,7 +65,7 @@ describe('MatchWorker', () => {
             expect.stringContaining('INSERT INTO match_runs'),
             expect.arrayContaining(['job-1', 1, 7, 1, 'rules-v2', 'SUCCEEDED']),
         );
-        expect(query).toHaveBeenLastCalledWith(
+        expect(query).toHaveBeenCalledWith(
             expect.stringContaining('claim_token = $2::uuid'),
             [currentJob.id, currentJob.claim_token],
         );
@@ -89,5 +91,18 @@ describe('MatchWorker', () => {
             'Error',
             now,
         );
+    });
+
+    it('does not persist results when the report closes during geocoding', async () => {
+        const jobs = { claim: jest.fn().mockResolvedValue(job()), fail: jest.fn(), cancel: jest.fn() } as any;
+        const reports = { findById: jest.fn().mockResolvedValue({ id: 7, status: 'OPEN', revision: 1 }) } as any;
+        const matching = { performMatch: jest.fn().mockResolvedValue({ metadata: {}, top10Matches: [] }) } as any;
+        const query = jest.fn(async (sql: string) => {
+            if (sql.includes('FOR UPDATE')) return { rows: [{ status: 'CLOSED', revision: 2 }] };
+            return { rows: [{ id: 'run-1' }], rowCount: 1 };
+        });
+        const worker = new MatchWorker({ jobs, reports, matching, transaction: work => work({ query } as any) });
+        await worker.runOnce(now);
+        expect(query.mock.calls.some(([sql]) => sql.includes('INSERT INTO match_runs'))).toBe(false);
     });
 });

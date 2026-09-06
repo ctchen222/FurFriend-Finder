@@ -19,9 +19,8 @@ class AnimalLostRepository extends BaseRepository {
 
 	async findMatchingAnimals(colour?: string[], kind?: string, sex?: string, variety?: string) {
 		return recordDbOperation('find_match_candidates', async () => {
-			// animal_lost has no lifecycle status until the lifecycle migration lands;
-			// do not reference a non-existent column and make every imported row searchable.
-			const filters: string[] = [];
+			// Matching searches shelter inventory, not lost-report lifecycle rows.
+			const filters: string[] = ["animal.status = 'OPEN'"];
 		const values: any[] = [];
 
 		if (kind) {

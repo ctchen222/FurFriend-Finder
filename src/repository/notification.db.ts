@@ -13,6 +13,7 @@ export interface NotificationJob {
     email: string | null;
     user_name: string | null;
     mail_enabled: boolean;
+    report_active?: boolean;
 }
 
 export class NotificationRepository {
@@ -46,8 +47,11 @@ export class NotificationRepository {
              FROM next_notification
              WHERE item.id = next_notification.id
              RETURNING item.*, (SELECT email FROM "user" WHERE id = item.user_id),
-                       (SELECT name FROM "user" WHERE id = item.user_id),
-                       (SELECT "isLostAnimalMailEnabled" FROM "user" WHERE id = item.user_id) AS mail_enabled`,
+                       (SELECT name FROM "user" WHERE id = item.user_id) AS user_name,
+                       (SELECT "isLostAnimalMailEnabled" FROM "user" WHERE id = item.user_id) AS mail_enabled,
+                       (SELECT a.status='OPEN' AND a.revision=r.report_revision
+                        FROM animal_lost a JOIN match_runs r ON r.report_id=a.id
+                        WHERE a.id=item.report_id AND r.id=item.run_id) AS report_active`,
             [now, claimToken],
         );
         return result.rows[0] ?? null;

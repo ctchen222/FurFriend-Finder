@@ -48,6 +48,16 @@ export class MatchWorker {
             });
 
             const finalized = await this.transaction(async (db) => {
+                // Lock in the same order as report edits/closure, then fence before inserting anything.
+                const current = await db.query<{ status: string; revision: number }>(
+                    'SELECT status, revision FROM animal_lost WHERE id=$1 FOR UPDATE', [job.report_id],
+                );
+                if (current.rows[0]?.status !== 'OPEN' || current.rows[0]?.revision !== job.report_revision) {
+                    await new MatchJobRepository(db).cancel(job.id, job.claim_token as string);
+                    return false;
+                }
+                const claimed = await new MatchJobRepository(db).succeed(job.id, job.claim_token as string, now);
+                if (!claimed) throw new Error('MATCH_CLAIM_LOST');
                 const runs = new MatchRunRepository(db);
                 const runId = await runs.create({
                     jobId: job.id,
@@ -68,7 +78,7 @@ export class MatchWorker {
                         userId: String(report.user_id),
                     });
                 }
-                return new MatchJobRepository(db).succeed(job.id, job.claim_token as string, now);
+                return true;
             });
             return finalized;
         } catch (error) {
