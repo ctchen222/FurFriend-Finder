@@ -98,9 +98,11 @@ pnpm test:web:e2e
 pnpm exec tsc --noEmit
 pnpm exec jest --runInBand --silent
 pnpm build:web
+pnpm exec tsx src/scripts/verify-empty-matching.ts
 ```
 
 瀏覽器測試會新增可辨識的測試帳號與走失案件，不會清空 DB；同一時間只跑一組，以免測試產物互相覆蓋。
+`verify-empty-matching.ts` 使用單一連線的暫存表，驗證真實建案、worker 與結果保存路徑在空候選時成功且不建立通知；不刪改 public 資料列。暫存表複製既有 serial 預設值，因此可能消耗序號並留下正常的 ID 間隔。測試結束後銷毀連線與暫存表。
 
 ## 人工驗收順序
 
@@ -112,6 +114,9 @@ pnpm build:web
 6. 公開收容列表、分頁、詳情與快速比對，在桌面及手機寬度操作。
 
 Google OAuth 必須另外配置 provider 並完成真實 callback 驗收；未配置或未測試不能算通過。
+本機設定 `GOOGLE_OAUTH_ENABLED=true`、`GOOGLE_CLIENT_ID`、`GOOGLE_CLIENT_SECRET`，並保留有效的 `BETTER_AUTH_SECRET`。
+Google Console 的 Web OAuth client 應允許 `http://localhost:5173`，redirect URI 為 `http://localhost:5173/api/auth/callback/google`。
+重新啟動 API 後，登入／註冊頁才會依設定顯示 Google 選項。請勿將 client secret 提交到 Git 或貼進對話。
 配對流程成功不等於配對準確率已驗證；人工標註品質驗收仍是 Phase C 前的獨立關卡。
 
 ## 建置後入口
@@ -126,3 +131,6 @@ Google OAuth 必須另外配置 provider 並完成真實 callback 驗收；未�
 `POST /api/lost-animals/match/:id/notify` 改為回傳 HTTP 202 與 `extras.queued=true`。
 這代表已接受背景配對要求，不代表已寄信；不再回傳同步計算的 `top10Matches` 或 `notified`。
 請從 `GET /api/v1/reports/:id` 讀取配對與通知狀態。新舊通知及結案 API 使用同一個 application service，遵守 ownership、案件 revision、結案狀態與通知偏好。
+
+公開列表 `GET /api/animals` 支援選填 `kind=狗|貓|其他`、`sex=M|F|N`、`city=縣市或地址片段`。
+篩選在 DB 分頁前執行；讀取下一頁時必須保留原篩選條件並附上回應的 `nextCursor`，變更條件時清除 cursor。
