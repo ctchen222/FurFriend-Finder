@@ -29,6 +29,16 @@ let mockFindMatches: jest.Mock;
 let mockEnqueueJob: jest.Mock;
 let mockCancelForReport: jest.Mock;
 let mockFindLatestRun: jest.Mock;
+let mockRetryReport: jest.Mock;
+let mockCloseReport: jest.Mock;
+
+jest.mock('../../Service/reports/service', () => ({
+	...jest.requireActual('../../Service/reports/service'),
+	createReportService: () => ({
+		retry: (...args: any[]) => mockRetryReport(...args),
+		close: (...args: any[]) => mockCloseReport(...args),
+	}),
+}));
 
 jest.mock('../../repository/animalLost.db', () =>
 	jest.fn().mockImplementation(() => ({
@@ -113,6 +123,8 @@ unauthenticatedApp.use('/api/lost-animals', animalLostRouter);
 
 describe('AnimalLostController Integration Tests', () => {
 	beforeEach(() => {
+		mockRetryReport = jest.fn().mockResolvedValue({ queued: true });
+		mockCloseReport = jest.fn().mockResolvedValue({ id: 1, status: 'REUNITED', revision: 2 });
 		(AnimalLostRepository as unknown as jest.Mock).mockImplementation(() => ({
 			findAll: (...args: any[]) => mockFindAll(...args),
 			findByUserId: (...args: any[]) => mockFindByUserId(...args),
@@ -237,13 +249,12 @@ describe('AnimalLostController Integration Tests', () => {
 
 			expect(res.status).toBe(200);
 			expect(res.body.extras.report.status).toBe('REUNITED');
-			expect(mockCloseForUser).toHaveBeenCalledWith('1', 'test-user', 1, 'REUNITED');
-			expect(mockCancelForReport).toHaveBeenCalledWith('1');
+			expect(mockCloseReport).toHaveBeenCalledWith('test-user', 1, 1, 'REUNITED');
 		});
 	});
 
 	describe('POST /api/lost-animals/match/:id/notify', () => {
-		it('runs the explicit notification action for an owned report', async () => {
+		it('queues the shared durable flow instead of sending synchronously', async () => {
 			mockFindMatchesAndSendMail.mockResolvedValue({
 				metadata: { total: 1 },
 				top10Matches: [{ id: 'animal-1' }],
@@ -252,8 +263,10 @@ describe('AnimalLostController Integration Tests', () => {
 			const res = await request(app)
 				.post('/api/lost-animals/match/1/notify');
 
-			expect(res.status).toBe(200);
-			expect(res.body.extras.notified).toBe(true);
+			expect(res.status).toBe(202);
+			expect(res.body.extras.queued).toBe(true);
+			expect(mockRetryReport).toHaveBeenCalledWith('test-user', 1);
+			expect(mockFindMatchesAndSendMail).not.toHaveBeenCalled();
 		});
 	});
 
