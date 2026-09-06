@@ -21,7 +21,8 @@
     "test:e2e": "playwright test",
     "test:coverage": "jest --coverage",
     "smtp:smoke": "tsx src/scripts/mailgun-smoke-test.ts",
-    "db:migrate": "tsx src/scripts/migrate.ts"
+    "db:migrate": "tsx src/scripts/migrate.ts",
+    "workers": "tsx src/workers/main.ts"
   },
   "keywords": [],
   "author": "",

@@ -18,4 +18,13 @@ router.route('/quick-match')
 router.route('/match/:id')
 	.get(requireUser, requireSameOrigin, logMatchRequest, catchAsync(animalLostCtrler.matchLostAnimal));
 
+router.route('/:id/close')
+	.post(requireUser, requireSameOrigin, catchAsync(animalLostCtrler.close));
+
+router.route('/match/:id/notify')
+	.post(requireUser, requireSameOrigin, logMatchRequest, catchAsync(animalLostCtrler.notify));
+
+router.route('/:id/matches/latest')
+	.get(requireUser, catchAsync(animalLostCtrler.latestMatches));
+
 export { router };

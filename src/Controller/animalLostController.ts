@@ -18,6 +18,8 @@ import DatabaseUtils from '../libs/database.utils';
 import { APP_MESSAGE_KEYS, withMessage } from '../constants/appMessages';
 import { pool } from '../db';
 import { withTransaction } from '../libs/transaction';
+import MatchJobRepository from '../repository/matchJob.db';
+import MatchRunRepository from '../repository/matchRun.db';
 
 class AnimalLostController {
     private repository: AnimalLostRepository;
@@ -87,7 +89,15 @@ class AnimalLostController {
 				const animalLostRepository = new AnimalLostRepository(client);
 				const owner = await ownerRepository.findOrCreate(animalOwner);
 				const animalToCreate: AnimalLost = { ...animalLostData, owner_id: owner.id, user_id: userId };
-				await animalLostRepository.create<AnimalLost>(animalToCreate);
+				const report = await animalLostRepository.create<AnimalLost>(animalToCreate);
+				if (!report?.id) {
+					throw new Error('Lost report insert did not return an id');
+				}
+				await new MatchJobRepository(client).enqueue({
+					reportId: Number(report.id),
+					reportRevision: 1,
+					engineVersion: 'rules-v1',
+				});
 			});
 
             res.locals.result = new SuccessResponse(
@@ -129,6 +139,79 @@ class AnimalLostController {
             lostAnimal,
             top10Matches,
         });
+        return next();
+    };
+
+    close = async (
+        req: express.Request,
+        res: express.Response,
+        next: express.NextFunction,
+    ) => {
+        const id = req.params.id as string;
+        const expectedRevision = Number(req.body?.expectedRevision);
+        const requestedStatus = String(req.body?.status ?? '').toLowerCase();
+        if (!id || !Number.isInteger(expectedRevision) || expectedRevision < 1 ||
+            !['reunited', 'closed'].includes(requestedStatus)) {
+            throw new CustomError(apiMessage.VALIDATION_ERROR);
+        }
+
+        const result = await withTransaction(pool, async (client) => {
+            const reportRepository = new AnimalLostRepository(client);
+            const closed = await reportRepository.closeForUser(
+                id,
+                String(res.locals.user.id),
+                expectedRevision,
+                requestedStatus === 'reunited' ? 'REUNITED' : 'CLOSED',
+            );
+            if (closed) {
+                await new MatchJobRepository(client).cancelForReport(id);
+            }
+            return closed;
+        });
+        if (!result) {
+            throw new CustomError(apiMessage.CONTENT_NOT_FOUND);
+        }
+        res.locals.result = new SuccessResponse('api', { report: result });
+        return next();
+    };
+
+    notify = async (
+        req: express.Request,
+        res: express.Response,
+        next: express.NextFunction,
+    ) => {
+        const id = req.params.id as string;
+        if (!id) {
+            throw new CustomError(apiMessage.ID_MUST_PROVIDED);
+        }
+        const userId = String(res.locals.user.id);
+        const ownedReport = await this.repository.findByIdForUser<AnimalLost>(id, userId);
+        if (!ownedReport) {
+            throw new CustomError(apiMessage.CONTENT_NOT_FOUND);
+        }
+
+        const result = await this.animalLostService.findMatchesAndSendMail(id);
+        res.locals.result = new SuccessResponse('api', {
+            metadata: result.metadata,
+            notified: result.top10Matches.length > 0,
+            top10Matches: result.top10Matches,
+        });
+        return next();
+    };
+
+    latestMatches = async (
+        req: express.Request,
+        res: express.Response,
+        next: express.NextFunction,
+    ) => {
+        const id = req.params.id as string;
+        if (!id) throw new CustomError(apiMessage.ID_MUST_PROVIDED);
+        const userId = String(res.locals.user.id);
+        const ownedReport = await this.repository.findByIdForUser<AnimalLost>(id, userId);
+        if (!ownedReport) throw new CustomError(apiMessage.CONTENT_NOT_FOUND);
+
+        const latest = await new MatchRunRepository().findLatestForUser(id, userId);
+        res.locals.result = new SuccessResponse('api', { match: latest });
         return next();
     };
 

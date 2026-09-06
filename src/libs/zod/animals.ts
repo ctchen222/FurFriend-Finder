@@ -115,6 +115,8 @@ export type AnimalLostRequest = z.infer<typeof AnimalLostRequestSchema>;
 
 export const AnimalLostSchema = z.object({
 	id: z.number().optional(),
+	status: z.enum(['OPEN', 'REUNITED', 'CLOSED']).optional(),
+	revision: z.number().optional(),
 	chipid: z.string().optional(),
 	name: z.string().optional(),
 	kind: z.string().optional(),
