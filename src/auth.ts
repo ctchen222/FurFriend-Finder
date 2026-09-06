@@ -4,7 +4,7 @@ import { pool } from './db';
 import logger from './config/logger';
 import { getBetterAuthBaseUrl } from './config/url';
 import { readGoogleOAuthConfig } from './config/oauth';
-import { assertGoogleAccountLinkAllowed } from './Service/oauthPolicy';
+import { assertExistingGoogleAccountVerified, mapVerifiedGoogleProfile } from './Service/oauthPolicy';
 
 const mailService = new MailService();
 const googleOAuth = readGoogleOAuthConfig();
@@ -48,6 +48,7 @@ export const auth = betterAuth({
             google: {
                 clientId: googleOAuth.clientId,
                 clientSecret: googleOAuth.clientSecret,
+                mapProfileToUser: mapVerifiedGoogleProfile,
             },
         },
         account: {
@@ -67,10 +68,7 @@ export const auth = betterAuth({
                             'SELECT "emailVerified" FROM "user" WHERE id = $1',
                             [account.userId],
                         );
-                        assertGoogleAccountLinkAllowed({
-                            providerEmailVerified: true,
-                            existingEmailVerified: result.rows[0]?.emailVerified ?? null,
-                        });
+                        assertExistingGoogleAccountVerified(result.rows[0]?.emailVerified ?? null);
                     },
                 },
             },
