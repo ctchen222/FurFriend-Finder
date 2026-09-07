@@ -19,6 +19,11 @@ import {
     OrganizationInvitationPage,
     OwnershipTransferPage,
 } from './features/organizations/OrganizationActionPages';
+import {
+    PublicOrganizationDetailPage,
+    PublicOrganizationsPage,
+} from './features/organizations/PublicOrganizationPages';
+import { ReviewerOrganizationsPage } from './features/organizations/ReviewerOrganizationsPage';
 import './styles.css';
 
 createRoot(document.getElementById('root')!).render(
@@ -67,6 +72,22 @@ createRoot(document.getElementById('root')!).render(
                             element={
                                 <Protected>
                                     <CreateOrganizationPage />
+                                </Protected>
+                            }
+                        />
+                        <Route
+                            path="foster-organizations"
+                            element={<PublicOrganizationsPage />}
+                        />
+                        <Route
+                            path="foster-organizations/:id"
+                            element={<PublicOrganizationDetailPage />}
+                        />
+                        <Route
+                            path="review/organizations"
+                            element={
+                                <Protected>
+                                    <ReviewerOrganizationsPage />
                                 </Protected>
                             }
                         />

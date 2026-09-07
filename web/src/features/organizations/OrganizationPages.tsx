@@ -7,6 +7,7 @@ import type {
 import { useResource } from '../../hooks/useResource';
 import { Feedback } from '../../ui/Feedback';
 import { OrganizationMembers } from './OrganizationMembers';
+import { OrganizationProfileEditor } from './OrganizationProfileEditor';
 import { useSession } from '../auth/SessionProvider';
 
 const roles = { OWNER: '負責人', ADMIN: '管理員', EDITOR: '編輯者' };
@@ -114,7 +115,7 @@ export function OrganizationWorkspacePage() {
 
 function Workspace({ id }: { id: string }) {
     const result = useResource<{ organization: OrganizationWorkspace }>(
-        `/api/v1/organizations/${encodeURIComponent(id)}`,
+        `/api/v1/organizations/${encodeURIComponent(id)}/profile`,
     );
     useEffect(() => {
         window.addEventListener('focus', result.reload);
@@ -141,37 +142,13 @@ function Workspace({ id }: { id: string }) {
                             <span>{organizationStatus(org)}</span>
                         </p>
                     </header>
-                    <section className="panel">
-                        <h2>介紹資料</h2>
-                        <dl className="organization-details">
-                            <dt>類型</dt>
-                            <dd>
-                                {org.type === 'INDIVIDUAL'
-                                    ? '個人中途'
-                                    : '救援團隊'}
-                            </dd>
-                            {org.city && (
-                                <>
-                                    <dt>地區</dt>
-                                    <dd>{org.city}</dd>
-                                </>
-                            )}
-                            {org.description && (
-                                <>
-                                    <dt>介紹</dt>
-                                    <dd className="preserve-lines">
-                                        {org.description}
-                                    </dd>
-                                </>
-                            )}
-                            {org.publicContact && (
-                                <>
-                                    <dt>聯絡方式</dt>
-                                    <dd>{org.publicContact}</dd>
-                                </>
-                            )}
-                        </dl>
-                    </section>
+                    <OrganizationProfileEditor
+                        key={org.version}
+                        organization={org}
+                        onChanged={(organization) =>
+                            result.updateData(() => ({ organization }))
+                        }
+                    />
                     <OrganizationMembers organizationId={org.id} />
                 </>
             )}

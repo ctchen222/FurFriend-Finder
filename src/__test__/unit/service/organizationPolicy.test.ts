@@ -1,6 +1,7 @@
 import {
     canManageMember,
     canManageOrganization,
+    canReviewOrganization,
 } from '../../../Service/organizations/policy';
 import {
     createInvitationSchema,
@@ -102,6 +103,11 @@ describe('organization authorization', () => {
         expect(canManageMember('ADMIN', null, 'ADMIN')).toBe(false);
         expect(canManageMember('ADMIN', 'ADMIN', 'EDITOR')).toBe(false);
         expect(canManageMember('EDITOR', null, 'EDITOR')).toBe(false);
+    });
+    it('requires an independent reviewer who is not a member of the target organization', () => {
+        expect(canReviewOrganization(true, false)).toBe(true);
+        expect(canReviewOrganization(false, false)).toBe(false);
+        expect(canReviewOrganization(true, true)).toBe(false);
     });
 });
 

@@ -48,3 +48,10 @@ export function canManageMember(
         desiredRole === 'EDITOR'
     );
 }
+
+export function canReviewOrganization(
+    isReviewer: boolean,
+    isActiveMember: boolean,
+): boolean {
+    return isReviewer && !isActiveMember;
+}

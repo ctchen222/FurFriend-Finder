@@ -37,10 +37,19 @@ const membership = {
     transferDetail: jest.fn(),
     respondTransfer: jest.fn(),
 };
+const profile = {
+    detail: jest.fn(),
+    update: jest.fn(),
+    publish: jest.fn(),
+    unpublish: jest.fn(),
+};
 const app = express();
 app.use(express.json());
 app.use('/api/v1', createOrganizationActionRouter(membership));
-app.use('/api/v1/organizations', createOrganizationRouter(service, membership));
+app.use(
+    '/api/v1/organizations',
+    createOrganizationRouter(service, membership, profile),
+);
 
 beforeEach(() => {
     (auth.api.getSession as jest.Mock).mockResolvedValue({
@@ -65,6 +74,10 @@ beforeEach(() => {
     membership.createTransfer.mockResolvedValue({ id: organizationId });
     membership.transferDetail.mockResolvedValue({ organizationId });
     membership.respondTransfer.mockResolvedValue({ organizationId });
+    profile.update.mockResolvedValue(organization);
+    profile.detail.mockResolvedValue(organization);
+    profile.publish.mockResolvedValue(organization);
+    profile.unpublish.mockResolvedValue(organization);
 });
 
 describe('private organization HTTP boundary', () => {
@@ -224,6 +237,58 @@ describe('private organization HTTP boundary', () => {
             'actor',
             organizationId,
             { toUserId: 'member' },
+        );
+    });
+
+    it('maps profile and publication changes to the authenticated actor', async () => {
+        const body = { expectedVersion: 2 };
+        expect(
+            (
+                await request(app).get(
+                    `/api/v1/organizations/${organizationId}/profile`,
+                )
+            ).status,
+        ).toBe(200);
+        expect(
+            (
+                await request(app)
+                    .patch(`/api/v1/organizations/${organizationId}/profile`)
+                    .send(body)
+            ).status,
+        ).toBe(200);
+        expect(
+            (
+                await request(app)
+                    .post(
+                        `/api/v1/organizations/${organizationId}/publications`,
+                    )
+                    .send(body)
+            ).status,
+        ).toBe(200);
+        expect(
+            (
+                await request(app)
+                    .delete(
+                        `/api/v1/organizations/${organizationId}/publications`,
+                    )
+                    .send(body)
+            ).status,
+        ).toBe(200);
+        expect(profile.update).toHaveBeenCalledWith(
+            'actor',
+            organizationId,
+            body,
+        );
+        expect(profile.detail).toHaveBeenCalledWith('actor', organizationId);
+        expect(profile.publish).toHaveBeenCalledWith(
+            'actor',
+            organizationId,
+            body,
+        );
+        expect(profile.unpublish).toHaveBeenCalledWith(
+            'actor',
+            organizationId,
+            body,
         );
     });
 

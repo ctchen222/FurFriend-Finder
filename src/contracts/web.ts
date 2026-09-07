@@ -5,6 +5,7 @@ export interface SessionUser {
     email: string;
     emailVerified: boolean;
     isLostAnimalMailEnabled: boolean;
+    isOrganizationReviewer?: boolean;
 }
 
 export type ReportStatus = 'OPEN' | 'REUNITED' | 'CLOSED';

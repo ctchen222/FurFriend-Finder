@@ -228,7 +228,7 @@ export class OrganizationMembershipRepository {
             await this.db.query<any>(
                 `INSERT INTO organization_ownership_transfers
              (id,organization_id,from_user_id,to_user_id,token_hash,expires_at)
-             VALUES ($1,$2,$3,$4,$5,CURRENT_TIMESTAMP + INTERVAL '7 days')
+             VALUES ($1,$2,$3,$4,$5,CURRENT_TIMESTAMP + INTERVAL '24 hours')
              RETURNING id,to_user_id AS "toUserId",status,expires_at AS "expiresAt"`,
                 [
                     input.id,

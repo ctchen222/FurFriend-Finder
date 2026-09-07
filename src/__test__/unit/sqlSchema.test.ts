@@ -157,4 +157,39 @@ describe('SQL schema', () => {
         expect(migration).toContain('dedupe_key TEXT NOT NULL UNIQUE');
         expect(migration).toContain('token_hash CHAR(64) NOT NULL UNIQUE');
     });
+
+    it('separates platform reviewers, review decisions, and moderation history', () => {
+        const migration = fs.readFileSync(
+            path.join(
+                __dirname,
+                '..',
+                '..',
+                '..',
+                'sql',
+                'V10__Organization_review_and_publication.sql',
+            ),
+            'utf8',
+        );
+        expect(migration).toContain('CREATE TABLE platform_roles');
+        expect(migration).toContain('CREATE TABLE platform_role_events');
+        expect(migration).toContain('CREATE TABLE organization_reviews');
+        expect(migration).toContain(
+            'UNIQUE (organization_id, organization_version)',
+        );
+        expect(migration).toContain(
+            'CREATE TABLE organization_moderation_events',
+        );
+        expect(migration).toContain("created_at + INTERVAL '24 hours'");
+        expect(
+            fs.readFileSync(
+                path.join(
+                    process.cwd(),
+                    'src/Service/organizations/membershipRepository.ts',
+                ),
+                'utf8',
+            ),
+        ).toContain(
+            "organization_invitations (id,organization_id,email,role,token_hash,invited_by,expires_at)\n             VALUES ($1,$2,$3,$4,$5,$6,CURRENT_TIMESTAMP + INTERVAL '7 days')",
+        );
+    });
 });

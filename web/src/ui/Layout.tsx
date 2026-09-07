@@ -86,12 +86,22 @@ export function Layout() {
                                 首頁
                             </NavLink>
                             <NavLink to="/shelter-animals">收容所動物</NavLink>
+                            <NavLink to="/foster-organizations">
+                                中途之家
+                            </NavLink>
                             <NavLink to="/quick-use">快速比對</NavLink>
                             <NavLink to="/report-lost">協尋登記</NavLink>
                             {session.user ? (
                                 <>
                                     <NavLink to="/profile">個人資料</NavLink>
-                                    <NavLink to="/organizations">我的中途之家</NavLink>
+                                    <NavLink to="/organizations">
+                                        我的中途之家
+                                    </NavLink>
+                                    {session.user.isOrganizationReviewer && (
+                                        <NavLink to="/review/organizations">
+                                            審核工作台
+                                        </NavLink>
+                                    )}
                                     <button
                                         disabled={signingOut}
                                         onClick={logout}
@@ -133,6 +143,7 @@ export function Layout() {
                         </p>
                         <nav className="footer-nav" aria-label="頁腳導覽">
                             <Link to="/shelter-animals">收容所動物</Link>
+                            <Link to="/foster-organizations">中途之家</Link>
                             <Link to="/quick-use">快速比對</Link>
                             <Link to="/report-lost">協尋登記</Link>
                         </nav>

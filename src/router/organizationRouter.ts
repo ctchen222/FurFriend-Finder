@@ -15,10 +15,17 @@ import {
     createOrganizationMembershipService,
     type OrganizationMembershipService,
 } from '../Service/organizations/membershipService';
+import {
+    createOrganizationProfileService,
+    type OrganizationProfileService,
+} from '../Service/organizations/profileService';
 
 export function createOrganizationRouter(
     service: OrganizationService = createOrganizationService(pool),
     membership: OrganizationMembershipService = createOrganizationMembershipService(
+        pool,
+    ),
+    profile: OrganizationProfileService = createOrganizationProfileService(
         pool,
     ),
 ) {
@@ -49,6 +56,53 @@ export function createOrganizationRouter(
         '/:id/members',
         catchAsync(async (req, res) => {
             res.json(await membership.list(res.locals.user.id, req.params.id));
+        }),
+    );
+    router.patch(
+        '/:id/profile',
+        catchAsync(async (req, res) => {
+            res.json({
+                organization: await profile.update(
+                    res.locals.user.id,
+                    req.params.id,
+                    req.body,
+                ),
+            });
+        }),
+    );
+    router.get(
+        '/:id/profile',
+        catchAsync(async (req, res) => {
+            res.json({
+                organization: await profile.detail(
+                    res.locals.user.id,
+                    req.params.id,
+                ),
+            });
+        }),
+    );
+    router.post(
+        '/:id/publications',
+        catchAsync(async (req, res) => {
+            res.json({
+                organization: await profile.publish(
+                    res.locals.user.id,
+                    req.params.id,
+                    req.body,
+                ),
+            });
+        }),
+    );
+    router.delete(
+        '/:id/publications',
+        catchAsync(async (req, res) => {
+            res.json({
+                organization: await profile.unpublish(
+                    res.locals.user.id,
+                    req.params.id,
+                    req.body,
+                ),
+            });
         }),
     );
     router.post(

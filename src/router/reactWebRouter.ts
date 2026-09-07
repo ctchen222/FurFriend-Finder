@@ -4,6 +4,8 @@ import path from 'path';
 const pagePath =
     /^(?:\/|\/(?:login|register|forgot-password|reset-password|profile|report-lost|quick-use|shelter-animals|organizations(?:\/new)?)\/?|\/(?:reports|shelter-animals)\/\d+\/?|\/orgs\/[0-9a-f-]{36}\/?|\/organization-(?:invitations|ownership-transfers)\/[A-Za-z0-9_.-]{32,256}\/?)$/;
 const reservedPath = /^\/(?:api|assets|health|webhook|images|css|js)(?:\/|$)/;
+const organizationPagePath =
+    /^\/(?:foster-organizations(?:\/[0-9a-f-]{36})?|review\/organizations)\/?$/;
 
 /** Serves the built client without intercepting API responses or missing assets. */
 export function createReactWebRouter(
@@ -19,7 +21,8 @@ export function createReactWebRouter(
         }),
     );
     router.get('*', (req, res, next) => {
-        const knownPage = pagePath.test(req.path);
+        const knownPage =
+            pagePath.test(req.path) || organizationPagePath.test(req.path);
         if (
             reservedPath.test(req.path) ||
             (!knownPage && path.extname(req.path)) ||

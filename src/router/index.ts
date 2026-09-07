@@ -12,10 +12,16 @@ import {
     createOrganizationActionRouter,
     createOrganizationRouter,
 } from './organizationRouter';
+import {
+    createOrganizationReviewRouter,
+    createPublicOrganizationRouter,
+} from './organizationReviewRouter';
 
 export default function routes(app: express.Express) {
     app.use('/health', healthRoute);
     app.use('/api/v1', createOrganizationActionRouter());
+    app.use('/api/v1/public/organizations', createPublicOrganizationRouter());
+    app.use('/api/v1/reviewer/organizations', createOrganizationReviewRouter());
     app.use('/api/v1/organizations', createOrganizationRouter());
     app.use('/api/v1', createWebApiRouter());
 

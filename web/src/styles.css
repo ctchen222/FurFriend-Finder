@@ -270,6 +270,45 @@ textarea {
     list-style: none;
     padding: 0;
 }
+.public-organization-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+    gap: 20px;
+}
+.public-organization-grid .panel {
+    margin: 0;
+}
+.organization-summary {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+}
+.public-organization-detail {
+    max-width: 780px;
+}
+.public-organization-detail p,
+.reviewer-card p {
+    overflow-wrap: anywhere;
+}
+.foster-filter-bar {
+    grid-template-columns: minmax(180px, 2fr) repeat(2, minmax(140px, 1fr)) auto;
+    align-items: end;
+}
+.review-tabs {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    margin-bottom: 24px;
+    padding-bottom: 4px;
+}
+.review-tabs button[aria-current='page'] {
+    color: white;
+    background: var(--color-primary);
+}
+.reviewer-card {
+    max-width: 860px;
+}
 .organization-heading h1,
 .organization-list h2 {
     overflow-wrap: anywhere;
@@ -358,6 +397,9 @@ textarea {
 }
 @media (max-width: 560px) {
     .shelter-filter-bar {
+        grid-template-columns: minmax(0, 1fr);
+    }
+    .foster-filter-bar {
         grid-template-columns: minmax(0, 1fr);
     }
     .organization-details {

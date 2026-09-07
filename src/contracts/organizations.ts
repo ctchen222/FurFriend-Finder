@@ -23,6 +23,7 @@ export interface OrganizationWorkspace {
     city: string;
     publicContact: string;
     reviewStatus: OrganizationReviewStatus;
+    reviewReason?: string;
     operationalStatus: OrganizationOperationalStatus;
     publishedAt: string | null;
     version: number;
@@ -96,4 +97,47 @@ export interface OrganizationOwnershipTransferDetail {
     expiresAt: string;
     accountMatches: boolean;
     status: OrganizationInvitationStatus;
+}
+
+export interface OrganizationProfileInput {
+    expectedVersion: number;
+    name: string;
+    type: OrganizationType;
+    description: string;
+    city: string;
+    publicContact: string;
+}
+
+export interface ReviewerOrganization {
+    id: string;
+    name: string;
+    type: OrganizationType;
+    description: string;
+    city: string;
+    publicContact: string;
+    reviewStatus: OrganizationReviewStatus;
+    reviewReason?: string;
+    operationalStatus: OrganizationOperationalStatus;
+    publishedAt: string | null;
+    version: number;
+}
+
+export interface ReviewerOrganizationPage {
+    organizations: ReviewerOrganization[];
+    nextCursor: string | null;
+}
+
+export interface PublicOrganization {
+    id: string;
+    name: string;
+    type: OrganizationType;
+    description: string;
+    city: string;
+    publicContact: string;
+    publishedAt: string;
+}
+
+export interface PublicOrganizationPage {
+    organizations: PublicOrganization[];
+    nextCursor: string | null;
 }

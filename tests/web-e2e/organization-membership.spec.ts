@@ -44,7 +44,7 @@ test.beforeEach(async ({ page }) => {
             },
         }),
     );
-    await page.route(`**/api/v1/organizations/${id}`, (route) =>
+    await page.route(`**/api/v1/organizations/${id}/profile`, (route) =>
         route.fulfill({ json: { organization } }),
     );
 });
@@ -143,7 +143,7 @@ test('owner invites, changes role, removes, and starts a confirmed ownership tra
 test('editor sees a private roster without member email or management controls', async ({
     page,
 }) => {
-    await page.route(`**/api/v1/organizations/${id}`, (route) =>
+    await page.route(`**/api/v1/organizations/${id}/profile`, (route) =>
         route.fulfill({
             json: { organization: { ...organization, role: 'EDITOR' } },
         }),
