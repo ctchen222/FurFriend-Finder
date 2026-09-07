@@ -33,7 +33,7 @@ export function AuthPage({ mode }: { mode: Mode }) {
     const [title, description, submitText] = copy[mode];
     const requestedPath = params.get('returnTo') ?? '/profile';
     const returnTo =
-        /^\/(profile|report-lost|quick-use|reports\/\d+|organizations(?:\/new)?|orgs\/[0-9a-f-]{36}|review\/organizations|organization-(?:invitations|ownership-transfers)\/[A-Za-z0-9_.-]{32,256})$/.test(
+        /^\/(profile|report-lost|quick-use|reports\/\d+|organizations(?:\/new)?|orgs\/[0-9a-f-]{36}(?:\/animals(?:\/(?:new|[0-9a-f-]{36}))?)?|review\/organizations|organization-(?:invitations|ownership-transfers)\/[A-Za-z0-9_.-]{32,256})$/.test(
             requestedPath,
         )
             ? requestedPath

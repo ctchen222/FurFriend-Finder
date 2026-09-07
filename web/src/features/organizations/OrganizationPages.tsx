@@ -142,6 +142,20 @@ function Workspace({ id }: { id: string }) {
                             <span>{organizationStatus(org)}</span>
                         </p>
                     </header>
+                    <section className="panel section-heading">
+                        <div>
+                            <h2>動物管理</h2>
+                            <p className="muted">
+                                整理照片與介紹，讓等待家的毛孩被看見。
+                            </p>
+                        </div>
+                        <Link
+                            className="button primary"
+                            to={`/orgs/${org.id}/animals`}
+                        >
+                            管理動物
+                        </Link>
+                    </section>
                     <OrganizationProfileEditor
                         key={org.version}
                         organization={org}

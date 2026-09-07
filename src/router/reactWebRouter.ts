@@ -6,6 +6,8 @@ const pagePath =
 const reservedPath = /^\/(?:api|assets|health|webhook|images|css|js)(?:\/|$)/;
 const organizationPagePath =
     /^\/(?:foster-organizations(?:\/[0-9a-f-]{36})?|review\/organizations)\/?$/;
+const listingPagePath =
+    /^\/(?:orgs\/[0-9a-f-]{36}\/animals(?:\/(?:new|[0-9a-f-]{36}))?|foster-organizations\/[0-9a-f-]{36}\/animals\/[0-9a-f-]{36})\/?$/;
 
 /** Serves the built client without intercepting API responses or missing assets. */
 export function createReactWebRouter(
@@ -22,7 +24,9 @@ export function createReactWebRouter(
     );
     router.get('*', (req, res, next) => {
         const knownPage =
-            pagePath.test(req.path) || organizationPagePath.test(req.path);
+            pagePath.test(req.path) ||
+            organizationPagePath.test(req.path) ||
+            listingPagePath.test(req.path);
         if (
             reservedPath.test(req.path) ||
             (!knownPage && path.extname(req.path)) ||

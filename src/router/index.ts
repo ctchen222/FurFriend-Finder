@@ -9,6 +9,10 @@ import { addUserToLocals } from '../middleware/userSession';
 import { createWebApiRouter, createWebConfigRouter } from './webApiRouter';
 import { createReactWebRouter } from './reactWebRouter';
 import {
+    createOrganizationAnimalRouter,
+    createPublicOrganizationAnimalRouter,
+} from './organizationAnimalRouter';
+import {
     createOrganizationActionRouter,
     createOrganizationRouter,
 } from './organizationRouter';
@@ -22,9 +26,17 @@ export default function routes(app: express.Express) {
     // These endpoints are intentionally public and must be mounted before the
     // broad authenticated action router at /api/v1.
     app.use('/api/v1/config', createWebConfigRouter());
+    app.use(
+        '/api/v1/public/organizations/:orgId/animals',
+        createPublicOrganizationAnimalRouter(),
+    );
     app.use('/api/v1/public/organizations', createPublicOrganizationRouter());
     app.use('/api/v1', createOrganizationActionRouter());
     app.use('/api/v1/reviewer/organizations', createOrganizationReviewRouter());
+    app.use(
+        '/api/v1/organizations/:orgId/animals',
+        createOrganizationAnimalRouter(),
+    );
     app.use('/api/v1/organizations', createOrganizationRouter());
     app.use('/api/v1', createWebApiRouter());
 

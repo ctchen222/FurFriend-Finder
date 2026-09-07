@@ -5,6 +5,7 @@ import type {
 } from '../../../../src/contracts/organizations';
 import { useResource } from '../../hooks/useResource';
 import { Feedback } from '../../ui/Feedback';
+import { AnimalList } from '../organization-animals/AnimalListingPages';
 
 const typeLabel = { INDIVIDUAL: '個人中途', GROUP: '救援團隊' };
 
@@ -187,6 +188,10 @@ export function PublicOrganizationDetailPage() {
                                 </p>
                             </>
                         )}
+                    </section>
+                    <section aria-labelledby="public-animals-title">
+                        <h2 id="public-animals-title">認識我們照顧的動物</h2>
+                        <AnimalList key={id} orgId={id} isPublic />
                     </section>
                 </article>
             )}
