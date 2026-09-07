@@ -6,7 +6,7 @@ import { router as authRoute } from './authRouter';
 import { router as webhookRoute } from './webhookRouter';
 import { router as healthRoute } from './healthRouter';
 import { addUserToLocals } from '../middleware/userSession';
-import { createWebApiRouter } from './webApiRouter';
+import { createWebApiRouter, createWebConfigRouter } from './webApiRouter';
 import { createReactWebRouter } from './reactWebRouter';
 import {
     createOrganizationActionRouter,
@@ -19,8 +19,11 @@ import {
 
 export default function routes(app: express.Express) {
     app.use('/health', healthRoute);
-    app.use('/api/v1', createOrganizationActionRouter());
+    // These endpoints are intentionally public and must be mounted before the
+    // broad authenticated action router at /api/v1.
+    app.use('/api/v1/config', createWebConfigRouter());
     app.use('/api/v1/public/organizations', createPublicOrganizationRouter());
+    app.use('/api/v1', createOrganizationActionRouter());
     app.use('/api/v1/reviewer/organizations', createOrganizationReviewRouter());
     app.use('/api/v1/organizations', createOrganizationRouter());
     app.use('/api/v1', createWebApiRouter());

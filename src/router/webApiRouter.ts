@@ -7,9 +7,18 @@ import { requireUser } from '../middleware/requireUser';
 import { requireSameOrigin } from '../middleware/requireSameOrigin';
 import { createReportService, ReportError } from '../Service/reports/service';
 
+export function createWebConfigRouter() {
+    const router = Router();
+    router.get('/', (_req, res) =>
+        res.json({
+            googleOAuthEnabled: process.env.GOOGLE_OAUTH_ENABLED === 'true',
+        }),
+    );
+    return router;
+}
+
 export function createWebApiRouter(service = createReportService()) {
     const router = Router();
-    router.get('/config', (_req, res) => res.json({ googleOAuthEnabled: process.env.GOOGLE_OAUTH_ENABLED === 'true' }));
     router.use(addUserToLocals, requireUser, requireSameOrigin);
     router.get('/me', catchAsync(async (_req, res) => {
         const result = await pool.query(
