@@ -377,6 +377,12 @@ textarea {
 .ownership-transfer {
     margin-top: 24px;
 }
+.delivery-state {
+    font-size: 0.9rem;
+}
+.error-text {
+    color: var(--color-danger, #a12b2b);
+}
 .organization-action-page {
     margin-block: 64px;
 }

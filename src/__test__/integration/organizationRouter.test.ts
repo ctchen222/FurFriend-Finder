@@ -27,6 +27,7 @@ const service = { create: jest.fn(), listMine: jest.fn(), detail: jest.fn() };
 const membership = {
     list: jest.fn(),
     invite: jest.fn(),
+    resendInvitation: jest.fn(),
     revokeInvitation: jest.fn(),
     invitationDetail: jest.fn(),
     respondInvitation: jest.fn(),
@@ -68,6 +69,7 @@ beforeEach(() => {
         capabilities: {},
     });
     membership.invite.mockResolvedValue({ id: organizationId });
+    membership.resendInvitation.mockResolvedValue({ id: organizationId });
     membership.invitationDetail.mockResolvedValue({ organizationId });
     membership.respondInvitation.mockResolvedValue({ organizationId });
     membership.updateMember.mockResolvedValue({ userId: 'member' });
@@ -193,6 +195,16 @@ describe('private organization HTTP boundary', () => {
             'actor',
             organizationId,
             { email: 'helper@example.com', role: 'EDITOR' },
+        );
+
+        const resent = await request(app).post(
+            `/api/v1/organizations/${organizationId}/invitations/${organizationId}/resend`,
+        );
+        expect(resent.status).toBe(201);
+        expect(membership.resendInvitation).toHaveBeenCalledWith(
+            'actor',
+            organizationId,
+            organizationId,
         );
     });
 

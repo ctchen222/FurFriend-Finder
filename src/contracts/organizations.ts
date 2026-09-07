@@ -42,6 +42,26 @@ export type OrganizationInvitationStatus =
     | 'DECLINED'
     | 'REVOKED'
     | 'EXPIRED';
+export type OrganizationMailDeliveryState =
+    | 'PENDING'
+    | 'RUNNING'
+    | 'SENT'
+    | 'FAILED'
+    | 'CANCELLED';
+export type OrganizationMailFailureReason =
+    | 'auth'
+    | 'timeout'
+    | 'network'
+    | 'smtp_rejected'
+    | 'unknown';
+
+export interface OrganizationMailDelivery {
+    state: OrganizationMailDeliveryState;
+    attempts: number;
+    sentAt: string | null;
+    failureReason: OrganizationMailFailureReason | null;
+    resendAvailableAt: string;
+}
 
 export interface OrganizationMember {
     userId: string;
@@ -57,6 +77,7 @@ export interface OrganizationInvitationSummary {
     role: Exclude<OrganizationRole, 'OWNER'>;
     status: OrganizationInvitationStatus;
     expiresAt: string;
+    delivery: OrganizationMailDelivery;
 }
 
 export interface OrganizationOwnershipTransferSummary {

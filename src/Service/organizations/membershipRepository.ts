@@ -61,12 +61,27 @@ export class OrganizationMembershipRepository {
     async invitations(organizationId: string) {
         return (
             await this.db.query<any>(
-                `SELECT id,email,role,status,expires_at AS "expiresAt" FROM organization_invitations
-             WHERE organization_id=$1 AND status='PENDING' AND expires_at>CURRENT_TIMESTAMP
-             ORDER BY created_at DESC,id`,
+                `SELECT i.id,i.email,i.role,i.status,i.expires_at AS "expiresAt",
+                        m.state AS "deliveryState",m.attempts,m.sent_at AS "sentAt",
+                        m.last_error_code AS "failureReason",
+                        m.created_at + INTERVAL '60 seconds' AS "resendAvailableAt"
+                 FROM organization_invitations i
+                 JOIN organization_mail_outbox m ON m.invitation_id=i.id
+                 WHERE i.organization_id=$1 AND i.status='PENDING' AND i.expires_at>CURRENT_TIMESTAMP
+                 ORDER BY i.created_at DESC,i.id`,
                 [organizationId],
             )
         ).rows;
+    }
+
+    async invitationResendAvailable(invitationId: string) {
+        return (
+            await this.db.query<{ available: boolean }>(
+                `SELECT created_at <= CURRENT_TIMESTAMP - INTERVAL '60 seconds' AS available
+                 FROM organization_mail_outbox WHERE invitation_id=$1 FOR UPDATE`,
+                [invitationId],
+            )
+        ).rows[0]?.available;
     }
 
     async pendingTransfer(organizationId: string) {

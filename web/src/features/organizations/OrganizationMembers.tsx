@@ -9,6 +9,25 @@ import { Feedback } from '../../ui/Feedback';
 
 const roleNames = { OWNER: '負責人', ADMIN: '管理員', EDITOR: '協作者' };
 
+function deliveryText(
+    state: OrganizationMembershipWorkspace['invitations'][number]['delivery'],
+) {
+    switch (state.state) {
+        case 'SENT':
+            return '邀請信已寄出';
+        case 'RUNNING':
+            return '正在寄送邀請信';
+        case 'FAILED':
+            return '寄送失敗，請重新寄送';
+        case 'CANCELLED':
+            return '寄送已取消';
+        default:
+            return state.attempts > 0
+                ? '寄送暫時失敗，系統稍後會重試'
+                : '等待寄送';
+    }
+}
+
 export function OrganizationMembers({
     organizationId,
 }: {
@@ -253,22 +272,60 @@ export function OrganizationMembers({
                                             <span className="muted">
                                                 {roleNames[invitation.role]}
                                             </span>
+                                            <span
+                                                className={
+                                                    invitation.delivery.state ===
+                                                    'FAILED'
+                                                        ? 'delivery-state error-text'
+                                                        : 'delivery-state muted'
+                                                }
+                                                role={
+                                                    invitation.delivery.state ===
+                                                    'FAILED'
+                                                        ? 'alert'
+                                                        : undefined
+                                                }
+                                            >
+                                                {deliveryText(
+                                                    invitation.delivery,
+                                                )}
+                                            </span>
                                         </div>
-                                        <button
-                                            disabled={Boolean(busy)}
-                                            onClick={() =>
-                                                void act(
-                                                    `revoke-${invitation.id}`,
-                                                    () =>
-                                                        post(
-                                                            `/api/v1/organizations/${organizationId}/invitations/${invitation.id}/revoke`,
-                                                        ),
-                                                    '邀請已撤銷。',
-                                                )
-                                            }
-                                        >
-                                            撤銷邀請
-                                        </button>
+                                        <div className="member-actions">
+                                            <button
+                                                disabled={Boolean(busy)}
+                                                onClick={() =>
+                                                    void act(
+                                                        `resend-${invitation.id}`,
+                                                        () =>
+                                                            post(
+                                                                `/api/v1/organizations/${organizationId}/invitations/${invitation.id}/resend`,
+                                                            ),
+                                                        '新邀請已排入寄送，舊連結已失效。',
+                                                    )
+                                                }
+                                            >
+                                                {busy ===
+                                                `resend-${invitation.id}`
+                                                    ? '重新排入中…'
+                                                    : '重新寄送'}
+                                            </button>
+                                            <button
+                                                disabled={Boolean(busy)}
+                                                onClick={() =>
+                                                    void act(
+                                                        `revoke-${invitation.id}`,
+                                                        () =>
+                                                            post(
+                                                                `/api/v1/organizations/${organizationId}/invitations/${invitation.id}/revoke`,
+                                                            ),
+                                                        '邀請已撤銷。',
+                                                    )
+                                                }
+                                            >
+                                                撤銷邀請
+                                            </button>
+                                        </div>
                                     </li>
                                 ))}
                             </ul>

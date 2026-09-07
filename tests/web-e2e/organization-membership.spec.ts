@@ -80,6 +80,35 @@ test('owner invites, changes role, removes, and starts a confirmed ownership tra
                     role: body.role,
                     status: 'PENDING',
                     expiresAt: '2026-09-14T00:00:00.000Z',
+                    delivery: {
+                        state: 'FAILED',
+                        attempts: 3,
+                        sentAt: null,
+                        failureReason: 'network',
+                        resendAvailableAt: '2026-09-07T00:00:00.000Z',
+                    },
+                },
+            ];
+            await route.fulfill({
+                status: 201,
+                json: { invitation: invitations[0] },
+            });
+        },
+    );
+    await page.route(
+        `**/api/v1/organizations/${id}/invitations/${invitationId}/resend`,
+        async (route) => {
+            invitations = [
+                {
+                    ...invitations[0],
+                    id: '33333333-3333-4333-8333-333333333333',
+                    delivery: {
+                        state: 'PENDING',
+                        attempts: 0,
+                        sentAt: null,
+                        failureReason: null,
+                        resendAvailableAt: '2026-09-07T00:01:00.000Z',
+                    },
                 },
             ];
             await route.fulfill({
@@ -125,6 +154,12 @@ test('owner invites, changes role, removes, and starts a confirmed ownership tra
     await page.getByLabel('Email').fill('helper@example.com');
     await page.getByRole('button', { name: '寄出邀請' }).click();
     await expect(page.getByText('helper@example.com')).toBeVisible();
+    await expect(page.getByText('寄送失敗，請重新寄送')).toBeVisible();
+    await page.getByRole('button', { name: '重新寄送' }).click();
+    await expect(page.getByText('等待寄送')).toBeVisible();
+    await expect(
+        page.getByText('新邀請已排入寄送，舊連結已失效。'),
+    ).toBeVisible();
 
     await page.getByLabel('小美的角色').selectOption('ADMIN');
     await expect(page.getByLabel('小美的角色')).toHaveValue('ADMIN');

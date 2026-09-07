@@ -312,16 +312,49 @@ async function main() {
             ).rows[0].count,
             4,
         );
-        await memberships.invite('admin', organization.id, {
-            email: 'wrong@organization.test',
-            role: 'EDITOR',
-        });
+        const deliveryInvite = await memberships.invite(
+            'admin',
+            organization.id,
+            { email: 'wrong@organization.test', role: 'EDITOR' },
+        );
+        assert.equal(
+            (await memberships.list('admin', organization.id)).invitations[0]
+                .delivery.state,
+            'PENDING',
+        );
+        await assert.rejects(
+            memberships.resendInvitation(
+                'admin',
+                organization.id,
+                deliveryInvite.id,
+            ),
+            { code: 'INVITATION_RESEND_COOLDOWN' },
+        );
+        await db.query(
+            `UPDATE organization_mail_outbox SET created_at=created_at - INTERVAL '61 seconds'
+             WHERE invitation_id=$1`,
+            [deliveryInvite.id],
+        );
+        const resentInvite = await memberships.resendInvitation(
+            'admin',
+            organization.id,
+            deliveryInvite.id,
+        );
+        assert.notEqual(resentInvite.id, deliveryInvite.id);
+        await assert.rejects(
+            memberships.respondInvitation(
+                'wrong',
+                createOrganizationToken('invite', deliveryInvite.id),
+                'ACCEPTED',
+            ),
+            { code: 'INVITATION_NOT_FOUND' },
+        );
         const organizationMail = new OrganizationMailWorker(
             new OrganizationMailRepository(db),
             new MailService(),
             'http://localhost:5173',
         );
-        for (let index = 0; index < 5; index += 1)
+        for (let index = 0; index < 6; index += 1)
             await organizationMail.runOnce();
         assert.equal(
             (

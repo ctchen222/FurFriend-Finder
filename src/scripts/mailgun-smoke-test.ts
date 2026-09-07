@@ -14,11 +14,8 @@ async function run() {
     const response = await mailService.sendTestMail(testRecipient);
 
     console.log('SMTP smoke test succeeded.');
-    console.log(`Accepted: ${(response.accepted || []).join(', ') || 'none'}`);
-    console.log(`Rejected: ${(response.rejected || []).join(', ') || 'none'}`);
-    if ('messageId' in response && response.messageId) {
-        console.log(`Message ID: ${response.messageId}`);
-    }
+    console.log(`Accepted recipients: ${(response.accepted || []).length}`);
+    console.log(`Rejected recipients: ${(response.rejected || []).length}`);
 }
 
 run().catch((error) => {

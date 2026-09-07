@@ -76,12 +76,22 @@ function requireAccess(
 }
 
 function invitationSummary(row: any): OrganizationInvitationSummary {
+    const createdFallback = new Date(Date.now() + 60_000).toISOString();
     return {
         id: row.id,
         email: row.email,
         role: row.role,
         status: row.status,
         expiresAt: iso(row.expiresAt ?? row.expires_at),
+        delivery: {
+            state: row.deliveryState ?? 'PENDING',
+            attempts: row.attempts ?? 0,
+            sentAt: row.sentAt ? iso(row.sentAt) : null,
+            failureReason: row.failureReason ?? null,
+            resendAvailableAt: row.resendAvailableAt
+                ? iso(row.resendAvailableAt)
+                : createdFallback,
+        },
     };
 }
 
@@ -248,6 +258,67 @@ export function createOrganizationMembershipService(db: Pool) {
                     undefined,
                     invitation.id,
                 );
+            });
+        },
+
+        async resendInvitation(
+            actorId: string,
+            rawOrganizationId: string,
+            rawInvitationId: string,
+        ): Promise<OrganizationInvitationSummary> {
+            const organizationId =
+                organizationIdSchema.parse(rawOrganizationId);
+            const invitationId = organizationIdSchema.parse(rawInvitationId);
+            return withTransaction(db, async (client) => {
+                const repository = new OrganizationMembershipRepository(client);
+                requireAccount(await repository.account(actorId, true), true);
+                const access = requireAccess(
+                    await repository.access(organizationId, actorId, true),
+                    true,
+                );
+                const previous = await repository.invitationById(
+                    organizationId,
+                    invitationId,
+                    true,
+                );
+                if (!previous || previous.status !== 'PENDING')
+                    throw unavailable();
+                if (!canManageMember(access.role, null, previous.role)) {
+                    throw new OrganizationError(
+                        403,
+                        'MEMBER_MANAGEMENT_FORBIDDEN',
+                        '你沒有權限重新寄送此邀請',
+                    );
+                }
+                if (
+                    !(await repository.invitationResendAvailable(invitationId))
+                ) {
+                    throw new OrganizationError(
+                        429,
+                        'INVITATION_RESEND_COOLDOWN',
+                        '請稍候一分鐘再重新寄送',
+                    );
+                }
+                await repository.invitationStatus(invitationId, 'REVOKED');
+                const id = randomUUID();
+                const token = createOrganizationToken('invite', id);
+                const invitation = await repository.insertInvitation({
+                    id,
+                    organizationId,
+                    email: previous.email,
+                    role: previous.role,
+                    tokenHash: hashOrganizationToken(token),
+                    invitedBy: actorId,
+                });
+                await repository.enqueueInvitation(organizationId, id);
+                await repository.audit(
+                    organizationId,
+                    actorId,
+                    'MEMBER_INVITATION_RESENT',
+                    undefined,
+                    id,
+                );
+                return invitationSummary(invitation);
             });
         },
 

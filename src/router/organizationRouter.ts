@@ -128,6 +128,18 @@ export function createOrganizationRouter(
             res.status(204).end();
         }),
     );
+    router.post(
+        '/:id/invitations/:invitationId/resend',
+        catchAsync(async (req, res) => {
+            res.status(201).json({
+                invitation: await membership.resendInvitation(
+                    res.locals.user.id,
+                    req.params.id,
+                    req.params.invitationId,
+                ),
+            });
+        }),
+    );
     router.patch(
         '/:id/members/:userId',
         catchAsync(async (req, res) => {
