@@ -30,6 +30,20 @@ Migration 成功後再次執行應套用 0 筆。`sync:shelter` 會呼叫外部�
 
 ## 啟動：真實寄信模式
 
+一般開發只需在專案根目錄執行：
+
+```bash
+nvm use 22.22.2
+pnpm dev:all
+```
+
+`dev:all` 會啟動獨立的 API、React 與 worker 程序，並在停止時一起清理。
+需要增加每一類 worker 的並行數時，可執行 `WORKER_COUNT=2 pnpm dev:all`；預設為
+`1`，只接受 `1` 到 `16` 的整數。提高數量會增加 PostgreSQL 連線與 SMTP 並行負載，
+本機功能測試通常不需要調高。
+
+只有需要分別觀察或重啟單一程序時，才使用下列三個終端機。
+
 三個終端機都先在專案根目錄執行 `nvm use 22.22.2`。
 
 ```bash
@@ -43,12 +57,13 @@ pnpm dev:web
 ```
 
 ```bash
-# 終端機 3：背景配對與寄信
-pnpm workers
+# 終端機 3：背景配對與寄信（套用與 React 相同的本機網址）
+pnpm dev:workers
 ```
 
 以 `http://localhost:5173` 開啟網站；不要混用 `127.0.0.1`，避免登入 cookie 與 callback origin 不一致。
-`dev:api` 僅覆寫子程序的本機網址，不改寫 `.env`，並停用資料排程。配對與通知需要第三個終端機的 worker。
+`dev:api` 與 `dev:workers` 僅覆寫各自子程序的本機網址，不改寫 `.env`；
+`dev:api` 也會停用資料排程。配對與通知仍由獨立的 worker 程序處理。
 
 SMTP 由 API 與 worker 各自讀取，兩個程序必須使用相同模式：
 
@@ -94,7 +109,7 @@ export SMTP_USER=dev SMTP_PASSWORD=dev
 export SMTP_SENT_FROM='FurFriend <dev@example.test>'
 ```
 
-接著分別執行 `pnpm dev:api` 與 `pnpm workers`；前端仍為 `pnpm dev:web`。
+接著分別執行 `pnpm dev:api` 與 `pnpm dev:workers`；前端仍為 `pnpm dev:web`。
 信件只會進入 `http://localhost:8025`，不會送往外部收件匣。
 切回真實 SMTP 時，關閉這兩個終端機並在沒有上述覆寫的新終端機啟動。
 
