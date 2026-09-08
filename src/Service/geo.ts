@@ -18,6 +18,7 @@ class GeoService {
 
 	async geocoding(address: string): Promise<{ lat: number; lng: number } | null> {
 		const geocodeRequest: GeocodeRequest = {
+			timeout: 10_000,
 			params: {
 				address,
 				key: this.apiKey,

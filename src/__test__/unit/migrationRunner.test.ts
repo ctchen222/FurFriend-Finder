@@ -1,8 +1,14 @@
-import { MigrationRunner, type MigrationFile } from '../../libs/migrationRunner';
+import { loadMigrationFiles, MigrationRunner, type MigrationFile } from '../../libs/migrationRunner';
 
 function migration(version: number): MigrationFile { return { version, name: `migration-${version}`, sql: `SELECT ${version}`, checksum: `checksum-${version}` }; }
 
 describe('MigrationRunner', () => {
+    it('discovers the additive worker timestamp migration after existing migrations', () => {
+        const migrations = loadMigrationFiles();
+        expect(migrations.map(item => item.version)).toEqual(Array.from({ length: 13 }, (_, i) => i + 1));
+        expect(migrations[12].name).toBe('Worker_lease_timestamps');
+    });
+
     it.each([false, true])('destroys the connection on unlock failure and preserves migration failure: %s', async (migrationFails) => {
         const migrationError = new Error('migration failed');
         const unlockError = new Error('unlock failed');

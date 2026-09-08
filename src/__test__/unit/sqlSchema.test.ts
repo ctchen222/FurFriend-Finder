@@ -2,6 +2,20 @@ import fs from 'fs';
 import path from 'path';
 
 describe('SQL schema', () => {
+    it('migrates worker timestamps using the database session timezone', () => {
+        const migration = fs.readFileSync(
+            path.join(__dirname, '..', '..', '..', 'sql', 'V13__Worker_lease_timestamps.sql'),
+            'utf8',
+        );
+        expect(migration).toContain('ALTER TABLE match_jobs');
+        expect(migration).toContain('ALTER TABLE notification_outbox');
+        for (const column of ['available_at', 'lease_until', 'created_at', 'sent_at']) {
+            expect(migration).toContain(`ALTER COLUMN ${column} TYPE TIMESTAMPTZ`);
+            expect(migration).toContain(`USING ${column} AT TIME ZONE current_setting('TimeZone')`);
+        }
+        expect(migration).not.toContain('ALTER TABLE organization_mail_outbox');
+    });
+
     it('should define Better Auth verification timestamp columns with camelCase names', () => {
         const initialSchema = fs.readFileSync(
             path.join(__dirname, '..', '..', '..', 'sql', 'V1__Initial.sql'),
