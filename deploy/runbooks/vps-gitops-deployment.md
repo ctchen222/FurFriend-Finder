@@ -55,6 +55,36 @@ The `furfriend-secrets` Application creates the `observability` namespace and th
 
 ## 4. App Deployment
 
+### V13 worker lease migration prerequisite
+
+V13 requires a maintenance rollout. Stop every process that can claim matching or
+notification jobs, including local or separately scheduled workers, before running
+the migration. Prevent Argo CD or another supervisor from restarting old workers
+while maintenance is in progress; pause automatic reconciliation or commit the
+maintenance state before stopping workloads.
+
+1. Back up PostgreSQL and record its session `TimeZone`. Legacy DB-owned
+   `created_at` and initial `available_at` are interpreted in that timezone.
+2. Stop workers, wait for their in-flight work to drain or terminate, and verify
+   that no old worker process remains. The migration cannot stop external SMTP
+   calls or prove that workers have stopped.
+3. Run `node dist/scripts/migrate.js` from the new runtime image with its normal
+   database connection (`pnpm db:migrate` is the source-checkout equivalent).
+   The chart's initial-schema Job only
+   bootstraps V1; its success does not prove that V13 has run.
+4. Confirm V13 is recorded in `schema_migrations` before starting new workers.
+   V13 resets all `RUNNING` match jobs and notification outbox rows to `PENDING`,
+   clears their claim tokens and leases, and makes them immediately available.
+5. Start only the new workers, restore reconciliation, and verify that recovered
+   jobs obtain new tokens and progress normally.
+
+Legacy timestamps mix database and Node process wall times. V13 cannot reconstruct
+every original instant; historical `sent_at` remains wall-time reference data,
+and old retry schedules may retain their ambiguous interpretation. Interrupted
+SMTP delivery can repeat after recovery because delivery remains at-least-once.
+Do not alter migration checksums to bypass an already applied V13; investigate
+the installed version before proceeding.
+
 Apply the app Argo CD Application:
 
 ```sh

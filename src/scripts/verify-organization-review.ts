@@ -21,42 +21,98 @@ import { OrganizationMailRepository } from '../repository/organizationMail.db';
 async function verifyLeaseTimestampMigration(db: Pool, sql: string) {
     const client = await db.connect();
     try {
-        for (const timezone of ['UTC', 'Asia/Taipei']) {
+        // Independent constants: never derive expected instants with the SQL
+        // conversion expression being tested. Legacy Node values had other origins.
+        for (const fixture of [
+            { timezone: 'UTC', created: '2026-09-01T04:00:00.000Z', initial: '2099-09-01T04:00:00.000Z' },
+            { timezone: 'Asia/Taipei', created: '2026-08-31T20:00:00.000Z', initial: '2099-08-31T20:00:00.000Z' },
+        ]) {
             await client.query('BEGIN');
             try {
-                await client.query(`SELECT set_config('TimeZone',$1,true)`, [timezone]);
+                await client.query(`SELECT set_config('TimeZone',$1,true)`, [fixture.timezone]);
                 // Temporary tables shadow only these migration targets on this connection.
+                const pendingId = randomUUID();
+                const sentId = randomUUID();
+                const runningIds: string[] = [randomUUID(), randomUUID()];
+                const oldTokens = [randomUUID(), randomUUID()];
                 for (const table of ['match_jobs', 'notification_outbox']) {
                     await client.query(
                         `CREATE TEMP TABLE ${table} (
+                            id UUID PRIMARY KEY, state TEXT, attempts INTEGER DEFAULT 1,
+                            claim_token UUID, last_error_code TEXT,
                             available_at TIMESTAMP, lease_until TIMESTAMP,
-                            created_at TIMESTAMP, sent_at TIMESTAMP
+                            created_at TIMESTAMP, sent_at TIMESTAMP,
+                            report_id INTEGER, report_revision INTEGER, engine_version TEXT,
+                            execution_no INTEGER DEFAULT 1, run_id UUID, user_id TEXT
                          ) ON COMMIT DROP`,
                     );
                     await client.query(
-                        `INSERT INTO ${table} VALUES ('2026-09-01 12:00:00',NULL,'2026-09-01 11:00:00',NULL)`,
+                        `INSERT INTO ${table} (id,state,available_at,created_at,sent_at)
+                         VALUES ($1,'PENDING','2099-09-01 04:00:00','2026-09-01 04:00:00',NULL),
+                                ($2,$3,'2026-09-01 04:00:00','2026-09-01 04:00:00','2026-09-01 12:30:00')`,
+                        [pendingId, sentId, table === 'match_jobs' ? 'SUCCEEDED' : 'SENT'],
                     );
+                    for (const [index, id] of runningIds.entries()) {
+                        // A legacy Node Asia/Taipei write could encode 04:00Z as
+                        // 12:00 wall time. Its lease cannot safely be preserved.
+                        await client.query(
+                            `INSERT INTO ${table} (id,state,claim_token,available_at,lease_until,created_at)
+                             VALUES ($1,'RUNNING',$2,'2099-09-01 12:00:00',$3,'2026-09-01 04:00:00')`,
+                            [id, oldTokens[index], index === 0 ? '2099-09-01 12:02:00' : '2026-09-01 12:02:00'],
+                        );
+                    }
                 }
-                const expected = await client.query(
-                    `SELECT available_at AT TIME ZONE current_setting('TimeZone') AS instant FROM match_jobs`,
-                );
                 await client.query(sql);
                 for (const table of ['match_jobs', 'notification_outbox']) {
-                    const result = await client.query(
-                        `SELECT available_at,lease_until,sent_at,
-                            pg_typeof(available_at)::text AS available_type,
-                            pg_typeof(lease_until)::text AS lease_type,
-                            pg_typeof(created_at)::text AS created_type
-                         FROM ${table}`,
-                    );
-                    assert.deepEqual(result.rows[0], {
-                        available_at: expected.rows[0].instant,
-                        lease_until: null,
-                        sent_at: null,
-                        available_type: 'timestamp with time zone',
-                        lease_type: 'timestamp with time zone',
-                        created_type: 'timestamp with time zone',
+                    const pending = (await client.query(
+                        `SELECT state,available_at,created_at FROM ${table} WHERE id=$1`, [pendingId],
+                    )).rows[0];
+                    assert.deepEqual(pending, {
+                        state: 'PENDING',
+                        available_at: new Date(fixture.initial),
+                        created_at: new Date(fixture.created),
                     });
+                    const sent = (await client.query(
+                        `SELECT state,to_char(sent_at,'YYYY-MM-DD HH24:MI:SS') AS wall_time
+                         FROM ${table} WHERE id=$1`, [sentId],
+                    )).rows[0];
+                    assert.deepEqual(sent, {
+                        state: table === 'match_jobs' ? 'SUCCEEDED' : 'SENT',
+                        wall_time: '2026-09-01 12:30:00',
+                    });
+                    for (const id of runningIds) {
+                        assert.deepEqual((await client.query(
+                            `SELECT state,claim_token,lease_until,available_at<=CURRENT_TIMESTAMP AS ready
+                             FROM ${table} WHERE id=$1`, [id],
+                        )).rows[0], {
+                            state: 'PENDING', claim_token: null, lease_until: null, ready: true,
+                        }, `${table}: every legacy RUNNING claim must be recoverable`);
+                    }
+                    const jobs = new MatchJobRepository(client);
+                    const notices = new NotificationRepository(client);
+                    const repository = table === 'match_jobs' ? jobs : notices;
+                    const finish = table === 'match_jobs'
+                        ? (id: string, token: string) => jobs.succeed(id, token)
+                        : (id: string, token: string) => notices.markSent(id, token);
+                    const fail = table === 'match_jobs'
+                        ? (id: string, token: string) => jobs.fail(id, token, 1, 'stale')
+                        : (id: string, token: string) => notices.markFailed(id, token, 1, 'stale');
+                    for (let claimed = 0; claimed < runningIds.length; claimed += 1) {
+                        const job = await repository.claim();
+                        assert.ok(job?.claim_token, 'new workers can immediately reclaim migrated jobs');
+                        assert.ok(runningIds.includes(job.id));
+                        const staleToken = oldTokens[runningIds.indexOf(job.id)];
+                        assert.notEqual(job.claim_token, staleToken);
+                        assert.equal(await repository.renew(job.id, job.claim_token), true);
+                        assert.equal(await repository.renew(job.id, staleToken), false);
+                        assert.equal(await finish(job.id, staleToken), false);
+                        assert.equal(await fail(job.id, staleToken), false);
+                        const current = (await client.query(
+                            `SELECT state,claim_token FROM ${table} WHERE id=$1`, [job.id],
+                        )).rows[0];
+                        assert.deepEqual(current, { state: 'RUNNING', claim_token: job.claim_token });
+                    }
+                    assert.equal(await repository.claim(), null, 'renewed claims cannot be reclaimed');
                 }
                 assert.equal((await client.query(
                     'SELECT pg_typeof(sent_at)::text AS type FROM notification_outbox',
@@ -68,7 +124,7 @@ async function verifyLeaseTimestampMigration(db: Pool, sql: string) {
     } finally {
         client.release(true);
     }
-    console.log('PASS: V13 preserves legacy wall-time instants and null leases in UTC and Asia/Taipei.');
+    console.log('PASS: V13 resets mixed-origin RUNNING claims, preserves DB-owned timestamp interpretation, and fences recovered claims; historical sent_at remains wall-time reference data.');
 }
 
 /** All fixtures and lease manipulation stay inside the disposable verification schema. */
@@ -206,7 +262,7 @@ async function main() {
     assert.match(schema, /^fff_review_verify_[a-f0-9]{32}$/);
     const db = new Pool({
         connectionString,
-        options: `-c search_path=${schema},pg_catalog`,
+        options: `-c search_path=${schema},pg_catalog -c TimeZone=UTC`,
         max: 5,
     });
     let created = false;
