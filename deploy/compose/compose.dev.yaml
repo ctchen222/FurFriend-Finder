@@ -1,0 +1,21 @@
+services:
+  app:
+    environment:
+      NODE_ENV: production
+      DISABLE_DATA_CRON: "true"
+      THREADS_ENABLED: "false"
+      OTEL_SDK_DISABLED: "true"
+
+  worker:
+    environment:
+      NODE_ENV: production
+      DISABLE_DATA_CRON: "true"
+      THREADS_ENABLED: "false"
+      OTEL_SDK_DISABLED: "true"
+
+  migrate:
+    environment:
+      NODE_ENV: production
+      DISABLE_DATA_CRON: "true"
+      THREADS_ENABLED: "false"
+      OTEL_SDK_DISABLED: "true"

@@ -21,6 +21,7 @@ jobs:
     outputs:
       app: ${{ steps.filter.outputs.app }}
       helm: ${{ steps.filter.outputs.helm }}
+      deploy: ${{ steps.filter.outputs.deploy }}
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3
@@ -42,6 +43,12 @@ jobs:
               - '.github/actions/**'
             helm:
               - 'deploy/furfriend-finder/**'
+            deploy:
+              - 'deploy/compose/**'
+              - 'deploy/scripts/**'
+              - 'deploy/runbooks/vps-docker-dev.md'
+              - '.github/workflows/ci.yml'
+              - '.github/workflows/deploy-image.yml'
 
   lint:
     name: Lint
@@ -154,6 +161,32 @@ jobs:
       - name: Run Helm unit tests
         run: helm unittest deploy/furfriend-finder
 
+  compose-validate:
+    name: Docker Compose validation
+    needs: [changes]
+    if: needs.changes.outputs.deploy == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare non-secret Compose environment
+        shell: bash
+        run: |
+          cp deploy/compose/env.dev.example "$RUNNER_TEMP/dev.env"
+          touch "$RUNNER_TEMP/dev.cloudflare-tunnel-token"
+
+      - name: Validate Compose files
+        env:
+          APP_ENV_FILE: ${{ runner.temp }}/dev.env
+          CLOUDFLARE_TUNNEL_TOKEN_FILE: ${{ runner.temp }}/dev.cloudflare-tunnel-token
+        run: >-
+          docker compose
+          --env-file "$RUNNER_TEMP/dev.env"
+          -f deploy/compose/compose.yaml
+          -f deploy/compose/compose.dev.yaml
+          config --quiet
+
   status-gate:
     name: CI status gate
     runs-on: ubuntu-latest
@@ -167,6 +200,7 @@ jobs:
         test-unit,
         test-integration,
         helm-validate,
+        compose-validate,
       ]
     if: always()
     steps:
@@ -189,6 +223,7 @@ jobs:
           test-unit=${{ needs.test-unit.result }}
           test-integration=${{ needs.test-integration.result }}
           helm-validate=${{ needs.helm-validate.result }}
+          compose-validate=${{ needs.compose-validate.result }}
           EOF
           if [[ "$failed" == "true" ]]; then
             exit 1

@@ -1,0 +1,20 @@
+# Future production override. This file is intentionally not referenced by the
+# current dev workflow and contains no production secrets or deploy credentials.
+services:
+  app:
+    environment:
+      NODE_ENV: production
+      DISABLE_DATA_CRON: "false"
+      THREADS_ENABLED: "false"
+
+  worker:
+    environment:
+      NODE_ENV: production
+      DISABLE_DATA_CRON: "true"
+      THREADS_ENABLED: "false"
+
+  migrate:
+    environment:
+      NODE_ENV: production
+      DISABLE_DATA_CRON: "true"
+      THREADS_ENABLED: "false"
