@@ -34,6 +34,7 @@
 | `pnpm type-check`、`pnpm lint`、`pnpm build`、`pnpm build:web` | 全部 exit 0 |
 | `DOTENV_CONFIG_PATH=/Users/ctchen/Development/project/FurFriend-Finder/.env pnpm exec tsx src/scripts/verify-organizations.ts` | invitation/transfer 過期狀態 commit、durable cooldown、SMTP outbox 與 quota 驗證通過；只移除 disposable schema |
 | `DOTENV_CONFIG_PATH=/Users/ctchen/Development/project/FurFriend-Finder/.env pnpm verify:organization-review` | V13 timestamp migration、RUNNING claim recovery、renewal 與 stale-claim fencing 通過；只移除 disposable schema |
+| `DOTENV_CONFIG_PATH=/Users/ctchen/Development/project/FurFriend-Finder/.env pnpm test:c2:e2e` | 7 / 7 情境通過，aggregate exit 0，52.0 秒 |
 
 V13 部署 recovery 的契約如下：migration 前先停止 worker；既有 `RUNNING` jobs 一律 reset 成可重新 claim 的 `PENDING`，舊 claim token 與 lease 不保留。歷史 `sent_at` 是既有 wall-time 參考資料，不承諾可還原為精確 instant。worker 對 SMTP 維持 at-least-once；SMTP acceptance 不能宣稱為收件匣送達。
 
