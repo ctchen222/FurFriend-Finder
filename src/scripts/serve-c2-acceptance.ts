@@ -56,7 +56,7 @@ async function main() {
         created = true;
         await new MigrationRunner(db, loadMigrationFiles()).migrate();
         const password = await hashPassword('C2-acceptance-password!');
-        for (const id of ['owner', 'editor', 'stranger']) {
+        for (const id of ['owner', 'editor', 'stranger', 'reviewer']) {
             await db.query(
                 `INSERT INTO "user" (id,name,email,"emailVerified","updatedAt") VALUES ($1,$1,$2,true,NOW())`,
                 [id, `${id}@c2.example.test`],
@@ -66,6 +66,7 @@ async function main() {
                 [id, password],
             );
         }
+        await db.query(`INSERT INTO platform_roles(user_id,role,granted_by) VALUES ('reviewer','ORGANIZATION_REVIEWER','browser-fixture')`);
         const { createOrganizationService } = await import(
             '../Service/organizations/service.js'
         );

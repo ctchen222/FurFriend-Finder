@@ -64,21 +64,32 @@ function OrganizationList() {
                             <h2>尚未加入中途之家</h2>
                         </section>
                     )}
-                    <ul className="organization-list">
+                    <ul className="organization-list public-organization-grid">
                         {result.data.organizations.map((org) => (
-                            <li className="panel" key={org.id}>
-                                <h2>
-                                    <Link to={`/orgs/${org.id}`}>
-                                        {org.name}
-                                    </Link>
-                                </h2>
-                                <p>
-                                    {org.city && `${org.city} · `}
-                                    {roles[org.role]}
-                                </p>
-                                <p className="muted">
-                                    {organizationStatus(org)}
-                                </p>
+                            <li
+                                className="panel organization-card"
+                                key={org.id}
+                            >
+                                <Link
+                                    className="organization-card-link"
+                                    aria-label={org.name}
+                                    to={`/orgs/${org.id}`}
+                                >
+                                    <p className="organization-card-meta">
+                                        <span className="organization-type">
+                                            {roles[org.role]}
+                                        </span>
+                                        {org.city && <span>{org.city}</span>}
+                                    </p>
+                                    <h2>{org.name}</h2>
+                                    <p className="muted">
+                                        {organizationStatus(org)}
+                                    </p>
+                                    <span className="organization-card-action">
+                                        管理中途之家{' '}
+                                        <span aria-hidden="true">→</span>
+                                    </span>
+                                </Link>
                             </li>
                         ))}
                     </ul>

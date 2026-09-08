@@ -272,7 +272,7 @@ textarea {
 }
 .public-organization-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
     gap: 20px;
 }
 .public-organization-grid .panel {
@@ -284,6 +284,78 @@ textarea {
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 3;
 }
+.organization-card.panel {
+    padding: 0;
+    overflow: hidden;
+    min-width: 0;
+}
+.organization-card-link {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    height: 100%;
+    padding: 24px;
+    color: var(--color-ink);
+    text-decoration: none;
+}
+.organization-card-link:hover {
+    background: var(--color-surface-soft);
+}
+.organization-card-link:focus-visible {
+    outline-offset: -4px;
+}
+.organization-card-link h2 {
+    margin: 0;
+    font-size: 1.375rem;
+    line-height: 1.45;
+    font-weight: 700;
+}
+.organization-card-link p {
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+.organization-card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+    font-size: 0.875rem;
+    color: var(--color-muted);
+}
+.organization-type {
+    padding: 4px 8px;
+    border-radius: var(--radius-md);
+    background: var(--color-surface-soft);
+    color: var(--color-ink);
+}
+.organization-card-action {
+    margin-top: auto;
+    padding-top: 8px;
+    font-weight: 600;
+    color: var(--color-primary-active);
+}
+.organization-notification-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.organization-notification {
+    padding: 20px 0;
+    border-bottom: 1px solid var(--color-hairline);
+    overflow-wrap: anywhere;
+}
+.organization-notification:last-child { border-bottom: 0; }
+.organization-notification h3 { margin: 12px 0 8px; }
+.notification-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    color: var(--color-muted);
+    font-size: 0.875rem;
+}
+.delivery-status summary { cursor: pointer; font-weight: 600; }
+.delivery-status summary:focus-visible { outline: 3px solid var(--color-primary-active); outline-offset: 4px; }
 .public-organization-detail {
     max-width: 780px;
 }

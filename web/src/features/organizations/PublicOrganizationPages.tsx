@@ -133,19 +133,28 @@ function PublicOrganizationCard({
     organization: PublicOrganization;
 }) {
     return (
-        <li className="panel">
-            <p className="muted">
-                {typeLabel[organization.type]}
-                {organization.city ? ` · ${organization.city}` : ''}
-            </p>
-            <h2>
-                <Link to={`/foster-organizations/${organization.id}`}>
-                    {organization.name}
-                </Link>
-            </h2>
-            <p className="organization-summary">
-                {organization.description || '這個中途之家尚未填寫介紹。'}
-            </p>
+        <li className="panel organization-card">
+            <Link
+                className="organization-card-link"
+                aria-label={organization.name}
+                to={`/foster-organizations/${organization.id}`}
+            >
+                <p className="organization-card-meta">
+                    <span className="organization-type">
+                        {typeLabel[organization.type]}
+                    </span>
+                    {organization.city && <span>{organization.city}</span>}
+                </p>
+                <h2>{organization.name}</h2>
+                {organization.description && (
+                    <p className="organization-summary">
+                        {organization.description}
+                    </p>
+                )}
+                <span className="organization-card-action">
+                    查看介紹 <span aria-hidden="true">→</span>
+                </span>
+            </Link>
         </li>
     );
 }

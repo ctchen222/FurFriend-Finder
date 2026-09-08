@@ -6,6 +6,7 @@ import { useSession } from '../features/auth/SessionProvider';
 import { reportStatusLabel } from '../features/reports/reportApi';
 import { patch } from '../api/client';
 import { Feedback } from '../ui/Feedback';
+import { OrganizationNotifications } from '../features/organizations/OrganizationNotifications';
 
 export function ProfilePage() {
     const { user, updateMailPreference } = useSession();
@@ -88,6 +89,7 @@ export function ProfilePage() {
                     {error && <p role="alert">{error}</p>}
                 </article>
             </section>
+            <OrganizationNotifications key={user?.id} />
             <section className="card">
                 <div className="section-heading">
                     <div>

@@ -8,6 +8,7 @@ import { post } from '../../api/client';
 import { useResource } from '../../hooks/useResource';
 import { Feedback } from '../../ui/Feedback';
 import { useSession } from '../auth/SessionProvider';
+import { NoticeDeliveryStatus } from './NoticeDeliveryStatus';
 
 const views = {
     PENDING: '待審核',
@@ -38,6 +39,7 @@ export function ReviewerOrganizationsPage() {
                 <h1>中途之家審核</h1>
                 <p>審核權限獨立於組織角色，也不能處理自己參與的組織。</p>
             </header>
+            <NoticeDeliveryStatus key={user.id} />
             <nav className="review-tabs" aria-label="審核狀態">
                 {Object.entries(views).map(([value, label]) => (
                     <button
