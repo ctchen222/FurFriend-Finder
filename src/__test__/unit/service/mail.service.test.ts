@@ -121,4 +121,19 @@ describe('MailService', () => {
       expect(mockSendMail).not.toHaveBeenCalled();
     });
   });
+
+  describe('sendOwnershipTransfer', () => {
+    it('should state that the ownership-transfer link expires after 24 hours', async () => {
+      await service.sendOwnershipTransfer(
+        'next-owner@example.com',
+        '小橘中途',
+        '原負責人',
+        'https://furfriend.test/transfer/token'
+      );
+
+      const options = mockSendMail.mock.calls[0][0];
+      expect(options.text).toContain('24 小時後失效');
+      expect(options.text).not.toContain('7 天後失效');
+    });
+  });
 });

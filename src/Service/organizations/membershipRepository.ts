@@ -74,14 +74,29 @@ export class OrganizationMembershipRepository {
         ).rows;
     }
 
-    async invitationResendAvailable(invitationId: string) {
-        return (
-            await this.db.query<{ available: boolean }>(
-                `SELECT created_at <= CURRENT_TIMESTAMP - INTERVAL '60 seconds' AS available
-                 FROM organization_mail_outbox WHERE invitation_id=$1 FOR UPDATE`,
-                [invitationId],
-            )
-        ).rows[0]?.available;
+    async mailCooldownAvailable(
+        organizationId: string,
+        kind: 'MEMBER_INVITATION' | 'OWNERSHIP_TRANSFER',
+        recipient: string,
+    ): Promise<boolean> {
+        const query =
+            kind === 'MEMBER_INVITATION'
+                ? `SELECT m.created_at <= CURRENT_TIMESTAMP - INTERVAL '60 seconds' AS available
+                   FROM organization_mail_outbox m
+                   JOIN organization_invitations i ON i.id=m.invitation_id
+                   WHERE m.organization_id=$1 AND m.kind=$2 AND i.email=$3
+                   ORDER BY m.created_at DESC,m.id DESC LIMIT 1 FOR UPDATE OF m`
+                : `SELECT m.created_at <= CURRENT_TIMESTAMP - INTERVAL '60 seconds' AS available
+                   FROM organization_mail_outbox m
+                   JOIN organization_ownership_transfers t ON t.id=m.transfer_id
+                   WHERE m.organization_id=$1 AND m.kind=$2 AND t.to_user_id=$3
+                   ORDER BY m.created_at DESC,m.id DESC LIMIT 1 FOR UPDATE OF m`;
+        const result = await this.db.query<{ available: boolean }>(query, [
+            organizationId,
+            kind,
+            recipient,
+        ]);
+        return result.rows[0]?.available ?? true;
     }
 
     async pendingTransfer(organizationId: string) {

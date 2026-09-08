@@ -296,6 +296,66 @@ async function main() {
             ).rows[0].count,
             1,
         );
+
+        const expiredInvite = await memberships.invite(
+            'admin',
+            organization.id,
+            { email: 'wrong@organization.test', role: 'EDITOR' },
+        );
+        await db.query(
+            `UPDATE organization_invitations SET expires_at=CURRENT_TIMESTAMP - INTERVAL '1 second' WHERE id=$1`,
+            [expiredInvite.id],
+        );
+        await assert.rejects(
+            memberships.respondInvitation(
+                'wrong',
+                createOrganizationToken('invite', expiredInvite.id),
+                'ACCEPTED',
+            ),
+            { code: 'INVITATION_NOT_FOUND' },
+        );
+        assert.equal(
+            (
+                await db.query(
+                    'SELECT status FROM organization_invitations WHERE id=$1',
+                    [expiredInvite.id],
+                )
+            ).rows[0].status,
+            'EXPIRED',
+        );
+
+        const expiredTransfer = await memberships.createTransfer(
+            'admin',
+            organization.id,
+            { toUserId: 'owner' },
+        );
+        await db.query(
+            `UPDATE organization_ownership_transfers SET expires_at=CURRENT_TIMESTAMP - INTERVAL '1 second' WHERE id=$1`,
+            [expiredTransfer.id],
+        );
+        await assert.rejects(
+            memberships.respondTransfer(
+                'owner',
+                createOrganizationToken('transfer', expiredTransfer.id),
+                'ACCEPTED',
+            ),
+            { code: 'TRANSFER_NOT_FOUND' },
+        );
+        assert.equal(
+            (
+                await db.query(
+                    'SELECT status FROM organization_ownership_transfers WHERE id=$1',
+                    [expiredTransfer.id],
+                )
+            ).rows[0].status,
+            'EXPIRED',
+        );
+        await db.query(
+            `UPDATE organization_mail_outbox SET created_at=created_at - INTERVAL '61 seconds'
+             WHERE transfer_id=$1`,
+            [expiredTransfer.id],
+        );
+
         await assert.rejects(
             memberships.removeMember('owner', organization.id, 'admin'),
             { code: 'MEMBER_MANAGEMENT_FORBIDDEN' },
@@ -310,17 +370,31 @@ async function main() {
                     `SELECT COUNT(*)::int AS count FROM organization_mail_outbox`,
                 )
             ).rows[0].count,
-            4,
+            6,
         );
         const deliveryInvite = await memberships.invite(
             'admin',
             organization.id,
-            { email: 'wrong@organization.test', role: 'EDITOR' },
+            { email: 'cooldown@organization.test', role: 'EDITOR' },
         );
         assert.equal(
             (await memberships.list('admin', organization.id)).invitations[0]
                 .delivery.state,
             'PENDING',
+        );
+        const inviteCounts = (
+            await db.query(
+                `SELECT
+                    (SELECT COUNT(*)::int FROM organization_mail_outbox) AS "outboxCount",
+                    (SELECT COUNT(*)::int FROM organization_audit_events) AS "auditCount"`,
+            )
+        ).rows[0];
+        await assert.rejects(
+            memberships.invite('admin', organization.id, {
+                email: 'cooldown@organization.test',
+                role: 'EDITOR',
+            }),
+            { status: 429, code: 'INVITATION_RESEND_COOLDOWN' },
         );
         await assert.rejects(
             memberships.resendInvitation(
@@ -328,7 +402,26 @@ async function main() {
                 organization.id,
                 deliveryInvite.id,
             ),
-            { code: 'INVITATION_RESEND_COOLDOWN' },
+            { status: 429, code: 'INVITATION_RESEND_COOLDOWN' },
+        );
+        assert.equal(
+            (
+                await db.query(
+                    'SELECT status FROM organization_invitations WHERE id=$1',
+                    [deliveryInvite.id],
+                )
+            ).rows[0].status,
+            'PENDING',
+        );
+        assert.deepEqual(
+            (
+                await db.query(
+                    `SELECT
+                        (SELECT COUNT(*)::int FROM organization_mail_outbox) AS "outboxCount",
+                        (SELECT COUNT(*)::int FROM organization_audit_events) AS "auditCount"`,
+                )
+            ).rows[0],
+            inviteCounts,
         );
         await db.query(
             `UPDATE organization_mail_outbox SET created_at=created_at - INTERVAL '61 seconds'
@@ -349,12 +442,50 @@ async function main() {
             ),
             { code: 'INVITATION_NOT_FOUND' },
         );
+
+        const cooldownTransfer = await memberships.createTransfer(
+            'admin',
+            organization.id,
+            { toUserId: 'owner' },
+        );
+        const transferCounts = (
+            await db.query(
+                `SELECT
+                    (SELECT COUNT(*)::int FROM organization_mail_outbox) AS "outboxCount",
+                    (SELECT COUNT(*)::int FROM organization_audit_events) AS "auditCount"`,
+            )
+        ).rows[0];
+        await assert.rejects(
+            memberships.createTransfer('admin', organization.id, {
+                toUserId: 'owner',
+            }),
+            { status: 429, code: 'OWNERSHIP_TRANSFER_COOLDOWN' },
+        );
+        assert.equal(
+            (
+                await db.query(
+                    'SELECT status FROM organization_ownership_transfers WHERE id=$1',
+                    [cooldownTransfer.id],
+                )
+            ).rows[0].status,
+            'PENDING',
+        );
+        assert.deepEqual(
+            (
+                await db.query(
+                    `SELECT
+                        (SELECT COUNT(*)::int FROM organization_mail_outbox) AS "outboxCount",
+                        (SELECT COUNT(*)::int FROM organization_audit_events) AS "auditCount"`,
+                )
+            ).rows[0],
+            transferCounts,
+        );
         const organizationMail = new OrganizationMailWorker(
             new OrganizationMailRepository(db),
             new MailService(),
             'http://localhost:5173',
         );
-        for (let index = 0; index < 6; index += 1)
+        for (let index = 0; index < 9; index += 1)
             await organizationMail.runOnce();
         assert.equal(
             (
@@ -362,7 +493,7 @@ async function main() {
                     `SELECT COUNT(*)::int AS count FROM organization_mail_outbox WHERE state='SENT'`,
                 )
             ).rows[0].count,
-            1,
+            2,
         );
         console.log(
             'PASS: organization creation, invitation, revocation, role isolation, Owner transfer, durable SMTP, and DB invariants.',
