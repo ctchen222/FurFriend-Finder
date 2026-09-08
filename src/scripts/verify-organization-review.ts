@@ -17,6 +17,7 @@ import { createNoticeDeliveryService } from '../Service/organizations/noticeDeli
 import MatchJobRepository from '../repository/matchJob.db';
 import NotificationRepository from '../repository/notification.db';
 import { OrganizationMailRepository } from '../repository/organizationMail.db';
+import { getOrganizationLimits } from '../config/organizationLimits';
 
 async function verifyLeaseTimestampMigration(db: Pool, sql: string) {
     const client = await db.connect();
@@ -289,7 +290,11 @@ async function main() {
              ('reviewer','ORGANIZATION_REVIEWER','verification'),
              ('member-reviewer','ORGANIZATION_REVIEWER','verification')`,
         );
-        const organizations = createOrganizationService(db);
+        // Keep verifier capacity deterministic even when the caller configures
+        // a smaller production quota (the verifier creates two organizations).
+        const organizations = createOrganizationService(db, {
+            limits: getOrganizationLimits({}),
+        });
         const profiles = createOrganizationProfileService(db);
         const reviews = createOrganizationReviewService(db);
         const publicOrganizations = createPublicOrganizationService(db);
