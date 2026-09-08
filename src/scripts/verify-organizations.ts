@@ -10,6 +10,7 @@ import { createOrganizationToken } from '../Service/organizations/token';
 import MailService from '../Service/mail';
 import { OrganizationMailRepository } from '../repository/organizationMail.db';
 import { OrganizationMailWorker } from '../workers/organizationMailWorker';
+import { getOrganizationLimits } from '../config/organizationLimits';
 
 /** Real DB verification, isolated from public data; never requires real user credentials. */
 async function main() {
@@ -31,6 +32,7 @@ async function main() {
     const db = new Pool({
         connectionString,
         options: `-c search_path=${schema},pg_catalog`,
+        application_name: schema,
         max: 5,
     });
     let created = false;
@@ -56,7 +58,9 @@ async function main() {
                 [id, `${id}@organization.test`, id !== 'unverified'],
             );
         }
-        const service = createOrganizationService(db);
+        const service = createOrganizationService(db, {
+            limits: getOrganizationLimits({}),
+        });
         const input = {
             requestId: randomUUID(),
             name: '小橘中途',
@@ -554,6 +558,159 @@ async function main() {
         );
         console.log(
             'PASS: organization quota, concurrent last slot, and request replay at capacity.',
+        );
+
+        const raceOrg = await service.create('owner', {
+            ...input,
+            requestId: randomUUID(),
+            name: 'Concurrent cooldown verifier',
+        });
+        await db.query(
+            `INSERT INTO organization_memberships (organization_id,user_id,role)
+            VALUES ($1,'other','ADMIN')`,
+            [raceOrg.id],
+        );
+        const counts = async () =>
+            (
+                await db.query(
+                    `SELECT
+            (SELECT COUNT(*)::int FROM organization_mail_outbox WHERE organization_id=$1) AS outbox,
+            (SELECT COUNT(*)::int FROM organization_audit_events WHERE organization_id=$1) AS audit`,
+                    [raceOrg.id],
+                )
+            ).rows[0] as { outbox: number; audit: number };
+        async function race<T>(
+            operations: [() => Promise<T>, () => Promise<T>],
+        ) {
+            const gate = await db.connect();
+            let pending: Promise<PromiseSettledResult<T>[]> | undefined;
+            try {
+                await gate.query('BEGIN');
+                await gate.query(
+                    'SELECT id FROM organizations WHERE id=$1 FOR UPDATE',
+                    [raceOrg.id],
+                );
+                pending = Promise.allSettled(
+                    operations.map((operation) => operation()),
+                );
+                // Confirm both real DB requests overlap before releasing the row lock.
+                const deadline = Date.now() + 5000;
+                let blocked = 0;
+                while (blocked < 2 && Date.now() < deadline) {
+                    blocked = (
+                        await db.query(
+                            `SELECT COUNT(*)::int AS count FROM pg_stat_activity
+                        WHERE application_name=$1 AND wait_event_type='Lock'`,
+                            [schema],
+                        )
+                    ).rows[0].count;
+                    if (blocked < 2)
+                        await new Promise((resolve) => setTimeout(resolve, 10));
+                }
+                assert.equal(
+                    blocked,
+                    2,
+                    'Both cooldown requests must be waiting on database locks',
+                );
+            } finally {
+                await gate.query('ROLLBACK');
+                gate.release();
+                await pending;
+            }
+            return pending!;
+        }
+        function winner<T>(
+            results: PromiseSettledResult<T>[],
+            code: string,
+        ): T {
+            const success = results.filter(
+                (result) => result.status === 'fulfilled',
+            );
+            assert.equal(success.length, 1);
+            assert.equal(
+                results.filter(
+                    (result) =>
+                        result.status === 'rejected' &&
+                        result.reason.status === 429 &&
+                        result.reason.code === code,
+                ).length,
+                1,
+            );
+            return success[0].value;
+        }
+        const beforeInviteRace = await counts();
+        const invitationWinner = winner(
+            await race([
+                () =>
+                    memberships.invite('owner', raceOrg.id, {
+                        email: 'wrong@organization.test',
+                        role: 'EDITOR',
+                    }),
+                () =>
+                    memberships.invite('other', raceOrg.id, {
+                        email: 'wrong@organization.test',
+                        role: 'EDITOR',
+                    }),
+            ]),
+            'INVITATION_RESEND_COOLDOWN',
+        );
+        assert.deepEqual(await counts(), {
+            outbox: beforeInviteRace.outbox + 1,
+            audit: beforeInviteRace.audit + 1,
+        });
+        assert.deepEqual(
+            (
+                await db.query(
+                    `SELECT id,status FROM organization_invitations
+            WHERE organization_id=$1`,
+                    [raceOrg.id],
+                )
+            ).rows,
+            [{ id: invitationWinner.id, status: 'PENDING' }],
+        );
+        const invitationDetail = await memberships.invitationDetail(
+            'wrong',
+            createOrganizationToken('invite', invitationWinner.id),
+        );
+        assert.equal(invitationDetail.status, 'PENDING');
+        assert.equal(invitationDetail.accountMatches, true);
+
+        const beforeTransferRace = await counts();
+        const transferWinner = winner(
+            await race([
+                () =>
+                    memberships.createTransfer('owner', raceOrg.id, {
+                        toUserId: 'other',
+                    }),
+                () =>
+                    memberships.createTransfer('owner', raceOrg.id, {
+                        toUserId: 'other',
+                    }),
+            ]),
+            'OWNERSHIP_TRANSFER_COOLDOWN',
+        );
+        assert.deepEqual(await counts(), {
+            outbox: beforeTransferRace.outbox + 1,
+            audit: beforeTransferRace.audit + 1,
+        });
+        assert.deepEqual(
+            (
+                await db.query(
+                    `SELECT id,status FROM organization_ownership_transfers
+            WHERE organization_id=$1`,
+                    [raceOrg.id],
+                )
+            ).rows,
+            [{ id: transferWinner.id, status: 'PENDING' }],
+        );
+        const transferDetail = await memberships.transferDetail(
+            'other',
+            createOrganizationToken('transfer', transferWinner.id),
+        );
+        assert.equal(transferDetail.status, 'PENDING');
+        assert.equal(transferDetail.accountMatches, true);
+        console.log(
+            'PASS: concurrent invitation and ownership cooldowns, one winner, no loser side effects, and valid pending tokens.',
         );
     } finally {
         try {

@@ -12,8 +12,16 @@ describe('lease renewal lifecycle', () => {
 
     it('does not overlap renewal calls and never restarts after stopping in flight', async () => {
         let finish!: (value: boolean) => void;
-        const renew = jest.fn(() => new Promise<boolean>(resolve => { finish = resolve; }));
-        const lease = startLeaseRenewal(renew, { worker: 'match', jobId: 'job-1' });
+        const renew = jest.fn(
+            () =>
+                new Promise<boolean>((resolve) => {
+                    finish = resolve;
+                }),
+        );
+        const lease = startLeaseRenewal(renew, {
+            worker: 'match',
+            jobId: 'job-1',
+        });
         await jest.advanceTimersByTimeAsync(90_000);
         expect(renew).toHaveBeenCalledTimes(1);
         lease.stop();
@@ -24,24 +32,67 @@ describe('lease renewal lifecycle', () => {
     });
 
     it('catches renewal errors without exposing their contents and retries', async () => {
-        const renew = jest.fn().mockRejectedValueOnce(new Error('private database details')).mockResolvedValue(true);
-        const lease = startLeaseRenewal(renew, { worker: 'mail', jobId: 'a'.repeat(200) });
+        const renew = jest
+            .fn()
+            .mockRejectedValueOnce(new Error('private database details'))
+            .mockResolvedValue(true);
+        const lease = startLeaseRenewal(renew, {
+            worker: 'mail',
+            jobId: 'a'.repeat(200),
+        });
         await jest.advanceTimersByTimeAsync(60_000);
         expect(renew).toHaveBeenCalledTimes(2);
-        expect(logger.error).toHaveBeenCalledWith('Worker lease renewal failed', {
-            worker: 'mail', jobId: 'a'.repeat(64),
-        });
+        expect(logger.error).toHaveBeenCalledWith(
+            'Worker lease renewal failed',
+            {
+                worker: 'mail',
+                jobId: 'a'.repeat(64),
+            },
+        );
         lease.stop();
         expect(jest.getTimerCount()).toBe(0);
     });
 
+    it.each(['false', 'rejection'])(
+        'does not log a late %s after stopping in flight',
+        async (outcome) => {
+            let finish!: (value: boolean) => void;
+            let fail!: (error: Error) => void;
+            const renew = jest.fn(
+                () =>
+                    new Promise<boolean>((resolve, reject) => {
+                        finish = resolve;
+                        fail = reject;
+                    }),
+            );
+            const lease = startLeaseRenewal(renew, {
+                worker: 'mail',
+                jobId: 'completed-job',
+            });
+            await jest.advanceTimersByTimeAsync(30_000);
+            expect(renew).toHaveBeenCalledTimes(1);
+            lease.stop();
+            if (outcome === 'false') finish(false);
+            else fail(new Error('renewal settled after completion'));
+            await jest.advanceTimersByTimeAsync(90_000);
+            expect(logger.warn).not.toHaveBeenCalled();
+            expect(logger.error).not.toHaveBeenCalled();
+            expect(renew).toHaveBeenCalledTimes(1);
+            expect(jest.getTimerCount()).toBe(0);
+        },
+    );
+
     it('stops renewing when the fenced claim is lost', async () => {
         const renew = jest.fn().mockResolvedValue(false);
-        startLeaseRenewal(renew, { worker: 'organization-mail', jobId: 'job-1' });
+        startLeaseRenewal(renew, {
+            worker: 'organization-mail',
+            jobId: 'job-1',
+        });
         await jest.advanceTimersByTimeAsync(90_000);
         expect(renew).toHaveBeenCalledTimes(1);
         expect(logger.warn).toHaveBeenCalledWith('Worker lease claim lost', {
-            worker: 'organization-mail', jobId: 'job-1',
+            worker: 'organization-mail',
+            jobId: 'job-1',
         });
         expect(jest.getTimerCount()).toBe(0);
     });

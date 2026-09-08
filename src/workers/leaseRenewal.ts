@@ -25,11 +25,14 @@ export function startLeaseRenewal(
         if (stopped || renewing) return;
         renewing = true;
         try {
-            if (!await renew()) {
+            const renewed = await renew();
+            if (stopped) return;
+            if (!renewed) {
                 stop();
                 logger.warn('Worker lease claim lost', logContext);
             }
         } catch {
+            if (stopped) return;
             logger.error('Worker lease renewal failed', logContext);
         } finally {
             renewing = false;

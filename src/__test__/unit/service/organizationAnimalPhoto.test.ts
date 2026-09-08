@@ -15,7 +15,7 @@ import {
 
 describe('photo processing permits', () => {
     it('fails fast at capacity and releases each permit only once', () => {
-        const limiter = new PhotoWorkLimiter();
+        const limiter = new PhotoWorkLimiter(2);
         const first = limiter.tryAcquire()!;
         const second = limiter.tryAcquire()!;
         expect(first).toBeInstanceOf(Function);
@@ -49,6 +49,7 @@ describe('photo service resource boundaries', () => {
     };
     let transactionOpen: boolean;
     let limiter: PhotoWorkLimiter;
+    let db: Pool;
     let service: ReturnType<typeof createOrganizationAnimalService>;
 
     beforeEach(() => {
@@ -63,7 +64,7 @@ describe('photo service resource boundaries', () => {
             }),
             release: jest.fn(),
         };
-        const db = { connect: async () => client } as unknown as Pool;
+        db = { connect: async () => client } as unknown as Pool;
         jest.spyOn(
             OrganizationProfileRepository.prototype,
             'workspace',
@@ -192,6 +193,58 @@ describe('photo service resource boundaries', () => {
         expectPermitAvailable();
     });
 
+    it('shares the process photo budget across two default service factories', async () => {
+        jest.replaceProperty(process, 'env', {
+            ...process.env,
+            MAX_ORGANIZATIONS_PER_USER: '5',
+            MAX_ANIMALS_PER_ORGANIZATION: '500',
+            MAX_ORGANIZATION_PHOTO_BYTES: '1073741824',
+            PHOTO_PROCESSING_CONCURRENCY: '1',
+        });
+        const first = createOrganizationAnimalService(db);
+        const second = createOrganizationAnimalService(db);
+        const uploadWith = (target: typeof first) =>
+            target.addPhoto(
+                'owner',
+                orgId,
+                animalId,
+                { expectedVersion: 1 },
+                Buffer.from('input'),
+            );
+        let finish!: (value: Buffer) => void;
+        let started!: () => void;
+        const ready = new Promise<void>((resolve) => {
+            started = resolve;
+        });
+        jest.mocked(
+            photoNormalization.normalizeAnimalPhoto,
+        ).mockImplementationOnce(() => {
+            expect(transactionOpen).toBe(false);
+            started();
+            return new Promise<Buffer>((resolve) => {
+                finish = resolve;
+            });
+        });
+        const pending = uploadWith(first);
+        await ready;
+        try {
+            await expect(uploadWith(second)).rejects.toMatchObject({
+                status: 429,
+                code: 'PHOTO_PROCESSING_BUSY',
+            });
+            expect(
+                photoNormalization.normalizeAnimalPhoto,
+            ).toHaveBeenCalledTimes(1);
+        } finally {
+            finish(Buffer.from('normalized'));
+            await pending;
+        }
+        await uploadWith(second);
+        expect(photoNormalization.normalizeAnimalPhoto).toHaveBeenCalledTimes(
+            2,
+        );
+    });
+
     it.each([
         'normalization',
         'permission',
@@ -246,7 +299,9 @@ describe('photo service resource boundaries', () => {
                 write: { message: 'insert failure' },
                 audit: { message: 'audit failure' },
             };
-            await expect(upload()).rejects.toMatchObject(expectedFailure[failure]);
+            await expect(upload()).rejects.toMatchObject(
+                expectedFailure[failure],
+            );
             expect(
                 photoNormalization.normalizeAnimalPhoto,
             ).toHaveBeenCalledTimes(1);

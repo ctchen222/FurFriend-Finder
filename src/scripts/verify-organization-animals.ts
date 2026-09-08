@@ -9,6 +9,7 @@ import { createOrganizationAnimalService } from '../Service/organizations/animal
 import type { AnimalListing } from '../contracts/organizationAnimals';
 import { getOrganizationLimits } from '../config/organizationLimits';
 import { normalizeAnimalPhoto } from '../Service/organizations/animalPhoto';
+import { PhotoWorkLimiter } from '../Service/organizations/photoWorkLimiter';
 
 async function main() {
     const connectionString = process.env.DATABASE_URL;
@@ -47,7 +48,11 @@ async function main() {
                 [id, `${id}@animal.test`, id !== 'unverified'],
             );
         }
-        const orgs = createOrganizationService(db);
+        const limits = getOrganizationLimits({});
+        const photoWorkLimiter = new PhotoWorkLimiter(
+            limits.photoProcessingConcurrency,
+        );
+        const orgs = createOrganizationService(db, { limits });
         const org = await orgs.create('owner', {
             requestId: randomUUID(),
             name: '刊登驗收中途',
@@ -64,7 +69,10 @@ async function main() {
                 [org.id, id, id === 'admin' ? 'ADMIN' : 'EDITOR'],
             );
         }
-        const service = createOrganizationAnimalService(db);
+        const service = createOrganizationAnimalService(db, {
+            limits,
+            photoWorkLimiter,
+        });
         const input = { requestId: randomUUID(), name: '小橘', species: 'CAT' };
         let animal = await service.create('editor', org.id, input);
         const id = animal.id;
@@ -335,10 +343,11 @@ async function main() {
         const normalizedBytes = (await normalizeAnimalPhoto(photo)).length;
         const limited = createOrganizationAnimalService(db, {
             limits: {
-                ...getOrganizationLimits({}),
+                ...limits,
                 maxAnimalsPerOrganization: 2,
                 maxPhotoBytesPerOrganization: normalizedBytes,
             },
+            photoWorkLimiter,
         });
         const quotaInput = { ...input, requestId: randomUUID() };
         const firstAnimal = await limited.create(
