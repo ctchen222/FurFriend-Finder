@@ -43,6 +43,9 @@ describe('MailService', () => {
       host: 'smtp.test.local',
       port: 2525,
       secure: true,
+      connectionTimeout: 10000,
+      greetingTimeout: 10000,
+      socketTimeout: 30000,
       auth: {
         user: 'smtp-user',
         pass: 'smtp-password',

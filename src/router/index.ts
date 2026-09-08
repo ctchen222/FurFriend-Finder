@@ -7,6 +7,7 @@ import { router as webhookRoute } from './webhookRouter';
 import { router as healthRoute } from './healthRouter';
 import { addUserToLocals } from '../middleware/userSession';
 import { createWebApiRouter, createWebConfigRouter } from './webApiRouter';
+import { createOrganizationNotificationRouter, createNoticeDeliveryRouter } from './organizationNotificationRouter';
 import { createReactWebRouter } from './reactWebRouter';
 import {
     createOrganizationAnimalRouter,
@@ -32,6 +33,7 @@ export default function routes(app: express.Express) {
     );
     app.use('/api/v1/public/organizations', createPublicOrganizationRouter());
     app.use('/api/v1', createOrganizationActionRouter());
+    app.use('/api/v1/reviewer/notice-deliveries', createNoticeDeliveryRouter());
     app.use('/api/v1/reviewer/organizations', createOrganizationReviewRouter());
     app.use(
         '/api/v1/organizations/:orgId/animals',
@@ -39,6 +41,7 @@ export default function routes(app: express.Express) {
     );
     app.use('/api/v1/organizations', createOrganizationRouter());
     app.use('/api/v1', createWebApiRouter());
+    app.use('/api/v1/me/organization-notifications', createOrganizationNotificationRouter());
 
     app.use('/api/animals', animalRoute);
     app.use('/api/lost-animals', addUserToLocals, animalLostRoute);

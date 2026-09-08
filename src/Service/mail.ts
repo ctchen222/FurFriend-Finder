@@ -68,6 +68,9 @@ class MailService {
             host: mailConfig.smtpHost,
             port: mailConfig.smtpPort,
             secure: mailConfig.smtpSecure,
+            connectionTimeout: 10_000,
+            greetingTimeout: 10_000,
+            socketTimeout: 30_000,
             auth: {
                 user: mailConfig.smtpUser,
                 pass: mailConfig.smtpPassword,

@@ -23,7 +23,8 @@ export class OrganizationMailRepository {
         const result = await this.db.query<OrganizationMailJob>(
             `WITH next_mail AS (
                 SELECT id FROM organization_mail_outbox
-                WHERE available_at <= $1 AND (state='PENDING' OR (state='RUNNING' AND lease_until < $1))
+                WHERE kind IN ('MEMBER_INVITATION','OWNERSHIP_TRANSFER')
+                    AND available_at <= $1 AND (state='PENDING' OR (state='RUNNING' AND lease_until < $1))
                 ORDER BY available_at,created_at,id FOR UPDATE SKIP LOCKED LIMIT 1
              )
              UPDATE organization_mail_outbox item

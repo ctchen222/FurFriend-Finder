@@ -1,5 +1,7 @@
 import type { DbExecutor } from '../../libs/transaction';
 import type { ReviewerList } from './validation';
+import { OrganizationNotificationRepository } from './notificationRepository';
+import type { OrganizationNotificationKind } from '../../contracts/organizationNotifications';
 
 const reviewFields = `o.id,o.name,o.type,o.description,o.city,o.public_contact AS "publicContact",
     o.review_status AS "reviewStatus",o.operational_status AS "operationalStatus",
@@ -70,7 +72,7 @@ export class OrganizationReviewRepository {
         id: string,
         reviewerId: string,
         expectedVersion: number,
-        decision: string,
+        decision: Extract<OrganizationNotificationKind, 'APPROVED' | 'REJECTED'>,
         reason: string,
     ) {
         await this.db.query(
@@ -86,6 +88,7 @@ export class OrganizationReviewRepository {
             `INSERT INTO organization_audit_events (organization_id,actor_id,action) VALUES ($1,$2,$3)`,
             [id, reviewerId, `REVIEW_${decision}`],
         );
+        await new OrganizationNotificationRepository(this.db).enqueue(id, expectedVersion, decision, reason);
         return this.organization(id);
     }
 
@@ -111,6 +114,7 @@ export class OrganizationReviewRepository {
             `INSERT INTO organization_audit_events (organization_id,actor_id,action) VALUES ($1,$2,$3)`,
             [id, reviewerId, action],
         );
+        await new OrganizationNotificationRepository(this.db).enqueue(id, expectedVersion, action, reason);
         return this.organization(id);
     }
 }

@@ -7,6 +7,13 @@ import { createOrganizationService } from '../Service/organizations/service';
 import { createOrganizationProfileService } from '../Service/organizations/profileService';
 import { createOrganizationReviewService } from '../Service/organizations/reviewService';
 import { createPublicOrganizationService } from '../Service/organizations/publicService';
+import { createOrganizationNotificationService } from '../Service/organizations/notificationService';
+import { OrganizationNoticeMailRepository } from '../repository/organizationNoticeMail.db';
+import { OrganizationNoticeWorker } from '../workers/organizationNoticeWorker';
+import { OrganizationNotificationRepository } from '../Service/organizations/notificationRepository';
+import nodemailer from 'nodemailer';
+import { createServer } from 'node:net';
+import { createNoticeDeliveryService } from '../Service/organizations/noticeDeliveryService';
 
 async function main() {
     const connectionString = process.env.DATABASE_URL;
@@ -84,6 +91,21 @@ async function main() {
             decision: 'APPROVED',
         });
         assert.equal(approved.version, 2);
+        const approvalNotices = await db.query(
+            `SELECT recipient_id,kind FROM organization_notifications WHERE organization_id=$1`,
+            [organization.id],
+        );
+        assert.deepEqual(approvalNotices.rows, [
+            { recipient_id: 'owner', kind: 'APPROVED' },
+        ]);
+        assert.equal(
+            (
+                await db.query(
+                    `SELECT count(*)::int AS count FROM organization_mail_outbox WHERE kind='ORGANIZATION_NOTICE'`,
+                )
+            ).rows[0].count,
+            1,
+        );
         await assert.rejects(publicOrganizations.detail(organization.id), {
             status: 404,
         });
@@ -149,6 +171,15 @@ async function main() {
             'SUSPENDED',
         );
         assert.equal(suspended.publishedAt, null);
+        assert.equal(
+            (
+                await db.query(
+                    `SELECT count(*)::int AS count FROM organization_notifications WHERE organization_id=$1 AND kind='SUSPENDED'`,
+                    [organization.id],
+                )
+            ).rows[0].count,
+            2,
+        );
         await assert.rejects(publicOrganizations.detail(organization.id), {
             status: 404,
         });
@@ -192,6 +223,262 @@ async function main() {
                 )
             ).rows[0].count,
             2,
+        );
+        const notices = createOrganizationNotificationService(db);
+        const ownerNotices = await notices.list('owner', { pageSize: 1 });
+        assert.equal(ownerNotices.unreadCount, 4);
+        assert.equal(ownerNotices.notifications[0].kind, 'REACTIVATED');
+        assert.ok(ownerNotices.nextCursor);
+        const older = await notices.list('owner', {
+            cursor: ownerNotices.nextCursor,
+        });
+        assert.equal(older.notifications.length, 3);
+        assert.equal(
+            (await notices.list('outsider', {})).notifications.length,
+            0,
+        );
+        await assert.rejects(
+            notices.read('outsider', ownerNotices.notifications[0].id),
+            { status: 404 },
+        );
+        await notices.read('owner', ownerNotices.notifications[0].id);
+        await notices.read('owner', ownerNotices.notifications[0].id);
+        assert.equal((await notices.list('owner', {})).unreadCount, 3);
+        await new OrganizationNotificationRepository(db).enqueue(
+            organization.id,
+            republished.version,
+            'SUSPENDED',
+            'duplicate',
+        );
+        assert.equal((await notices.list('owner', {})).notifications.length, 4);
+        await db.query(
+            `UPDATE organization_memberships SET status='REMOVED' WHERE user_id='member-reviewer'`,
+        );
+        assert.equal(
+            (await notices.list('member-reviewer', {})).notifications.length,
+            0,
+        );
+
+        // A failure creating delivery rolls the review and its audit back as well.
+        const pending = await organizations.create('owner', {
+            requestId: randomUUID(),
+            name: '回滾驗證',
+            type: 'INDIVIDUAL',
+        });
+        await db.query(
+            `CREATE FUNCTION refuse_notice() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'injected failure'; END $$`,
+        );
+        await db.query(
+            `CREATE TRIGGER refuse_notice BEFORE INSERT ON organization_mail_outbox FOR EACH ROW EXECUTE FUNCTION refuse_notice()`,
+        );
+        await assert.rejects(
+            reviews.review('reviewer', pending.id, {
+                expectedVersion: 1,
+                decision: 'APPROVED',
+            }),
+        );
+        assert.equal(
+            (
+                await db.query(
+                    'SELECT review_status FROM organizations WHERE id=$1',
+                    [pending.id],
+                )
+            ).rows[0].review_status,
+            'PENDING',
+        );
+        assert.equal(
+            (
+                await db.query(
+                    'SELECT count(*)::int AS count FROM organization_reviews WHERE organization_id=$1',
+                    [pending.id],
+                )
+            ).rows[0].count,
+            0,
+        );
+        assert.equal(
+            (
+                await db.query(
+                    'SELECT count(*)::int AS count FROM organization_notifications WHERE organization_id=$1',
+                    [pending.id],
+                )
+            ).rows[0].count,
+            0,
+        );
+        await db.query(
+            'DROP TRIGGER refuse_notice ON organization_mail_outbox',
+        );
+        await reviews.review('reviewer', pending.id, {
+            expectedVersion: 1,
+            decision: 'REJECTED',
+            reason: '請補充有效的公開聯絡方式',
+        });
+        assert.equal(
+            (await notices.list('owner', {})).notifications[0].kind,
+            'REJECTED',
+        );
+
+        const delivery = new OrganizationNoticeMailRepository(db);
+        const [claim1, claim2] = await Promise.all([
+            delivery.claim(),
+            delivery.claim(),
+        ]);
+        assert.ok(claim1 && claim2 && claim1.id !== claim2.id);
+        assert.ok(await delivery.renew(claim1.id, claim1.claimToken));
+        await db.query(
+            `UPDATE organization_mail_outbox SET lease_until=NOW()-INTERVAL '1 minute',available_at=NOW()-INTERVAL '1 day' WHERE id=$1`,
+            [claim1.id],
+        );
+        const recovered = await delivery.claim();
+        assert.equal(recovered!.id, claim1.id);
+        assert.notEqual(recovered!.claimToken, claim1.claimToken);
+        await delivery.finish(claim1.id, claim1.claimToken, 'SENT', 'stale');
+        assert.equal(
+            (
+                await db.query(
+                    'SELECT state FROM organization_mail_outbox WHERE id=$1',
+                    [claim1.id],
+                )
+            ).rows[0].state,
+            'RUNNING',
+        );
+        await delivery.fail(recovered!, 'network', false);
+        const retry = (
+            await db.query(
+                'SELECT state,available_at>NOW() AS delayed FROM organization_mail_outbox WHERE id=$1',
+                [claim1.id],
+            )
+        ).rows[0];
+        assert.deepEqual(retry, { state: 'PENDING', delayed: true });
+        await delivery.fail({ ...claim2, attempts: 8 }, 'network', false);
+        assert.equal(
+            (
+                await db.query(
+                    'SELECT state FROM organization_mail_outbox WHERE id=$1',
+                    [claim2.id],
+                )
+            ).rows[0].state,
+            'FAILED',
+        );
+        const deliveryAdmin = createNoticeDeliveryService(db);
+        await assert.rejects(deliveryAdmin.health('owner', {}), {
+            status: 403,
+        });
+        assert.equal(
+            (await deliveryAdmin.health('reviewer', {})).workerHealthy,
+            false,
+        );
+        assert.equal((await deliveryAdmin.health('reviewer', {})).failed, 1);
+        await delivery.heartbeat();
+        assert.equal(
+            (await deliveryAdmin.health('reviewer', {})).workerHealthy,
+            true,
+        );
+        await deliveryAdmin.retry('reviewer', claim2.id);
+        await assert.rejects(deliveryAdmin.retry('reviewer', claim2.id), {
+            status: 409,
+        });
+        assert.equal(
+            (
+                await db.query(
+                    `SELECT count(*)::int AS count FROM organization_audit_events WHERE action='NOTICE_MAIL_RETRIED'`,
+                )
+            ).rows[0].count,
+            1,
+        );
+
+        if (process.env.VERIFY_NOTICE_SMTP === 'true') {
+            // Deliberately ignore real SMTP credentials. Only Mailpit on localhost.
+            const transport = nodemailer.createTransport({
+                host: '127.0.0.1',
+                port: 1025,
+                secure: false,
+            });
+            const mail = {
+                sendMail: (options: object) =>
+                    transport.sendMail({
+                        from: 'notice-verifier@example.test',
+                        ...options,
+                    }),
+            };
+            const worker = new OrganizationNoticeWorker(
+                delivery,
+                mail as any,
+                'http://localhost:2487',
+            );
+            await db.query(
+                `UPDATE organization_mail_outbox SET state='PENDING',attempts=0,available_at=NOW() WHERE kind='ORGANIZATION_NOTICE'`,
+            );
+            const unavailableSmtp = createServer((socket) =>
+                socket.end('421 Temporarily unavailable\r\n'),
+            );
+            await new Promise<void>((resolve) =>
+                unavailableSmtp.listen(0, '127.0.0.1', resolve),
+            );
+            const address = unavailableSmtp.address();
+            assert.ok(address && typeof address !== 'string');
+            const failedTransport = nodemailer.createTransport({
+                host: '127.0.0.1',
+                port: address.port,
+                secure: false,
+                connectionTimeout: 1000,
+                greetingTimeout: 1000,
+            });
+            try {
+                await new OrganizationNoticeWorker(delivery, {
+                    sendMail: (options: object) =>
+                        failedTransport.sendMail({
+                            from: 'notice-verifier@example.test',
+                            ...options,
+                        }),
+                } as any).runOnce();
+                assert.equal(
+                    (
+                        await db.query(
+                            `SELECT count(*)::int AS count FROM organization_mail_outbox WHERE attempts=1 AND state='PENDING' AND available_at>NOW()`,
+                        )
+                    ).rows[0].count,
+                    1,
+                );
+            } finally {
+                failedTransport.close();
+                await new Promise<void>((resolve, reject) =>
+                    unavailableSmtp.close((error) =>
+                        error ? reject(error) : resolve(),
+                    ),
+                );
+            }
+            await db.query(
+                `UPDATE organization_mail_outbox SET available_at=NOW() WHERE kind='ORGANIZATION_NOTICE'`,
+            );
+            for (let i = 0; i < 20 && (await worker.runOnce()); i++) {
+                /* drain this isolated fixture only */
+            }
+            const states = await db.query(
+                `SELECT state,count(*)::int AS count FROM organization_mail_outbox GROUP BY state`,
+            );
+            assert.equal(
+                states.rows.find((row) => row.state === 'SENT')?.count,
+                5,
+            );
+            assert.equal(
+                states.rows.find((row) => row.state === 'CANCELLED')?.count,
+                2,
+            );
+            assert.equal(
+                (
+                    await db.query(
+                        `SELECT count(*)::int AS count FROM organization_mail_outbox WHERE state='SENT' AND message_id IS NULL`,
+                    )
+                ).rows[0].count,
+                0,
+            );
+            transport.close();
+            console.log(
+                'PASS: localhost Mailpit accepted five notices; two removed-member deliveries cancelled.',
+            );
+        }
+        console.log(
+            'PASS: notices, recipient isolation, pagination, idempotent read, atomic rollback, retry, claim recovery, and stale-claim fencing.',
         );
         console.log(
             'PASS: independent review, self-review denial, explicit publication, version conflicts, suspension, reactivation, and public projection.',
