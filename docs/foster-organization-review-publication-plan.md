@@ -1,5 +1,7 @@
 # 中途之家審核與公開 Implementation Plan
 
+> C1.3 已依 [2026-09-07 驗收紀錄](foster-organization-review-acceptance.md) 交付。下方保留原始實作步驟，不代表目前待辦；目前執行計畫移至 [審核通知與介面改善](../tasks/plan.md)。實際公開快取策略為 `public, max-age=0, must-revalidate`，CLI 為 `manage-organization-reviewer.ts`，審核頁為 `ReviewerOrganizationsPage.tsx`。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: use incremental implementation and TDD. Complete each vertical slice and verify it before continuing.
 
 **Goal:** 完成 C1.3 的組織資料編輯、平台 Reviewer 審核與停權、組織發布控制，以及訪客公開名錄／介紹頁。

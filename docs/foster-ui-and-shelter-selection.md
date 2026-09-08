@@ -2,6 +2,8 @@
 
 2026-09-07。延續 `feature/260907-foster-organizations`；整個 C 仍未完成。
 
+> 歷史批次紀錄：下方「尚未提供」描述是當時狀態。2026-09-08 已完成 C1 及 C2.1／C2.2；最新進度與通知補強見 [本批驗收](review-notifications-acceptance.md)。
+
 ## 本批範圍
 
 - `/organizations`：我的中途之家，支援清單分頁、空狀態及錯誤重試。

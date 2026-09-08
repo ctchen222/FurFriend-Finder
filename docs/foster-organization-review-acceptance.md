@@ -34,8 +34,8 @@ pnpm db:migrate
 由具名操作者授予或撤銷 Reviewer；每次操作都寫入 `platform_role_events`：
 
 ```bash
-pnpm reviewer:role -- grant reviewer@example.com local-admin
-pnpm reviewer:role -- revoke reviewer@example.com local-admin
+pnpm reviewer:role grant reviewer@example.com local-admin
+pnpm reviewer:role revoke reviewer@example.com local-admin
 ```
 
 登入 Reviewer 帳號後，從導覽列進入 `/review/organizations`。所有訪客可直接開啟 `/foster-organizations`。
