@@ -23,6 +23,8 @@ export const EMAIL_TEMPLATES = [
     'verification',
     'reset_password',
     'match_notice',
+    'organization_invitation',
+    'ownership_transfer',
     'generic',
 ] as const;
 export const EMAIL_FAILURE_REASONS = [
@@ -334,10 +336,8 @@ export async function recordDbOperation<T>(
     operation: DbOperation,
     work: () => Promise<T>,
 ): Promise<T> {
-    return recordMetricDuration(
-        dbQueryDurationHistogram,
-        { operation },
-        () => recordMetricOutcome(
+    return recordMetricDuration(dbQueryDurationHistogram, { operation }, () =>
+        recordMetricOutcome(
             {
                 counter: dbQueryErrorsCounter,
                 errorAttributes: { operation },
@@ -366,10 +366,8 @@ export async function recordMatchRequest<T>(
     boundary: Extract<MatchBoundary, 'perform_match'>,
     work: AsyncMetricWork<T>,
 ): Promise<T> {
-    return recordMetricDuration(
-        matchDurationHistogram,
-        { boundary },
-        () => recordMetricOutcome(
+    return recordMetricDuration(matchDurationHistogram, { boundary }, () =>
+        recordMetricOutcome(
             {
                 counter: matchRequestCounter,
                 successAttributes: { status: 'success' },
@@ -380,9 +378,7 @@ export async function recordMatchRequest<T>(
     );
 }
 
-export async function recordMatchFlow<T>(
-    work: AsyncMetricWork<T>,
-): Promise<T> {
+export async function recordMatchFlow<T>(work: AsyncMetricWork<T>): Promise<T> {
     return recordMetricDuration(
         matchDurationHistogram,
         { boundary: 'match_flow' },
@@ -391,9 +387,7 @@ export async function recordMatchFlow<T>(
 }
 
 export async function recordGeocodingRequest<T>(
-    work: (
-        setStatus: (status: GeocodingStatus) => void,
-    ) => Promise<T>,
+    work: (setStatus: (status: GeocodingStatus) => void) => Promise<T>,
 ): Promise<T> {
     const startedAt = Date.now();
     let status: GeocodingStatus = 'error';
@@ -419,10 +413,7 @@ export async function recordEmailAttempt<T>(
 
     try {
         const result = await work();
-        emailCounter.add(
-            1,
-            safeMetricAttributes({ status: 'sent', template }),
-        );
+        emailCounter.add(1, safeMetricAttributes({ status: 'sent', template }));
         return result;
     } catch (error) {
         emailCounter.add(
@@ -499,10 +490,7 @@ export async function recordAnimalSyncRun<T extends number>(
         status = 'success';
         return updatedRows;
     } finally {
-        animalSyncRunsCounter.add(
-            1,
-            safeMetricAttributes({ status, source }),
-        );
+        animalSyncRunsCounter.add(1, safeMetricAttributes({ status, source }));
         animalSyncDurationHistogram.record(
             Date.now() - startedAt,
             safeMetricAttributes({ source }),
@@ -517,10 +505,7 @@ export async function recordAnimalSyncApiRequest<T>(
     try {
         return await work();
     } catch (error) {
-        animalSyncApiFailuresCounter.add(
-            1,
-            safeMetricAttributes({ source }),
-        );
+        animalSyncApiFailuresCounter.add(1, safeMetricAttributes({ source }));
         throw error;
     }
 }

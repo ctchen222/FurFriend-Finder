@@ -7,12 +7,27 @@ import { requireUser } from '../middleware/requireUser';
 import { requireSameOrigin } from '../middleware/requireSameOrigin';
 import { createReportService, ReportError } from '../Service/reports/service';
 
+export function createWebConfigRouter() {
+    const router = Router();
+    router.get('/', (_req, res) =>
+        res.json({
+            googleOAuthEnabled: process.env.GOOGLE_OAUTH_ENABLED === 'true',
+        }),
+    );
+    return router;
+}
+
 export function createWebApiRouter(service = createReportService()) {
     const router = Router();
-    router.get('/config', (_req, res) => res.json({ googleOAuthEnabled: process.env.GOOGLE_OAUTH_ENABLED === 'true' }));
     router.use(addUserToLocals, requireUser, requireSameOrigin);
     router.get('/me', catchAsync(async (_req, res) => {
-        const result = await pool.query('SELECT id,name,email,"emailVerified","isLostAnimalMailEnabled" FROM "user" WHERE id=$1', [res.locals.user.id]);
+        const result = await pool.query(
+            `SELECT u.id,u.name,u.email,u."emailVerified",u."isLostAnimalMailEnabled",
+                EXISTS (SELECT 1 FROM platform_roles p WHERE p.user_id=u.id
+                    AND p.role='ORGANIZATION_REVIEWER' AND p.active=true) AS "isOrganizationReviewer"
+             FROM "user" u WHERE u.id=$1`,
+            [res.locals.user.id],
+        );
         res.json({ user: result.rows[0] });
     }));
     router.patch('/me/settings', catchAsync(async (req, res) => {

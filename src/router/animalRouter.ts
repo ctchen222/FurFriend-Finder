@@ -20,6 +20,8 @@ router.route('/')
 router.route('/random')
 	.get(catchAsync(animalCtrler.fetchRandom));
 
+router.route('/shelters').get(catchAsync(animalCtrler.fetchShelters));
+
 router.route('/city/:city')
 	.get(catchAsync(animalCtrler.fetchByCity));
 

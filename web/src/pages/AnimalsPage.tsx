@@ -5,6 +5,7 @@ import { useResource } from '../hooks/useResource';
 import { Feedback } from '../ui/Feedback';
 import { PetGrid, PetPhoto } from '../ui/PetCard';
 import { ShelterReference } from '../ui/ShelterReference';
+import { ShelterLocationFields } from '../features/shelters/ShelterLocationFields';
 
 export function AnimalsPage() {
     const [params, setParams] = useSearchParams();
@@ -12,14 +13,15 @@ export function AnimalsPage() {
     const city = params.get('city') ?? '';
     const kind = params.get('kind') ?? '';
     const sex = params.get('sex') ?? '';
+    const shelterId = params.get('shelterId') ?? '';
     const [history, setHistory] = useState<{
         filters: string;
         cursors: (string | null)[];
     }>({ filters: '', cursors: [] });
-    const filters = JSON.stringify([city, kind, sex]);
+    const filters = JSON.stringify([city, kind, sex, shelterId]);
     const previous = history.filters === filters ? history.cursors : [];
     const query = new URLSearchParams({ pageSize: '12' });
-    for (const key of ['city', 'kind', 'sex', 'cursor']) {
+    for (const key of ['city', 'kind', 'sex', 'shelterId', 'cursor']) {
         const value = params.get(key);
         if (value) query.set(key, value);
     }
@@ -30,21 +32,17 @@ export function AnimalsPage() {
     return (
         <>
             <div className="page-hero page-hero--compact">
-                <p className="eyebrow">Shelter catalog</p>
                 <h1 className="page-title">收容所動物</h1>
-                <p className="page-subtitle">
-                    用縣市、物種與性別縮小範圍，快速查看正在等待認養或可能與走失案件相關的公開資料。
-                </p>
             </div>
             <form
-                className="filter-bar"
+                className="filter-bar shelter-filter-bar"
                 aria-label="收容所動物篩選"
-                key={`${city}:${kind}:${sex}`}
+                key={`${city}:${kind}:${sex}:${shelterId}`}
                 onSubmit={(event) => {
                     event.preventDefault();
                     const data = new FormData(event.currentTarget);
                     const next = new URLSearchParams();
-                    for (const key of ['city', 'kind', 'sex']) {
+                    for (const key of ['city', 'kind', 'sex', 'shelterId']) {
                         const value = String(data.get(key) ?? '').trim();
                         if (value) next.set(key, value);
                     }
@@ -61,15 +59,7 @@ export function AnimalsPage() {
                         <option>其他</option>
                     </select>
                 </label>
-                <label>
-                    縣市／地址
-                    <input
-                        name="city"
-                        defaultValue={city}
-                        placeholder="例如：臺北市"
-                        maxLength={100}
-                    />
-                </label>
+                <ShelterLocationFields city={city} shelterId={shelterId} />
                 <label>
                     性別
                     <select name="sex" defaultValue={sex}>
@@ -92,36 +82,36 @@ export function AnimalsPage() {
                     </button>
                 </div>
             </form>
-            <div className="catalog-toolbar">
-                <p className="result-info">
-                    {result.data
-                        ? `本頁 ${result.data.extras.animals.length} 筆收容資料`
-                        : ''}
-                </p>
-                <div className="active-filters">
-                    {city && <span className="filter-chip">{city}</span>}
-                    {kind && <span className="filter-chip">{kind}</span>}
-                    {sex && (
-                        <span className="filter-chip">
-                            {sex === 'M'
-                                ? '公'
-                                : sex === 'F'
-                                  ? '母'
-                                  : '性別未提供'}
-                        </span>
-                    )}
-                    {(city || kind || sex || cursor) && (
-                        <Link
-                            to="/shelter-animals"
-                            onClick={() =>
-                                setHistory({ filters: '', cursors: [] })
-                            }
-                        >
-                            清除條件，回到第一頁
-                        </Link>
-                    )}
+            {(city || kind || sex || shelterId || cursor) && (
+                <div className="catalog-toolbar">
+                    <div className="active-filters">
+                        {city && <span className="filter-chip">{city}</span>}
+                        {kind && <span className="filter-chip">{kind}</span>}
+                        {sex && (
+                            <span className="filter-chip">
+                                {sex === 'M'
+                                    ? '公'
+                                    : sex === 'F'
+                                      ? '母'
+                                      : '性別未提供'}
+                            </span>
+                        )}
+                        {shelterId && (
+                            <span className="filter-chip">已指定收容所</span>
+                        )}
+                        {(city || kind || sex || shelterId || cursor) && (
+                            <Link
+                                to="/shelter-animals"
+                                onClick={() =>
+                                    setHistory({ filters: '', cursors: [] })
+                                }
+                            >
+                                清除條件，回到第一頁
+                            </Link>
+                        )}
+                    </div>
                 </div>
-            </div>
+            )}
             <Feedback
                 loading={result.loading}
                 error={result.error}
