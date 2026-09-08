@@ -1,0 +1,105 @@
+services:
+  postgres:
+    image: postgres:16-bookworm
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+    mem_limit: ${POSTGRES_MEMORY_LIMIT:-512m}
+
+  app:
+    image: ${IMAGE_REPOSITORY:?IMAGE_REPOSITORY is required}@${IMAGE_DIGEST:?IMAGE_DIGEST is required}
+    restart: unless-stopped
+    env_file:
+      - ${APP_ENV_FILE:?APP_ENV_FILE is required}
+    expose:
+      - "2486"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+    networks:
+      - edge
+      - backend
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:2486/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    mem_limit: ${APP_MEMORY_LIMIT:-384m}
+
+  worker:
+    image: ${IMAGE_REPOSITORY:?IMAGE_REPOSITORY is required}@${IMAGE_DIGEST:?IMAGE_DIGEST is required}
+    restart: unless-stopped
+    command: ["node", "--require", "./dist/instrumentation.js", "dist/workers/main.js"]
+    env_file:
+      - ${APP_ENV_FILE:?APP_ENV_FILE is required}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+    networks:
+      - edge
+      - backend
+    mem_limit: ${WORKER_MEMORY_LIMIT:-256m}
+
+  migrate:
+    image: ${IMAGE_REPOSITORY:?IMAGE_REPOSITORY is required}@${IMAGE_DIGEST:?IMAGE_DIGEST is required}
+    profiles: [migration]
+    command: ["node", "--require", "./dist/instrumentation.js", "dist/scripts/migrate.js"]
+    env_file:
+      - ${APP_ENV_FILE:?APP_ENV_FILE is required}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - backend
+
+  mailpit:
+    image: ${MAILPIT_IMAGE:-axllent/mailpit:v1.21.8}
+    restart: unless-stopped
+    expose:
+      - "1025"
+      - "8025"
+    networks:
+      - edge
+    mem_limit: ${MAILPIT_MEMORY_LIMIT:-128m}
+
+  cloudflared:
+    image: ${CLOUDFLARED_IMAGE:-cloudflare/cloudflared:2025.4.0}
+    restart: unless-stopped
+    command: ["tunnel", "--no-autoupdate", "run", "--token-file", "/run/secrets/tunnel_token"]
+    secrets:
+      - tunnel_token
+    depends_on:
+      app:
+        condition: service_healthy
+    networks:
+      - edge
+    mem_limit: ${CLOUDFLARED_MEMORY_LIMIT:-128m}
+
+volumes:
+  postgres_data:
+
+networks:
+  edge:
+  backend:
+    internal: true
+
+secrets:
+  tunnel_token:
+    file: ${CLOUDFLARE_TUNNEL_TOKEN_FILE:?CLOUDFLARE_TUNNEL_TOKEN_FILE is required}
