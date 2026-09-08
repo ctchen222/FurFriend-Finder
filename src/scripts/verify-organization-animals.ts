@@ -7,6 +7,8 @@ import { loadMigrationFiles, MigrationRunner } from '../libs/migrationRunner';
 import { createOrganizationService } from '../Service/organizations/service';
 import { createOrganizationAnimalService } from '../Service/organizations/animalService';
 import type { AnimalListing } from '../contracts/organizationAnimals';
+import { getOrganizationLimits } from '../config/organizationLimits';
+import { normalizeAnimalPhoto } from '../Service/organizations/animalPhoto';
 
 async function main() {
     const connectionString = process.env.DATABASE_URL;
@@ -324,6 +326,138 @@ async function main() {
             new Set([...first.animals, ...second.animals].map((a) => a.id))
                 .size,
             23,
+        );
+        const quotaOrg = await orgs.create('owner', {
+            requestId: randomUUID(),
+            name: '配額驗證中途',
+            type: 'GROUP',
+        });
+        const normalizedBytes = (await normalizeAnimalPhoto(photo)).length;
+        const limited = createOrganizationAnimalService(db, {
+            limits: {
+                ...getOrganizationLimits({}),
+                maxAnimalsPerOrganization: 2,
+                maxPhotoBytesPerOrganization: normalizedBytes,
+            },
+        });
+        const quotaInput = { ...input, requestId: randomUUID() };
+        const firstAnimal = await limited.create(
+            'owner',
+            quotaOrg.id,
+            quotaInput,
+        );
+        const lastSlot = await Promise.allSettled([
+            limited.create('owner', quotaOrg.id, {
+                ...input,
+                requestId: randomUUID(),
+            }),
+            limited.create('owner', quotaOrg.id, {
+                ...input,
+                requestId: randomUUID(),
+            }),
+        ]);
+        const winners = lastSlot.filter(
+            (result) => result.status === 'fulfilled',
+        );
+        assert.equal(winners.length, 1);
+        assert.equal(
+            lastSlot.filter(
+                (result) =>
+                    result.status === 'rejected' &&
+                    result.reason.code === 'ANIMAL_LIMIT',
+            ).length,
+            1,
+        );
+        await assert.rejects(
+            limited.create('owner', quotaOrg.id, {
+                ...input,
+                requestId: randomUUID(),
+            }),
+            { status: 422, code: 'ANIMAL_LIMIT' },
+        );
+        assert.equal(
+            (await limited.create('owner', quotaOrg.id, quotaInput)).id,
+            firstAnimal.id,
+        );
+        await assert.rejects(
+            limited.create('owner', quotaOrg.id, {
+                ...quotaInput,
+                name: 'changed',
+            }),
+            { code: 'REQUEST_REUSED' },
+        );
+        const secondAnimal = winners[0].value;
+        const photos = await Promise.allSettled(
+            [firstAnimal, secondAnimal].map((target) =>
+                limited.addPhoto(
+                    'owner',
+                    quotaOrg.id,
+                    target.id,
+                    { expectedVersion: target.version },
+                    photo,
+                ),
+            ),
+        );
+        assert.equal(
+            photos.filter((result) => result.status === 'fulfilled').length,
+            1,
+        );
+        assert.equal(
+            photos.filter(
+                (result) =>
+                    result.status === 'rejected' &&
+                    result.reason.code === 'ORGANIZATION_PHOTO_QUOTA',
+            ).length,
+            1,
+        );
+        assert.equal(
+            Number(
+                (
+                    await db.query(
+                        `SELECT COALESCE(SUM(octet_length(p.image)),0) AS bytes
+            FROM organization_animal_photos p JOIN organization_animals a ON a.id=p.animal_id
+            WHERE a.organization_id=$1`,
+                        [quotaOrg.id],
+                    )
+                ).rows[0].bytes,
+            ),
+            normalizedBytes,
+        );
+        const uploaded = photos.find(
+            (result) => result.status === 'fulfilled',
+        )!.value;
+        await assert.rejects(
+            limited.addPhoto(
+                'owner',
+                quotaOrg.id,
+                uploaded.id,
+                { expectedVersion: uploaded.version },
+                photo,
+            ),
+            { status: 422, code: 'ORGANIZATION_PHOTO_QUOTA' },
+        );
+        const emptied = await limited.changePhoto(
+            'owner',
+            quotaOrg.id,
+            uploaded.id,
+            uploaded.photoIds[0],
+            { expectedVersion: uploaded.version },
+            false,
+        );
+        assert.equal(
+            (
+                await limited.addPhoto(
+                    'owner',
+                    quotaOrg.id,
+                    emptied.id,
+                    { expectedVersion: emptied.version },
+                    photo,
+                )
+            ).photoIds.length,
+            1,
+        );
+        console.log(
+            'PASS: animal quota, photo byte quota, concurrent last slots, replay at capacity, and deletion restores capacity.',
         );
         console.log(
             'PASS: C2 migrations, idempotency, roles, tenant isolation, optimistic concurrency, audit rollback, photos, publication, withdrawal and pagination.',

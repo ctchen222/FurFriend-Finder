@@ -498,6 +498,63 @@ async function main() {
         console.log(
             'PASS: organization creation, invitation, revocation, role isolation, Owner transfer, durable SMTP, and DB invariants.',
         );
+        await db.query(`INSERT INTO "user" (id,name,email,"emailVerified","updatedAt")
+            VALUES ('quota-owner','quota-owner','quota@organization.test',true,NOW())`);
+        const quotaInput = { ...input, requestId: randomUUID() };
+        const quotaFirst = await service.create('quota-owner', quotaInput);
+        for (let i = 0; i < 3; i++) {
+            await service.create('quota-owner', {
+                ...input,
+                requestId: randomUUID(),
+            });
+        }
+        const lastSlot = await Promise.allSettled([
+            service.create('quota-owner', {
+                ...input,
+                requestId: randomUUID(),
+            }),
+            service.create('quota-owner', {
+                ...input,
+                requestId: randomUUID(),
+            }),
+        ]);
+        assert.equal(
+            lastSlot.filter((result) => result.status === 'fulfilled').length,
+            1,
+        );
+        assert.equal(
+            lastSlot.filter(
+                (result) =>
+                    result.status === 'rejected' &&
+                    result.reason.code === 'ORGANIZATION_LIMIT',
+            ).length,
+            1,
+        );
+        await assert.rejects(
+            service.create('quota-owner', {
+                ...input,
+                requestId: randomUUID(),
+            }),
+            { status: 422, code: 'ORGANIZATION_LIMIT' },
+        );
+        assert.equal(
+            (await service.create('quota-owner', quotaInput)).id,
+            quotaFirst.id,
+        );
+        await assert.rejects(
+            service.create('quota-owner', { ...quotaInput, name: 'changed' }),
+            { code: 'CREATION_CONFLICT' },
+        );
+        assert.equal(
+            (
+                await db.query(`SELECT COUNT(*)::int AS count FROM organizations
+            WHERE created_by='quota-owner'`)
+            ).rows[0].count,
+            5,
+        );
+        console.log(
+            'PASS: organization quota, concurrent last slot, and request replay at capacity.',
+        );
     } finally {
         try {
             if (created) {
@@ -514,10 +571,18 @@ async function main() {
     }
 }
 
-main().catch(() => {
+main().catch((error) => {
     // Do not print database URLs, parameters, or fixture details on failure.
     console.error(
         'Organization verification failed. Inspect assertions with local debugging; no application schema was modified.',
     );
+    if (error instanceof assert.AssertionError)
+        console.error(`Assertion failed (${error.operator}).`);
+    if (error instanceof Error) {
+        const location = error.stack?.match(
+            /verify-organizations\.ts:\d+:\d+/,
+        )?.[0];
+        if (location) console.error(location);
+    }
     process.exitCode = 1;
 });
