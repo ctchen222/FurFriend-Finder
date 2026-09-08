@@ -14,4 +14,3 @@ export function parseWorkerCount(raw: string | undefined): number {
     }
     return count;
 }
-
