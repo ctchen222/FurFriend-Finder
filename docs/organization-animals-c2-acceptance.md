@@ -37,6 +37,21 @@ C2 瀏覽器驗收另包含：照片上傳中暫停編輯、preview Escape 關�
 
 既有註冊驗證信與走失配對的完整 SMTP E2E 本輪未重寄；相關後端單元與整合 regression 已跑。C2 fixture 不啟動 mail/matching workers，避免處理使用者待寄郵件。
 
+## 2026-09-09 Phase C H0 regression 結果
+
+| 驗證 | 實際結果 |
+| --- | --- |
+| `pnpm exec jest --runInBand --roots src --testPathIgnorePatterns='/node_modules/|/dist/|e2e'` | 67 suites / 465 tests 通過，4.244 秒 |
+| `pnpm type-check`、`pnpm lint`、`pnpm build`、`pnpm build:web` | 全部 exit 0；React build 轉換 58 modules |
+| `DOTENV_CONFIG_PATH=/Users/ctchen/Development/project/FurFriend-Finder/.env pnpm exec tsx src/scripts/verify-organizations.ts` | 組織、邀請、撤銷、角色、Owner transfer、durable SMTP、quota、併發最後名額與 request replay 通過；只移除 disposable schema |
+| `DOTENV_CONFIG_PATH=/Users/ctchen/Development/project/FurFriend-Finder/.env pnpm verify:organization-review` | V13 recovery、三個 worker renewal、stale-claim fencing、審核與公開投影通過；只移除 disposable schema |
+| `DOTENV_CONFIG_PATH=/Users/ctchen/Development/project/FurFriend-Finder/.env pnpm verify:organization-animals` | 動物／照片 quota、併發最後名額、容量釋放及既有 C2 契約通過；只移除 disposable schema |
+| C2 Playwright（同一 `playwright.c2.config.ts`） | 7 / 7 情境以分段命令 exit 0：四個 `animal-listings.spec.ts` 情境與三個 `organization-notifications.spec.ts` 情境 |
+
+完整的 `DOTENV_CONFIG_PATH=/Users/ctchen/Development/project/FurFriend-Finder/.env pnpm test:c2:e2e` 兩次皆開始執行 7 個情境，並各自輸出前 3 個動物情境通過；本執行環境在後續結果前截斷，未回傳 aggregate exit status。因此上表的 7 / 7 結論只依同一 config 的分段 exit 0 結果。`CI=1` 的完整命令未能啟動任何情境，原因是本機缺少 Playwright `chromium_headless_shell` binary，不能作為產品 regression 結論。
+
+Phase C 的新增資源限制由環境變數設定並有安全預設：每位使用者 5 個組織、每組織 500 隻動物、每組織 1073741824 bytes 照片，以及每 API process 2 個照片處理 permit。照片處理 limiter 是 process-local，不跨 API process 協調；SMTP worker 是 at-least-once，SMTP 接受不代表收件匣送達。
+
 ## 本機 review
 
 1. 維持原本 `pnpm dev:api`、`pnpm dev:web`，進入「我的中途之家 → 管理動物」。

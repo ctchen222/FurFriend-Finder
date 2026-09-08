@@ -16,6 +16,8 @@
 - Worker lease 固定 120 秒，每 30 秒續租；SMTP 語意維持 at-least-once，不宣稱 exactly-once。
 - 預設 limits：每人 5 組織、每組織 500 動物、每組織 1073741824 圖片 bytes、每 process 2 個圖片處理 permit。
 - 不改政府匯入、matching 排名、C2.3 搜尋、C3 認養、OAuth 或 UI 視覺設計。
+- V13 timestamp migration 前先停止 worker；legacy `RUNNING` claim reset 為 `PENDING` 並清除 claim token／lease。歷史 `sent_at` 是 wall-time reference data，不保證精確 instant；SMTP 維持 at-least-once。
+- 圖片 limiter 只在單一 API process 內生效；組織／動物／照片 quotas 為可設定環境變數並有安全預設。
 - 每一 task 必須 RED→GREEN、focused verification、atomic commit；完成前跑完整 gates。
 
 ---
@@ -276,7 +278,7 @@ Expected: isolated schemas are removed, all verifier assertions and Playwright s
 
 - [ ] **Step 3: Update acceptance evidence**
 
-Record exact commands, suite/test counts, and explicit limitations: SMTP acceptance is not inbox delivery; worker delivery is at-least-once; process limiter is per API process; quotas are configurable.
+Record exact commands, suite/test counts, and explicit limitations: SMTP acceptance is not inbox delivery; worker delivery is at-least-once; process limiter is per API process; quotas are configurable. Record the V13 recovery prerequisite: stop workers before migration, reset legacy `RUNNING` claims to `PENDING`, and treat historical `sent_at` as non-instant wall-time reference data.
 
 - [ ] **Step 4: Inspect and commit evidence**
 

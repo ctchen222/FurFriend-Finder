@@ -57,6 +57,12 @@ Geocoding client request timeout 設為十秒，避免單次外部請求無限�
 - 新限制全部有安全預設與 `.env.example` 說明，但不修改使用者主工作目錄的 dirty `.env.example`。
 - 回退應回退應用程式；本批不需要破壞性 down migration，也不刪除既有 outbox 或動物資料。
 
+### V13 safe recovery
+
+V13 timestamp migration 前必須停止所有 worker。migration 將 legacy `RUNNING` claim reset 為 `PENDING`、清除 claim token 與 lease，讓新 worker 以新的 token 重新 claim；不可嘗試保留混合來源的 lease。歷史 `sent_at` 保留作為既有 wall-time reference data，不保證可還原為精確 instant。
+
+SMTP 語意維持 at-least-once，SMTP acceptance 不等同收件匣送達。圖片 limiter 是 per API process 的 fail-fast semaphore；組織／動物／照片 quotas 皆由環境變數設定並以安全預設啟動，並非跨 process distributed quota limiter。
+
 ## 不在本批
 
 - C2.3 `pg_trgm`／跨來源動物搜尋。

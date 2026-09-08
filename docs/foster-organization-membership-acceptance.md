@@ -26,6 +26,19 @@
 - 組織邀請透過本機 Mailpit 實際送達，outbox 只在 SMTP 成功後標記 SENT；一次性測試 schema 已清理。
 - backend build、frontend type-check/build、`src` 與 `web/src` ESLint、`git diff --check` 通過。
 
+## 2026-09-09 Phase C H0 regression 與 V13 recovery
+
+| 驗證 | 實際結果 |
+| --- | --- |
+| `pnpm exec jest --runInBand --roots src --testPathIgnorePatterns='/node_modules/|/dist/|e2e'` | 67 suites / 465 tests 通過，4.244 秒 |
+| `pnpm type-check`、`pnpm lint`、`pnpm build`、`pnpm build:web` | 全部 exit 0 |
+| `DOTENV_CONFIG_PATH=/Users/ctchen/Development/project/FurFriend-Finder/.env pnpm exec tsx src/scripts/verify-organizations.ts` | invitation/transfer 過期狀態 commit、durable cooldown、SMTP outbox 與 quota 驗證通過；只移除 disposable schema |
+| `DOTENV_CONFIG_PATH=/Users/ctchen/Development/project/FurFriend-Finder/.env pnpm verify:organization-review` | V13 timestamp migration、RUNNING claim recovery、renewal 與 stale-claim fencing 通過；只移除 disposable schema |
+
+V13 部署 recovery 的契約如下：migration 前先停止 worker；既有 `RUNNING` jobs 一律 reset 成可重新 claim 的 `PENDING`，舊 claim token 與 lease 不保留。歷史 `sent_at` 是既有 wall-time 參考資料，不承諾可還原為精確 instant。worker 對 SMTP 維持 at-least-once；SMTP acceptance 不能宣稱為收件匣送達。
+
+組織、動物與照片 quotas 可由環境變數設定，預設為 5／500／1073741824 bytes；照片處理 limiter 預設 2 個 permit，且只在單一 API process 內生效，不是跨 process 的 distributed limiter。
+
 ## 尚未包含
 
 - 平台審核、組織發布／停權操作與一般訪客公開頁（C1.3）。
