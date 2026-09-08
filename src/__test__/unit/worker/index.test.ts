@@ -1,4 +1,53 @@
-import { startWorkers } from '../../../workers';
+import { parseWorkerCount } from '../../../workers/config';
+import { startWorkerGroups, startWorkers } from '../../../workers';
+
+describe('worker concurrency configuration', () => {
+    it('defaults to one worker group', () => {
+        expect(parseWorkerCount(undefined)).toBe(1);
+        expect(parseWorkerCount('')).toBe(1);
+    });
+
+    it.each([
+        ['1', 1],
+        ['2', 2],
+        ['16', 16],
+    ])('accepts %s worker groups', (raw, expected) => {
+        expect(parseWorkerCount(raw)).toBe(expected);
+    });
+
+    it.each(['0', '-1', '1.5', '2workers', '17', ' 2 '])(
+        'rejects invalid WORKER_COUNT=%s',
+        (raw) => {
+            expect(() => parseWorkerCount(raw)).toThrow(
+                `Invalid WORKER_COUNT: ${raw}`,
+            );
+        },
+    );
+});
+
+describe('startWorkerGroups', () => {
+    it('creates, stops, and drains every configured worker group', async () => {
+        const stops = [jest.fn(), jest.fn(), jest.fn()];
+        const drains = [
+            jest.fn().mockResolvedValue(undefined),
+            jest.fn().mockResolvedValue(undefined),
+            jest.fn().mockResolvedValue(undefined),
+        ];
+        let group = 0;
+        const starter = jest.fn(() => {
+            const index = group++;
+            return { stop: stops[index], drain: drains[index] };
+        });
+
+        const workers = startWorkerGroups(3, starter);
+        workers.stop();
+        await workers.drain();
+
+        expect(starter).toHaveBeenCalledTimes(3);
+        stops.forEach((stop) => expect(stop).toHaveBeenCalledTimes(1));
+        drains.forEach((drain) => expect(drain).toHaveBeenCalledTimes(1));
+    });
+});
 
 describe('startWorkers', () => {
     it('can drain an in-flight delivery after stopping new ticks', async () => {

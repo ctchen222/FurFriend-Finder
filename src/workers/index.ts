@@ -9,6 +9,23 @@ export interface WorkerLoop {
     drain(): Promise<void>;
 }
 
+/** Start independently instantiated worker groups behind one lifecycle. */
+export function startWorkerGroups(
+    count: number,
+    starter: () => WorkerLoop = startWorkers,
+): WorkerLoop {
+    if (!Number.isInteger(count) || count < 1) {
+        throw new Error(`Invalid worker group count: ${count}`);
+    }
+    const groups = Array.from({ length: count }, () => starter());
+    return {
+        stop: () => groups.forEach((group) => group.stop()),
+        drain: async () => {
+            await Promise.allSettled(groups.map((group) => group.drain()));
+        },
+    };
+}
+
 /** Start stoppable local worker loops; tests can inject zero interval and workers. */
 export function startWorkers(deps?: {
     match?: MatchWorker;

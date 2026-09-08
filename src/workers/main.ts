@@ -1,7 +1,17 @@
 import 'dotenv/config';
-import { startWorkers } from './index';
+import logger from '../config/logger';
+import { parseWorkerCount } from './config';
+import { startWorkerGroups, type WorkerLoop } from './index';
 
-const workers = startWorkers();
+let workers: WorkerLoop;
+try {
+    const workerCount = parseWorkerCount(process.env.WORKER_COUNT);
+    workers = startWorkerGroups(workerCount);
+    logger.info('Background worker groups started', { workerCount });
+} catch (error) {
+    logger.error('Background workers failed to start', { error });
+    process.exit(1);
+}
 let stopping = false;
 const stop = async () => {
     if (stopping) return;
