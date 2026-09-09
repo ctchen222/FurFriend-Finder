@@ -39,7 +39,7 @@ PR 61 merged to dev (a81dce3)
 
 | File | Responsibility |
 | --- | --- |
-| `deploy/scripts/lib/release-state.sh` | 驗證、讀取與原子持久化 current/previous digest，不輸出 env secrets |
+| `deploy/scripts/lib/release-state.sh` | 驗證、讀取與原子持久化 current/previous digest，不輸出 env secrets；VPS 安裝於 `/usr/local/lib/furfriend/release-state.sh` |
 | `deploy/scripts/tests/release-state.test.sh` | 在 temporary directory 驗證 digest validation、atomic update 與 permissions |
 | `deploy/scripts/deploy.sh` | host lock、migration、rollout、image assertion、成功後 persist、失敗診斷 |
 | `deploy/scripts/rollback.sh` | 使用相同 lock 回到指定相容 digest，成功後更新 release state |
@@ -294,7 +294,7 @@ Move the existing Buildx/GHCR job into `ci.yml`. Its dependency and condition mu
     if: >-
       github.event_name == 'push' &&
       github.ref == 'refs/heads/dev' &&
-      needs.status-gate.result == 'success' &&
+      needs['status-gate'].result == 'success' &&
       (needs.changes.outputs.app == 'true' || needs.changes.outputs.deploy == 'true')
 ```
 
