@@ -30,7 +30,8 @@
 
 | 驗證 | 實際結果 |
 | --- | --- |
-| `pnpm exec jest --runInBand --roots src --testPathIgnorePatterns='/node_modules/|/dist/|e2e'` | 67 suites / 465 tests 通過，4.244 秒 |
+| `pnpm exec jest --runInBand --roots src --testPathIgnorePatterns='/node_modules/|/dist/|e2e'` | 67 suites / 468 tests 通過 |
+| `pnpm test:h0:auth` | Email verification／reset mail wiring、Google OAuth 設定／安全 linking、signup failure mapping 與前端 OAuth config 通過；不代表真實 Google callback 或收件匣送達 |
 | `pnpm type-check`、`pnpm lint`、`pnpm build`、`pnpm build:web` | 全部 exit 0 |
 | `DOTENV_CONFIG_PATH=/Users/ctchen/Development/project/FurFriend-Finder/.env pnpm exec tsx src/scripts/verify-organizations.ts` | invitation/transfer 過期狀態 commit、durable cooldown、SMTP outbox 與 quota 驗證通過；只移除 disposable schema |
 | `DOTENV_CONFIG_PATH=/Users/ctchen/Development/project/FurFriend-Finder/.env pnpm verify:organization-review` | V13 timestamp migration、RUNNING claim recovery、renewal 與 stale-claim fencing 通過；只移除 disposable schema |

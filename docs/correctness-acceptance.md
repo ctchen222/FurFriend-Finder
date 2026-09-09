@@ -24,6 +24,7 @@ V3 source provenance
 pnpm exec tsc --noEmit
 pnpm exec jest --runInBand --silent
 pnpm build
+pnpm test:h0:auth
 ```
 
 Migration runner 額外執行：
@@ -53,6 +54,14 @@ pnpm db:migrate
 | Google OAuth | Google 新帳號可建立並登入 | 真實 OAuth callback browser test |
 | Google OAuth | 未驗證 provider email 不可綁定既有帳號 | callback 被拒絕且既有帳號不變 |
 | Google OAuth | `returnTo` 不能導向外部網址 | allowlist test 與 browser test |
+
+H0 Email／OAuth gate：
+
+```bash
+pnpm test:h0:auth
+```
+
+此 gate 驗證 email/password 註冊後 verification mail callback、未驗證登入重寄、密碼重設、Google OAuth 設定與 verified-email linking policy，以及 signup／OAuth config 的 HTTP 邊界；不取代真實 Google callback 或 SMTP provider 收件匣驗收。
 
 ## 必須補做的外部驗收
 
