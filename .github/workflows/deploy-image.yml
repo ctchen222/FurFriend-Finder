@@ -1,9 +1,7 @@
 name: Build and Deploy Dev Image
 
 on:
-  workflow_run:
-    workflows: [CI]
-    types: [completed]
+  push:
     branches: [dev]
 
 permissions:
@@ -16,10 +14,6 @@ concurrency:
 jobs:
   image:
     name: Build and publish immutable dev image
-    if: >-
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.event == 'push' &&
-      github.event.workflow_run.head_branch == 'dev'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -33,7 +27,7 @@ jobs:
       - name: Checkout tested commit
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: ${{ github.sha }}
 
       - name: Normalize image repository
         id: image
@@ -60,7 +54,7 @@ jobs:
           context: .
           push: true
           platforms: linux/amd64
-          tags: ${{ env.IMAGE_REPOSITORY }}:${{ github.event.workflow_run.head_sha }}
+          tags: ${{ env.IMAGE_REPOSITORY }}:${{ github.sha }}
           outputs: type=registry
           cache-from: type=gha
           cache-to: type=gha,mode=max

@@ -143,7 +143,7 @@ dev 與 production 的 Compose override 會分開，但本實作階段只建立�
 | `src/scripts/migrate.ts` | migration runner + `DATABASE_URL` | 同 digest 一次性 migration service |
 | `docker-compose.yml` | DB port、observability、無完整 production worker boundary | 不直接沿用；建立部署專用 Compose |
 | `.github/workflows/ci.yml` | path filter 可能略過 sql/views/deploy | 補齊 paths 與 real PostgreSQL migration gate |
-| `.github/workflows/deploy-image.yml` | main-only、Helm tag、自動 push main | 移除 GitOps 寫回；新增 dev GHCR + SSH Compose 流程 |
+| `.github/workflows/deploy-image.yml` | main-only、Helm tag、自動 push main | 由 `dev` push 觸發 immutable GHCR image + SSH Compose 流程；CI 仍由 branch protection 作為合併 gate |
 
 ## Cloudflare Tunnel 設定
 
@@ -225,7 +225,7 @@ SSH 只呼叫 VPS 上 root-owned、不可由 deploy user 改寫的固定 script�
 | env 範本 | `deploy/compose/env.dev.example` | 無秘密的設定契約 |
 | scripts | `deploy/scripts/deploy.sh`、`rollback.sh`、`backup.sh` | 固定 dev 發布、回退與 DB 備份 |
 | bootstrap | `deploy/scripts/bootstrap-docker-host.sh` 或受控 runbook | 安裝 Docker 並驗證 K3s 不受影響 |
-| workflow | `.github/workflows/ci.yml`、`deploy-image.yml` | gate、GHCR 與 dev SSH deploy |
+| workflow | `.github/workflows/ci.yml`、`deploy-image.yml` | CI gate、`dev` push 後 GHCR 與 dev SSH deploy |
 | runbook | `deploy/runbooks/vps-docker-dev.md` | bootstrap、Tunnel、deploy、rollback、診斷 |
 | 主機設定 | `/opt/furfriend/dev`、`/etc/furfriend/dev.env` | release metadata 與 root-only secrets |
 | Tunnel token | `/etc/furfriend/dev.cloudflare-tunnel-token` | 僅供 dev cloudflared secret mount |
