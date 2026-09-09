@@ -1,10 +1,10 @@
 # 既有 Zeabur/K3s 主機上的 Docker Compose 部署與 CI/CD 規劃
 
-狀態：部署檔案初版已實作於 `feature/260909-docker-dev-deployment`，更新於 2026-09-09。尚未安裝 Docker、建立 Tunnel、修改 DNS、上傳 secrets、push、merge 或部署應用程式。
+狀態：dev Docker Compose、Cloudflare Tunnel、DNS、Secrets 與自動部署已於 2026-09-09 完成並驗證。PR 61 (`a81dce3`) 的 GitHub Actions run `34338903327` 已成功建置 GHCR image 並 SSH 部署到 dev；production 仍未部署。
 
-本回合已完成 repository-side slice：dev Compose（app、worker、PostgreSQL、migration、Mailpit、cloudflared）、dev env 範本、deploy/rollback/backup scripts、Docker Compose validation、GHCR immutable digest build 與 dev-only SSH deploy workflow。SSH 主機 bootstrap、套件安裝、Cloudflare Dashboard、DNS、VPS runtime 與 Threads publish 仍未執行。
+目前 repository 與 VPS 均有 dev Compose（app、worker、PostgreSQL、migration、Mailpit、cloudflared）、dev env、deploy/rollback/backup scripts、GHCR immutable digest build 與 dev-only SSH deploy workflow。一般 app release 會在 `dev` push 後自動部署；root-owned host scripts 變更仍需一次性人工安裝。Threads 每日自動發文仍未實作。
 
-本 worktree 的工作分支是 `docs/260908-vps-deployment-plan`，基底仍是 2026-09-08 的 `origin/dev`（`2b0b293`），目前落後新的 `origin/dev`。實作必須另從最新 `dev` 建立符合規範的功能分支；本文件中的程式碼盤點在實作前仍須重新核對。
+本文件是部署基準與操作紀錄；任何新的部署程式變更都必須從最新 `dev` 建立符合規範的分支，先在 PR 驗證後再更新 VPS root-owned scripts。
 
 ## 已核准的目標與階段邊界
 
@@ -43,12 +43,12 @@
 | 磁碟 | 根目錄約 59 GB、49 GB 可用 | Docker image、K3s volume 與 DB 共用磁碟 |
 | K3s | v1.36.4+k3s1，active | 不停止、不移除 |
 | K3s 使用量 | 約 1708 MiB / 65% | Docker 加入後必須設資源上限並觀察 OOM |
-| 平台工作負載 | 約 20 個 Zeabur、cert-manager、metrics/logs Pod | 未見 FurFriend；平台元件保持不動 |
+| 平台工作負載 | 約 20 個 Zeabur、cert-manager、metrics/logs Pod | FurFriend 以 Docker Compose 旁掛；平台元件保持不動 |
 | 平台儲存 | Victoria Logs / Metrics 各有 10 GiB PVC | 與 Docker DB 共享實體磁碟 |
-| Docker | 未找到、service inactive | 需新增 Docker Engine + Compose plugin |
+| Docker | Docker Engine / Compose active | dev Compose project `furfriend-dev` 已運作 |
 | 網路 | 80/443、6443、10250、4222、9090 已監聽 | 不讓 Docker/Caddy 搶占既有 port |
 | 防火牆 | UFW inactive | 需另查雲端防火牆；Tunnel 不要求開放 app port |
-| dev DNS | `dev.furfriend-finder.com` 尚無 A/AAAA/CNAME | 建立 Tunnel route 後產生/確認 CNAME |
+| dev DNS | `dev.furfriend-finder.com` 經 Cloudflare Tunnel | 外部 HTTPS `/health` 與靜態圖片已驗證 |
 | 正式網址 | Cloudflare 代理存在，但目前回傳 522 | 本階段不修復或切換 production |
 
 K3s Pod CIDR、Service CIDR、主機 routes 與 Docker 預設 bridge CIDR 仍須在安裝前完整記錄。Docker 可能調整 iptables；安裝前後都要驗證 K3s ingress、Pod 網路及 Zeabur Dashboard 健康，失敗時停止部署並回復新增設定。
@@ -143,7 +143,7 @@ dev 與 production 的 Compose override 會分開，但本實作階段只建立�
 | `src/scripts/migrate.ts` | migration runner + `DATABASE_URL` | 同 digest 一次性 migration service |
 | `docker-compose.yml` | DB port、observability、無完整 production worker boundary | 不直接沿用；建立部署專用 Compose |
 | `.github/workflows/ci.yml` | path filter 可能略過 sql/views/deploy | 補齊 paths 與 real PostgreSQL migration gate |
-| `.github/workflows/deploy-image.yml` | main-only、Helm tag、自動 push main | 由 `dev` push 觸發 immutable GHCR image + SSH Compose 流程；CI 仍由 branch protection 作為合併 gate |
+| `.github/workflows/ci.yml` | `dev` push 後 CI gate -> immutable GHCR -> SSH Compose deploy | 只部署 `development`；production caller 尚未啟用 |
 
 ## Cloudflare Tunnel 設定
 
@@ -223,11 +223,11 @@ SSH 只呼叫 VPS 上 root-owned、不可由 deploy user 改寫的固定 script�
 | dev override | `deploy/compose/compose.dev.yaml` | dev URL、資源、Mailpit、cron/Threads 關閉 |
 | production example | `deploy/compose/compose.prod.example.yaml` | 僅記錄未來差異，不啟用 production |
 | env 範本 | `deploy/compose/env.dev.example` | 無秘密的設定契約 |
-| scripts | `deploy/scripts/deploy.sh`、`rollback.sh`、`backup.sh` | 固定 dev 發布、回退與 DB 備份 |
+| scripts | `deploy/scripts/deploy.sh`、`rollback.sh`、`backup.sh`、`status.sh`、`lib/release-state.sh` | 固定 dev 發布、回退、診斷、digest 持久化與 DB 備份 |
 | bootstrap | `deploy/scripts/bootstrap-docker-host.sh` 或受控 runbook | 安裝 Docker 並驗證 K3s 不受影響 |
-| workflow | `.github/workflows/ci.yml`、`deploy-image.yml` | CI gate、`dev` push 後 GHCR 與 dev SSH deploy |
+| workflow | `.github/workflows/ci.yml` | CI gate、`dev` push 後 GHCR 與 dev SSH deploy |
 | runbook | `deploy/runbooks/vps-docker-dev.md` | bootstrap、Tunnel、deploy、rollback、診斷 |
-| 主機設定 | `/opt/furfriend/dev`、`/etc/furfriend/dev.env` | release metadata 與 root-only secrets |
+| 主機設定 | `/opt/furfriend/dev`、`/etc/furfriend/dev.env`、`/var/lib/furfriend/dev/previous-digest` | release metadata 與 root-only secrets |
 | Tunnel token | `/etc/furfriend/dev.cloudflare-tunnel-token` | 僅供 dev cloudflared secret mount |
 
 舊 Helm、Argo CD 與 observability manifests 暫時保留作歷史，但新 workflow 不再更新 Helm tag，也不讓 Argo CD 操作 Docker Compose。

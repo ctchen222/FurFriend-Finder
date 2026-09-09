@@ -12,17 +12,30 @@ else
 fi
 
 environment="${1:-}"
-image_digest="${2:-}"
+log_lines=100
 
 if [[ "$environment" != "dev" ]]; then
   echo "Only the dev environment is enabled by this script." >&2
   exit 2
 fi
 
-if ! validate_digest "$image_digest"; then
-  echo "Expected an immutable sha256 image digest." >&2
-  exit 2
-fi
+shift
+while (($# > 0)); do
+  case "$1" in
+    --logs)
+      [[ $# -ge 2 && "$2" =~ ^[0-9]+$ && "$2" -ge 1 && "$2" -le 500 ]] || {
+        echo "--logs must be an integer between 1 and 500." >&2
+        exit 2
+      }
+      log_lines="$2"
+      shift 2
+      ;;
+    *)
+      echo "Unknown argument: $1" >&2
+      exit 2
+      ;;
+  esac
+done
 
 readonly project="furfriend-dev"
 readonly app_root="/opt/furfriend/dev"
@@ -30,14 +43,12 @@ readonly env_file="/etc/furfriend/dev.env"
 readonly compose_file="$app_root/deploy/compose/compose.yaml"
 readonly dev_file="$app_root/deploy/compose/compose.dev.yaml"
 
-install -d -m 755 /run/lock
-exec 9>/run/lock/furfriend-dev-deploy.lock
-if ! flock -n 9; then
-  echo "Another FurFriend dev deployment is active." >&2
-  exit 75
-fi
-
-current_digest="$(read_env_digest "$env_file")"
+for required in "$env_file" "$compose_file" "$dev_file"; do
+  if [[ ! -r "$required" ]]; then
+    echo "Required deployment file is not readable: $required" >&2
+    exit 1
+  fi
+done
 
 if docker compose version >/dev/null 2>&1; then
   compose=(docker compose)
@@ -50,24 +61,19 @@ fi
 
 cd "$app_root"
 export IMAGE_REPOSITORY="${IMAGE_REPOSITORY:-ghcr.io/ctchen222/furfriend-finder}"
-export IMAGE_DIGEST="$image_digest"
+export IMAGE_DIGEST="$(read_env_digest "$env_file")"
 export APP_ENV_FILE="$env_file"
 export CLOUDFLARE_TUNNEL_TOKEN_FILE="/etc/furfriend/dev.cloudflare-tunnel-token"
 compose_args=(--project-name "$project" --env-file "$env_file" -f "$compose_file" -f "$dev_file")
 
-"${compose[@]}" "${compose_args[@]}" config --quiet
-"${compose[@]}" "${compose_args[@]}" pull app worker cloudflared
-"${compose[@]}" "${compose_args[@]}" up -d --wait app worker cloudflared
+printf 'configured_digest=%s\n' "$IMAGE_DIGEST"
 "${compose[@]}" "${compose_args[@]}" ps
-
-expected_image="${IMAGE_REPOSITORY}@${image_digest}"
 for service in app worker; do
   container_id="$("${compose[@]}" "${compose_args[@]}" ps -q "$service")"
-  [[ -n "$container_id" ]]
-  [[ "$(docker inspect --format '{{.Config.Image}}' "$container_id")" == "$expected_image" ]]
+  if [[ -n "$container_id" ]]; then
+    docker inspect --format '{{.Name}} image={{.Config.Image}} state={{.State.Status}} health={{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$container_id"
+  else
+    printf '%s state=missing\n' "$service"
+  fi
 done
-
-install -d -m 700 /var/lib/furfriend/dev
-printf '%s\n' "$current_digest" > /var/lib/furfriend/dev/previous-digest
-chmod 600 /var/lib/furfriend/dev/previous-digest
-persist_env_digest "$env_file" "$image_digest"
+"${compose[@]}" "${compose_args[@]}" logs --no-color --tail "$log_lines" app worker cloudflared

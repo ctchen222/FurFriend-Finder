@@ -12,7 +12,7 @@ permissions:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   changes:
@@ -31,6 +31,8 @@ jobs:
             app:
               - 'src/**'
               - 'web/**'
+              - 'views/**'
+              - 'sql/**'
               - 'tests/web-e2e/**'
               - 'playwright.web.config.ts'
               - '.github/workflows/ci.yml'
@@ -39,6 +41,7 @@ jobs:
               - 'package.json'
               - 'tsconfig.json'
               - 'pnpm-lock.yaml'
+              - 'web/pnpm-lock.yaml'
               - 'eslint.config.js'
               - '.github/actions/**'
             helm:
@@ -48,7 +51,6 @@ jobs:
               - 'deploy/scripts/**'
               - 'deploy/runbooks/vps-docker-dev.md'
               - '.github/workflows/ci.yml'
-              - '.github/workflows/deploy-image.yml'
 
   lint:
     name: Lint
@@ -229,3 +231,119 @@ jobs:
             exit 1
           fi
           echo "All checks passed or were skipped."
+
+  image:
+    name: Build and publish immutable dev image
+    needs: [changes, status-gate]
+    if: >-
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/dev' &&
+      needs['status-gate'].result == 'success' &&
+      (needs.changes.outputs.app == 'true' || needs.changes.outputs.deploy == 'true')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image_repository: ${{ steps.image.outputs.repository }}
+      image_digest: ${{ steps.build.outputs.digest }}
+    env:
+      IMAGE_REPOSITORY: ghcr.io/${{ github.repository_owner }}/furfriend-finder
+    steps:
+      - name: Checkout tested commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Normalize image repository
+        id: image
+        shell: bash
+        run: |
+          normalized="${IMAGE_REPOSITORY,,}"
+          echo "repository=$normalized" >> "$GITHUB_OUTPUT"
+          echo "IMAGE_REPOSITORY=$normalized" >> "$GITHUB_ENV"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and publish image
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64
+          tags: ${{ env.IMAGE_REPOSITORY }}:${{ github.sha }}
+          outputs: type=registry
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    name: Deploy dev Compose stack
+    needs: [image]
+    if: needs.image.result == 'success'
+    runs-on: ubuntu-latest
+    environment:
+      name: development
+      url: https://dev.furfriend-finder.com
+    env:
+      IMAGE_REPOSITORY: ${{ needs.image.outputs.image_repository }}
+      IMAGE_DIGEST: ${{ needs.image.outputs.image_digest }}
+      DEPLOY_HOST: ${{ secrets.DEV_DEPLOY_HOST }}
+      DEPLOY_USER: ${{ secrets.DEV_DEPLOY_USER }}
+      SSH_PRIVATE_KEY: ${{ secrets.DEV_SSH_PRIVATE_KEY }}
+      SSH_KNOWN_HOSTS: ${{ secrets.DEV_SSH_KNOWN_HOSTS }}
+    steps:
+      - name: Validate deployment inputs
+        shell: bash
+        run: |
+          [[ "$IMAGE_REPOSITORY" =~ ^ghcr\.io/[a-z0-9_.-]+/furfriend-finder$ ]]
+          [[ "$IMAGE_DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]
+          test -n "$DEPLOY_HOST"
+          test -n "$DEPLOY_USER"
+          test -n "$SSH_PRIVATE_KEY"
+          test -n "$SSH_KNOWN_HOSTS"
+
+      - name: Install SSH credentials
+        shell: bash
+        run: |
+          install -m 700 -d "$RUNNER_TEMP/ssh"
+          install -m 600 /dev/null "$RUNNER_TEMP/ssh/deploy_key"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$RUNNER_TEMP/ssh/deploy_key"
+          install -m 600 /dev/null "$RUNNER_TEMP/ssh/known_hosts"
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > "$RUNNER_TEMP/ssh/known_hosts"
+
+      - name: Deploy immutable digest
+        shell: bash
+        run: >-
+          ssh
+          -i "$RUNNER_TEMP/ssh/deploy_key"
+          -o IdentitiesOnly=yes
+          -o StrictHostKeyChecking=yes
+          -o UserKnownHostsFile="$RUNNER_TEMP/ssh/known_hosts"
+          "$DEPLOY_USER@$DEPLOY_HOST"
+          "sudo /usr/local/sbin/furfriend-deploy dev '$IMAGE_DIGEST'"
+
+      - name: Verify public dev health
+        run: >-
+          curl --fail --silent --show-error
+          --retry 6 --retry-delay 5 --retry-all-errors
+          https://dev.furfriend-finder.com/health
+
+      - name: Collect bounded deployment diagnostics
+        if: failure()
+        run: >-
+          ssh
+          -i "$RUNNER_TEMP/ssh/deploy_key"
+          -o IdentitiesOnly=yes
+          -o StrictHostKeyChecking=yes
+          -o UserKnownHostsFile="$RUNNER_TEMP/ssh/known_hosts"
+          "$DEPLOY_USER@$DEPLOY_HOST"
+          "sudo /usr/local/sbin/furfriend-status dev --logs 120"
