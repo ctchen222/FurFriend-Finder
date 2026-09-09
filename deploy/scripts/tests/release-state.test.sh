@@ -22,3 +22,22 @@ persist_env_digest "$env_file" "$new"
 permissions="$(stat -c '%a' "$env_file" 2>/dev/null || stat -f '%Lp' "$env_file")"
 [[ "$permissions" == "600" ]]
 grep -qx 'NODE_ENV=production' "$env_file"
+
+status_script="$script_dir/status.sh"
+if "$status_script" prod >/dev/null 2>&1; then
+  exit 1
+else
+  [[ "$?" == "2" ]]
+fi
+
+if "$status_script" dev --logs 0 >/dev/null 2>&1; then
+  exit 1
+else
+  [[ "$?" == "2" ]]
+fi
+
+if "$status_script" dev --logs 501 >/dev/null 2>&1; then
+  exit 1
+else
+  [[ "$?" == "2" ]]
+fi
