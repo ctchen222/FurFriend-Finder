@@ -254,12 +254,13 @@ Commit: `feat(deploy): expose safe dev deployment diagnostics`
 
 ### Checkpoint A: Install hardened host scripts once
 
-Repository changes do not automatically replace root-owned files under `/usr/local/sbin`. Before enabling the updated workflow, copy the reviewed scripts to the VPS using a temporary directory, compare SHA-256, then install as `root:root 0755`. This is a one-time infrastructure rollout; ordinary future app releases remain automatic.
+Repository changes do not automatically replace root-owned files under `/usr/local/sbin`. Before enabling the updated workflow, copy the reviewed scripts and `deploy/scripts/lib/release-state.sh` to the VPS using a temporary directory, compare SHA-256, then install as `root:root 0755` under `/usr/local/sbin` and `/usr/local/lib/furfriend`. This is a one-time infrastructure rollout; ordinary future app releases remain automatic.
 
 Required VPS verification:
 
 ```bash
 sudo bash -n /usr/local/sbin/furfriend-deploy /usr/local/sbin/furfriend-rollback /usr/local/sbin/furfriend-status
+sudo bash -n /usr/local/lib/furfriend/release-state.sh
 sudo stat -c '%U:%G %a %n' /usr/local/sbin/furfriend-deploy /usr/local/sbin/furfriend-rollback /usr/local/sbin/furfriend-status
 sudo /usr/local/sbin/furfriend-status dev --logs 20
 ```
