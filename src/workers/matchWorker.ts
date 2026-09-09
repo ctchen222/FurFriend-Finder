@@ -1,4 +1,5 @@
 import { pool } from '../db';
+import { startLeaseRenewal } from './leaseRenewal';
 import { withTransaction, type DbExecutor } from '../libs/transaction';
 import AnimalLostRepository from '../repository/animalLost.db';
 import MatchingService from '../Service/matching';
@@ -31,6 +32,10 @@ export class MatchWorker {
         const job = await this.jobs.claim(now);
         if (!job) return false;
 
+        const renewal = startLeaseRenewal(
+            () => this.jobs.renew(job.id, job.claim_token as string),
+            { worker: 'match', jobId: job.id },
+        );
         try {
             const report = await this.reports.findById<any>(job.report_id);
             if (!report || report.status !== 'OPEN' || report.revision !== job.report_revision) {
@@ -90,6 +95,8 @@ export class MatchWorker {
                 now,
             );
             return true;
+        } finally {
+            renewal.stop();
         }
     }
 }

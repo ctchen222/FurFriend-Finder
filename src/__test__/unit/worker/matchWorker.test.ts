@@ -1,6 +1,11 @@
 import MatchWorker from '../../../workers/matchWorker';
 
 describe('MatchWorker', () => {
+    beforeEach(() => jest.useFakeTimers());
+    afterEach(() => {
+        expect(jest.getTimerCount()).toBe(0);
+        jest.useRealTimers();
+    });
     const now = new Date('2026-09-06T00:00:00.000Z');
 
     function job(overrides: Record<string, unknown> = {}) {
@@ -11,6 +16,58 @@ describe('MatchWorker', () => {
             claim_token: '11111111-1111-4111-8111-111111111111', ...overrides,
         } as any;
     }
+
+    it('renews during slow matching and clears its timer after finalization', async () => {
+        jest.useFakeTimers();
+        let finish!: (value: any) => void;
+        const matchingResult = new Promise(resolve => { finish = resolve; });
+        const currentJob = job();
+        const jobs = {
+            claim: jest.fn().mockResolvedValue(currentJob),
+            renew: jest.fn().mockResolvedValue(true),
+        } as any;
+        const worker = new MatchWorker({
+            jobs,
+            reports: { findById: jest.fn().mockResolvedValue({ status: 'OPEN', revision: 1 }) } as any,
+            matching: { performMatch: jest.fn(() => matchingResult) } as any,
+            transaction: jest.fn().mockResolvedValue(true),
+        });
+        const running = worker.runOnce(now);
+        await jest.advanceTimersByTimeAsync(30_000);
+        expect(jobs.renew).toHaveBeenCalledWith(currentJob.id, currentJob.claim_token);
+        finish({ metadata: {}, top10Matches: [] });
+        await running;
+        expect(jest.getTimerCount()).toBe(0);
+    });
+
+    it.each(['report', 'transaction', 'fail', 'cancel'])(
+        'renews during %s and clears its timer even when finalization fails',
+        async stage => {
+            let reject!: (error: Error) => void;
+            const blocked = new Promise((_, rejectPromise) => { reject = rejectPromise; });
+            const currentJob = job();
+            const jobs = {
+                claim: jest.fn().mockResolvedValue(currentJob),
+                renew: jest.fn().mockResolvedValue(true),
+                fail: jest.fn().mockResolvedValue(true),
+                cancel: jest.fn().mockResolvedValue(true),
+            } as any;
+            if (stage === 'fail' || stage === 'cancel') jobs[stage].mockImplementation(() => blocked);
+            const reports = { findById: stage === 'report' ? jest.fn(() => blocked)
+                : jest.fn().mockResolvedValue({ status: stage === 'cancel' ? 'CLOSED' : 'OPEN', revision: 1 }) } as any;
+            const matching = { performMatch: stage === 'fail' ? jest.fn().mockRejectedValue(new Error('Maps failure'))
+                : jest.fn().mockResolvedValue({ metadata: {}, top10Matches: [] }) } as any;
+            const transaction = stage === 'transaction' ? jest.fn(() => blocked) : jest.fn().mockResolvedValue(true);
+            const running = new MatchWorker({ jobs, reports, matching, transaction }).runOnce(now);
+            const outcome = stage === 'fail'
+                ? expect(running).rejects.toThrow('acknowledgement failed')
+                : expect(running).resolves.toBe(true);
+            await jest.advanceTimersByTimeAsync(30_000);
+            expect(jobs.renew).toHaveBeenCalledWith(currentJob.id, currentJob.claim_token);
+            reject(new Error('acknowledgement failed'));
+            await outcome;
+        },
+    );
 
     it('returns false when there is no pending job', async () => {
         const jobs = { claim: jest.fn().mockResolvedValue(null) } as any;

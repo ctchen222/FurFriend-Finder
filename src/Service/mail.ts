@@ -191,7 +191,7 @@ class MailService {
             {
                 to: mail,
                 subject: `${organizationName} 負責人移轉確認`,
-                text: `${actorName} 希望將 ${organizationName} 的負責人權限移轉給你。請登入後開啟連結確認：${url}\n\n在你接受前不會變更任何權限；連結將於 7 天後失效。`,
+                text: `${actorName} 希望將 ${organizationName} 的負責人權限移轉給你。請登入後開啟連結確認：${url}\n\n在你接受前不會變更任何權限；連結將於 24 小時後失效。`,
             },
             'ownership_transfer',
         );

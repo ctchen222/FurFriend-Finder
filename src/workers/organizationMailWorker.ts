@@ -1,4 +1,5 @@
 import { getAppBaseUrl } from '../config/url';
+import { startLeaseRenewal } from './leaseRenewal';
 import MailService, { classifyEmailFailureReason } from '../Service/mail';
 import { createOrganizationToken } from '../Service/organizations/token';
 import { OrganizationMailRepository } from '../repository/organizationMail.db';
@@ -17,6 +18,10 @@ export class OrganizationMailWorker {
             await this.repository.markCancelled(job.id, job.claimToken);
             return true;
         }
+        const renewal = startLeaseRenewal(
+            () => this.repository.renew(job.id, job.claimToken),
+            { worker: 'organization-mail', jobId: job.id },
+        );
         try {
             if (job.kind === 'MEMBER_INVITATION') {
                 const token = createOrganizationToken('invite', job.subjectId);
@@ -46,6 +51,8 @@ export class OrganizationMailWorker {
                 classifyEmailFailureReason(error),
                 now,
             );
+        } finally {
+            renewal.stop();
         }
         return true;
     }

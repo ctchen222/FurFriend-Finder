@@ -28,6 +28,7 @@
     "test:integration": "jest --testPathPattern='src/__test__/integration'",
     "test:e2e": "playwright test",
     "test:coverage": "jest --coverage",
+    "test:h0:auth": "jest --runInBand --roots src --testPathIgnorePatterns='/node_modules/|/dist/|e2e' --runTestsByPath src/__test__/unit/auth.mail.test.ts src/__test__/unit/auth.oauth.test.ts src/__test__/unit/config/oauth.test.ts src/__test__/integration/authController.test.ts src/__test__/integration/webConfigRouter.test.ts",
     "smtp:smoke": "tsx src/scripts/mailgun-smoke-test.ts",
     "db:migrate": "tsx src/scripts/migrate.ts",
     "workers": "tsx src/workers/main.ts",

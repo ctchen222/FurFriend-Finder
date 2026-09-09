@@ -17,6 +17,55 @@ const job = {
 };
 
 describe('organization mail worker', () => {
+    beforeEach(() => jest.useFakeTimers());
+    afterEach(() => {
+        expect(jest.getTimerCount()).toBe(0);
+        jest.useRealTimers();
+    });
+
+    it('renews a slow SMTP claim and clears its timer after sending', async () => {
+        jest.useFakeTimers();
+        let finish!: () => void;
+        const sending = new Promise<void>(resolve => { finish = resolve; });
+        const repository = {
+            claim: jest.fn().mockResolvedValue(job),
+            renew: jest.fn().mockResolvedValue(true),
+            markSent: jest.fn(),
+        } as any;
+        const worker = new OrganizationMailWorker(repository, {
+            sendOrganizationInvitation: jest.fn(() => sending),
+        } as any, 'https://furfriend.test');
+        const running = worker.runOnce();
+        await jest.advanceTimersByTimeAsync(30_000);
+        expect(repository.renew).toHaveBeenCalledWith(job.id, job.claimToken);
+        finish();
+        await running;
+        expect(jest.getTimerCount()).toBe(0);
+    });
+
+    it.each(['markSent', 'markFailed'])('renews during %s and stops after rejected acknowledgement', async stage => {
+        let reject!: (error: Error) => void;
+        const blocked = new Promise((_, rejectPromise) => { reject = rejectPromise; });
+        const repository = {
+            claim: jest.fn().mockResolvedValue({ ...job, kind: 'OWNERSHIP_TRANSFER' }),
+            renew: jest.fn().mockResolvedValue(true),
+            markSent: jest.fn(),
+            markFailed: jest.fn(),
+        } as any;
+        repository[stage].mockImplementation(() => blocked);
+        const mail = { sendOwnershipTransfer: stage === 'markFailed'
+            ? jest.fn().mockRejectedValue(new Error('SMTP failure'))
+            : jest.fn().mockResolvedValue({}) } as any;
+        const running = new OrganizationMailWorker(repository, mail, 'https://furfriend.test').runOnce();
+        const outcome = stage === 'markFailed'
+            ? expect(running).rejects.toThrow('acknowledgement failed')
+            : expect(running).resolves.toBe(true);
+        await jest.advanceTimersByTimeAsync(30_000);
+        expect(repository.renew).toHaveBeenCalledWith(job.id, job.claimToken);
+        reject(new Error('acknowledgement failed'));
+        await outcome;
+    });
+
     it('sends a valid invitation independently of lost-pet mail preferences', async () => {
         const repository = {
             claim: jest.fn().mockResolvedValue(job),

@@ -13,6 +13,34 @@ export const visibleOrganization = `o.operational_status='ACTIVE' AND o.review_s
 export class OrganizationAnimalRepository {
     constructor(private readonly db: DbExecutor) {}
 
+    async creation(orgId: string, requestId: string) {
+        return (
+            await this.db.query<{ id: string; requestHash: string }>(
+                `SELECT id,request_hash AS "requestHash" FROM organization_animals WHERE organization_id=$1 AND request_id=$2`,
+                [orgId, requestId],
+            )
+        ).rows[0];
+    }
+
+    async count(orgId: string): Promise<number> {
+        return (
+            await this.db.query<{ count: number }>(
+                'SELECT COUNT(*)::int AS count FROM organization_animals WHERE organization_id=$1',
+                [orgId],
+            )
+        ).rows[0].count;
+    }
+
+    async photoBytes(orgId: string): Promise<bigint> {
+        const result = await this.db.query<{ bytes: string }>(
+            `SELECT COALESCE(SUM(octet_length(p.image)),0) AS bytes
+             FROM organization_animal_photos p JOIN organization_animals a ON a.id=p.animal_id
+             WHERE a.organization_id=$1`,
+            [orgId],
+        );
+        return BigInt(result.rows[0].bytes);
+    }
+
     async detail(
         orgId: string,
         id: string,

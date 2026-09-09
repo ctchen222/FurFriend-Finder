@@ -36,14 +36,14 @@ export class NotificationRepository {
         const result = await this.db.query<NotificationJob>(
             `WITH next_notification AS (
                 SELECT id FROM notification_outbox
-                WHERE available_at <= $1
-                  AND (state = 'PENDING' OR (state = 'RUNNING' AND lease_until < $1))
+                WHERE available_at <= $1::timestamptz
+                  AND (state = 'PENDING' OR (state = 'RUNNING' AND lease_until < $1::timestamptz))
                 ORDER BY available_at ASC, created_at ASC, id ASC
                 FOR UPDATE SKIP LOCKED LIMIT 1
              )
              UPDATE notification_outbox AS item
              SET state = 'RUNNING', attempts = item.attempts + 1,
-                 claim_token = $2::uuid, lease_until = $1 + INTERVAL '120 seconds'
+                 claim_token = $2::uuid, lease_until = $1::timestamptz + INTERVAL '120 seconds'
              FROM next_notification
              WHERE item.id = next_notification.id
              RETURNING item.*, (SELECT email FROM "user" WHERE id = item.user_id),
@@ -57,9 +57,21 @@ export class NotificationRepository {
         return result.rows[0] ?? null;
     }
 
+    async renew(id: string, claimToken: string): Promise<boolean> {
+        const result = await this.db.query(
+            `UPDATE notification_outbox
+             SET lease_until = CURRENT_TIMESTAMP + INTERVAL '120 seconds'
+             WHERE id = $1 AND state = 'RUNNING' AND claim_token = $2::uuid
+               AND lease_until > CURRENT_TIMESTAMP
+             RETURNING id`,
+            [id, claimToken],
+        );
+        return (result.rowCount ?? 0) === 1;
+    }
+
     async markSent(id: string, claimToken: string, now: Date = new Date()): Promise<boolean> {
         const result = await this.db.query(
-            `UPDATE notification_outbox SET state = 'SENT', lease_until = NULL, sent_at = $3
+            `UPDATE notification_outbox SET state = 'SENT', lease_until = NULL, sent_at = $3::timestamptz
              WHERE id = $1 AND state = 'RUNNING' AND claim_token = $2::uuid`,
             [id, claimToken, now],
         );
@@ -89,8 +101,8 @@ export class NotificationRepository {
         const delayMinutes = attempts === 1 ? 1 : 5;
         const result = await this.db.query(
             `UPDATE notification_outbox
-             SET state = $4,
-                 available_at = CASE WHEN $4 = 'PENDING' THEN $3 + ($5 * INTERVAL '1 minute') ELSE available_at END,
+             SET state = $4::text,
+                 available_at = CASE WHEN $4::text = 'PENDING' THEN $3::timestamptz + ($5 * INTERVAL '1 minute') ELSE available_at END,
                  lease_until = NULL, last_error_code = $6
              WHERE id = $1 AND state = 'RUNNING' AND claim_token = $2::uuid`,
             [id, claimToken, now, terminal ? 'FAILED' : 'PENDING', delayMinutes, errorCode],

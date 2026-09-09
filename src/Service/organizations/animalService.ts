@@ -1,5 +1,9 @@
 import { createHash } from 'node:crypto';
 import type { Pool, PoolClient } from 'pg';
+import {
+    getOrganizationLimits,
+    type OrganizationLimits,
+} from '../../config/organizationLimits';
 import type {
     AnimalListing,
     AnimalListingPage,
@@ -22,6 +26,10 @@ import {
 } from './animalValidation';
 import { organizationIdSchema } from './validation';
 import { normalizeAnimalPhoto } from './animalPhoto';
+import {
+    getProcessPhotoWorkLimiter,
+    type PhotoWorkLimiter,
+} from './photoWorkLimiter';
 
 const missing = () =>
     new OrganizationError(
@@ -52,7 +60,16 @@ function page(rows: AnimalListing[]): AnimalListingPage {
     };
 }
 
-export function createOrganizationAnimalService(db: Pool) {
+export function createOrganizationAnimalService(
+    db: Pool,
+    options: {
+        limits?: OrganizationLimits;
+        photoWorkLimiter?: PhotoWorkLimiter;
+    } = {},
+) {
+    const limits = options.limits ?? getOrganizationLimits();
+    const photoWorkLimiter =
+        options.photoWorkLimiter ?? getProcessPhotoWorkLimiter();
     async function context(
         client: PoolClient,
         actorId: string,
@@ -170,6 +187,25 @@ export function createOrganizationAnimalService(db: Pool) {
             return withTransaction(db, async (client) => {
                 await context(client, actor, orgId, true);
                 const repo = new OrganizationAnimalRepository(client);
+                const previous = await repo.creation(orgId, requestId);
+                if (previous) {
+                    if (previous.requestHash !== hash)
+                        throw new OrganizationError(
+                            409,
+                            'REQUEST_REUSED',
+                            '這次新增請求的內容已改變，請重新開始新增',
+                        );
+                    return (await repo.detail(orgId, previous.id))!;
+                }
+                if (
+                    (await repo.count(orgId)) >=
+                    limits.maxAnimalsPerOrganization
+                )
+                    throw new OrganizationError(
+                        422,
+                        'ANIMAL_LIMIT',
+                        '此中途之家的動物資料已達上限',
+                    );
                 const result = await repo.create(
                     orgId,
                     actor,
@@ -260,28 +296,63 @@ export function createOrganizationAnimalService(db: Pool) {
             raw: unknown,
             input: Buffer,
         ) {
-            return mutate(
-                actor,
-                orgId,
-                id,
-                raw,
-                'ANIMAL_PHOTO_ADDED',
-                async (repo, animal) => {
-                    editable(animal);
-                    if (animal.photoIds.length >= 6)
-                        throw new OrganizationError(
-                            422,
-                            'PHOTO_LIMIT',
-                            '每隻動物最多六張照片',
+            const parsedOrg = organizationIdSchema.parse(orgId);
+            const parsedId = organizationIdSchema.parse(id);
+            versionSchema.parse(raw);
+            // Authorize before spending a Sharp permit; finish this transaction
+            // before normalization so image work never holds database locks.
+            await withTransaction(db, async (client) => {
+                await context(client, actor, parsedOrg, true);
+                const animal = await new OrganizationAnimalRepository(
+                    client,
+                ).detail(parsedOrg, parsedId);
+                if (!animal) throw missing();
+                editable(animal);
+            });
+            const release = photoWorkLimiter.tryAcquire();
+            if (!release)
+                throw new OrganizationError(
+                    429,
+                    'PHOTO_PROCESSING_BUSY',
+                    '照片處理忙碌中，請稍後再試',
+                );
+            try {
+                const normalized = await normalizeAnimalPhoto(input);
+                return await mutate(
+                    actor,
+                    orgId,
+                    id,
+                    raw,
+                    'ANIMAL_PHOTO_ADDED',
+                    async (repo, animal) => {
+                        editable(animal);
+                        if (animal.photoIds.length >= 6)
+                            throw new OrganizationError(
+                                422,
+                                'PHOTO_LIMIT',
+                                '每隻動物最多六張照片',
+                            );
+                        if (
+                            (await repo.photoBytes(parsedOrg)) +
+                                BigInt(normalized.length) >
+                            BigInt(limits.maxPhotoBytesPerOrganization)
+                        )
+                            throw new OrganizationError(
+                                422,
+                                'ORGANIZATION_PHOTO_QUOTA',
+                                '此中途之家的照片容量已達上限',
+                            );
+                        await repo.addPhoto(
+                            animal.id,
+                            normalized,
+                            animal.photoIds.length,
                         );
-                    await repo.addPhoto(
-                        animal.id,
-                        await normalizeAnimalPhoto(input),
-                        animal.photoIds.length,
-                    );
-                    await repo.touch(animal.id);
-                },
-            );
+                        await repo.touch(animal.id);
+                    },
+                );
+            } finally {
+                release();
+            }
         },
         async changePhoto(
             actor: string,

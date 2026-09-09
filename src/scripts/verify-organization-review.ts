@@ -14,6 +14,238 @@ import { OrganizationNotificationRepository } from '../Service/organizations/not
 import nodemailer from 'nodemailer';
 import { createServer } from 'node:net';
 import { createNoticeDeliveryService } from '../Service/organizations/noticeDeliveryService';
+import MatchJobRepository from '../repository/matchJob.db';
+import NotificationRepository from '../repository/notification.db';
+import { OrganizationMailRepository } from '../repository/organizationMail.db';
+import { getOrganizationLimits } from '../config/organizationLimits';
+
+async function verifyLeaseTimestampMigration(db: Pool, sql: string) {
+    const client = await db.connect();
+    try {
+        // Independent constants: never derive expected instants with the SQL
+        // conversion expression being tested. Legacy Node values had other origins.
+        for (const fixture of [
+            { timezone: 'UTC', created: '2026-09-01T04:00:00.000Z', initial: '2099-09-01T04:00:00.000Z' },
+            { timezone: 'Asia/Taipei', created: '2026-08-31T20:00:00.000Z', initial: '2099-08-31T20:00:00.000Z' },
+        ]) {
+            await client.query('BEGIN');
+            try {
+                await client.query(`SELECT set_config('TimeZone',$1,true)`, [fixture.timezone]);
+                // Temporary tables shadow only these migration targets on this connection.
+                const pendingId = randomUUID();
+                const sentId = randomUUID();
+                const runningIds: string[] = [randomUUID(), randomUUID()];
+                const oldTokens = [randomUUID(), randomUUID()];
+                for (const table of ['match_jobs', 'notification_outbox']) {
+                    await client.query(
+                        `CREATE TEMP TABLE ${table} (
+                            id UUID PRIMARY KEY, state TEXT, attempts INTEGER DEFAULT 1,
+                            claim_token UUID, last_error_code TEXT,
+                            available_at TIMESTAMP, lease_until TIMESTAMP,
+                            created_at TIMESTAMP, sent_at TIMESTAMP,
+                            report_id INTEGER, report_revision INTEGER, engine_version TEXT,
+                            execution_no INTEGER DEFAULT 1, run_id UUID, user_id TEXT
+                         ) ON COMMIT DROP`,
+                    );
+                    await client.query(
+                        `INSERT INTO ${table} (id,state,available_at,created_at,sent_at)
+                         VALUES ($1,'PENDING','2099-09-01 04:00:00','2026-09-01 04:00:00',NULL),
+                                ($2,$3,'2026-09-01 04:00:00','2026-09-01 04:00:00','2026-09-01 12:30:00')`,
+                        [pendingId, sentId, table === 'match_jobs' ? 'SUCCEEDED' : 'SENT'],
+                    );
+                    for (const [index, id] of runningIds.entries()) {
+                        // A legacy Node Asia/Taipei write could encode 04:00Z as
+                        // 12:00 wall time. Its lease cannot safely be preserved.
+                        await client.query(
+                            `INSERT INTO ${table} (id,state,claim_token,available_at,lease_until,created_at)
+                             VALUES ($1,'RUNNING',$2,'2099-09-01 12:00:00',$3,'2026-09-01 04:00:00')`,
+                            [id, oldTokens[index], index === 0 ? '2099-09-01 12:02:00' : '2026-09-01 12:02:00'],
+                        );
+                    }
+                }
+                await client.query(sql);
+                for (const table of ['match_jobs', 'notification_outbox']) {
+                    const pending = (await client.query(
+                        `SELECT state,available_at,created_at FROM ${table} WHERE id=$1`, [pendingId],
+                    )).rows[0];
+                    assert.deepEqual(pending, {
+                        state: 'PENDING',
+                        available_at: new Date(fixture.initial),
+                        created_at: new Date(fixture.created),
+                    });
+                    const sent = (await client.query(
+                        `SELECT state,to_char(sent_at,'YYYY-MM-DD HH24:MI:SS') AS wall_time
+                         FROM ${table} WHERE id=$1`, [sentId],
+                    )).rows[0];
+                    assert.deepEqual(sent, {
+                        state: table === 'match_jobs' ? 'SUCCEEDED' : 'SENT',
+                        wall_time: '2026-09-01 12:30:00',
+                    });
+                    for (const id of runningIds) {
+                        assert.deepEqual((await client.query(
+                            `SELECT state,claim_token,lease_until,available_at<=CURRENT_TIMESTAMP AS ready
+                             FROM ${table} WHERE id=$1`, [id],
+                        )).rows[0], {
+                            state: 'PENDING', claim_token: null, lease_until: null, ready: true,
+                        }, `${table}: every legacy RUNNING claim must be recoverable`);
+                    }
+                    const jobs = new MatchJobRepository(client);
+                    const notices = new NotificationRepository(client);
+                    const repository = table === 'match_jobs' ? jobs : notices;
+                    const finish = table === 'match_jobs'
+                        ? (id: string, token: string) => jobs.succeed(id, token)
+                        : (id: string, token: string) => notices.markSent(id, token);
+                    const fail = table === 'match_jobs'
+                        ? (id: string, token: string) => jobs.fail(id, token, 1, 'stale')
+                        : (id: string, token: string) => notices.markFailed(id, token, 1, 'stale');
+                    for (let claimed = 0; claimed < runningIds.length; claimed += 1) {
+                        const job = await repository.claim();
+                        assert.ok(job?.claim_token, 'new workers can immediately reclaim migrated jobs');
+                        assert.ok(runningIds.includes(job.id));
+                        const staleToken = oldTokens[runningIds.indexOf(job.id)];
+                        assert.notEqual(job.claim_token, staleToken);
+                        assert.equal(await repository.renew(job.id, job.claim_token), true);
+                        assert.equal(await repository.renew(job.id, staleToken), false);
+                        assert.equal(await finish(job.id, staleToken), false);
+                        assert.equal(await fail(job.id, staleToken), false);
+                        const current = (await client.query(
+                            `SELECT state,claim_token FROM ${table} WHERE id=$1`, [job.id],
+                        )).rows[0];
+                        assert.deepEqual(current, { state: 'RUNNING', claim_token: job.claim_token });
+                    }
+                    assert.equal(await repository.claim(), null, 'renewed claims cannot be reclaimed');
+                }
+                assert.equal((await client.query(
+                    'SELECT pg_typeof(sent_at)::text AS type FROM notification_outbox',
+                )).rows[0].type, 'timestamp with time zone');
+            } finally {
+                await client.query('ROLLBACK');
+            }
+        }
+    } finally {
+        client.release(true);
+    }
+    console.log('PASS: V13 resets mixed-origin RUNNING claims, preserves DB-owned timestamp interpretation, and fences recovered claims; historical sent_at remains wall-time reference data.');
+}
+
+/** All fixtures and lease manipulation stay inside the disposable verification schema. */
+async function verifyWorkerLeases(db: Pool, organizationId: string) {
+    const owner = await db.query(`INSERT INTO owner (name) VALUES ('lease verification') RETURNING id`);
+    const report = await db.query(
+        `INSERT INTO animal_lost (owner_id,name) VALUES ($1,'lease verification') RETURNING id`,
+        [owner.rows[0].id],
+    );
+    const reportId: number = report.rows[0].id;
+    const jobs = new MatchJobRepository(db);
+    const jobId = await jobs.enqueue({ reportId, reportRevision: 1, engineVersion: 'lease-verification' });
+    const run = await db.query(
+        `INSERT INTO match_runs (job_id,execution_no,report_id,report_revision,engine_version,status)
+         VALUES ($1,1,$2,1,'lease-verification','SUCCEEDED') RETURNING id`,
+        [jobId, reportId],
+    );
+    const notifications = new NotificationRepository(db);
+    const notificationId = await notifications.enqueue({ runId: run.rows[0].id, reportId, userId: 'owner' });
+    assert.ok(notificationId);
+    const invitationId = randomUUID();
+    await db.query(
+        `INSERT INTO organization_invitations (id,organization_id,email,role,token_hash,invited_by,expires_at)
+         VALUES ($1,$2,'lease@review.test','EDITOR',$3,'owner',NOW()+INTERVAL '1 day')`,
+        [invitationId, organizationId, 'a'.repeat(64)],
+    );
+    const mailId = randomUUID();
+    await db.query(
+        `INSERT INTO organization_mail_outbox (id,organization_id,invitation_id,kind,dedupe_key)
+         VALUES ($1,$2,$3,'MEMBER_INVITATION',$4)`,
+        [mailId, organizationId, invitationId, `lease:${mailId}`],
+    );
+    const organizationMail = new OrganizationMailRepository(db);
+    const cases = [
+        {
+            table: 'match_jobs', id: jobId,
+            claim: async () => { const job = await jobs.claim(); return job && { id: job.id, token: job.claim_token! }; },
+            renew: (id: string, token: string) => jobs.renew(id, token),
+            finish: (id: string, token: string) => jobs.succeed(id, token),
+            fail: (id: string, token: string) => jobs.fail(id, token, 1, 'verification'),
+            cancel: (id: string, token: string) => jobs.cancel(id, token),
+            terminal: 'SUCCEEDED',
+        },
+        {
+            table: 'notification_outbox', id: notificationId,
+            claim: async () => { const job = await notifications.claim(); return job && { id: job.id, token: job.claim_token! }; },
+            renew: (id: string, token: string) => notifications.renew(id, token),
+            finish: (id: string, token: string) => notifications.markSent(id, token),
+            fail: (id: string, token: string) => notifications.markFailed(id, token, 1, 'verification'),
+            cancel: (id: string, token: string) => notifications.markDisabled(id, token),
+            terminal: 'SENT',
+        },
+        {
+            table: 'organization_mail_outbox', id: mailId,
+            claim: async () => { const job = await organizationMail.claim(); return job && { id: job.id, token: job.claimToken }; },
+            renew: (id: string, token: string) => organizationMail.renew(id, token),
+            finish: (id: string, token: string) => organizationMail.markSent(id, token),
+            fail: (id: string, token: string) => organizationMail.markFailed(id, token, 1, 'verification'),
+            cancel: (id: string, token: string) => organizationMail.markCancelled(id, token),
+            terminal: 'SENT',
+        },
+    ];
+    for (const item of cases) {
+        // SQL identifiers come exclusively from this fixed fixture allowlist.
+        assert.ok(['match_jobs', 'notification_outbox', 'organization_mail_outbox'].includes(item.table));
+        assert.equal(await item.renew(item.id, randomUUID()), false, 'pending jobs cannot renew');
+        const first = await item.claim();
+        assert.ok(first);
+        assert.equal(first.id, item.id);
+        await db.query(
+            `UPDATE ${item.table} SET lease_until=CURRENT_TIMESTAMP+INTERVAL '5 seconds' WHERE id=$1`,
+            [item.id],
+        );
+        assert.equal(await item.renew(item.id, randomUUID()), false, 'wrong token cannot renew');
+        assert.equal(await item.renew(randomUUID(), first.token), false, 'wrong id cannot renew');
+        assert.equal(await item.renew(item.id, first.token), true);
+        assert.equal((await db.query(
+            `SELECT lease_until>CURRENT_TIMESTAMP+INTERVAL '110 seconds' AS extended FROM ${item.table} WHERE id=$1`,
+            [item.id],
+        )).rows[0].extended, true);
+        assert.equal(await item.claim(), null, `${item.table}: renewed claim cannot be reclaimed`);
+        await db.query(
+            `UPDATE ${item.table} SET lease_until=CURRENT_TIMESTAMP-INTERVAL '1 minute' WHERE id=$1`,
+            [item.id],
+        );
+        assert.equal(await item.renew(item.id, first.token), false, 'expired lease cannot be revived');
+        const recovered = await item.claim();
+        assert.ok(recovered);
+        assert.equal(recovered.id, item.id);
+        assert.notEqual(recovered.token, first.token);
+        assert.equal(await item.renew(item.id, first.token), false, 'stale token cannot renew');
+        for (const acknowledge of [item.finish, item.fail, item.cancel]) {
+            await acknowledge(item.id, first.token);
+            assert.deepEqual((await db.query(
+                `SELECT state,claim_token FROM ${item.table} WHERE id=$1`, [item.id],
+            )).rows[0], { state: 'RUNNING', claim_token: recovered.token });
+        }
+        await item.fail(item.id, recovered.token);
+        assert.deepEqual((await db.query(
+            `SELECT state,lease_until,available_at>CURRENT_TIMESTAMP AS delayed
+             FROM ${item.table} WHERE id=$1`, [item.id],
+        )).rows[0], { state: 'PENDING', lease_until: null, delayed: true });
+        assert.equal(await item.renew(item.id, recovered.token), false, 'pending retry cannot renew');
+        assert.equal(await item.claim(), null, 'retry delay is enforced');
+        await db.query(
+            `UPDATE ${item.table} SET available_at=CURRENT_TIMESTAMP-INTERVAL '1 minute' WHERE id=$1`,
+            [item.id],
+        );
+        const retry = await item.claim();
+        assert.ok(retry);
+        assert.equal(retry.id, item.id);
+        assert.notEqual(retry.token, recovered.token);
+        await item.finish(item.id, retry.token);
+        assert.equal((await db.query(
+            `SELECT state FROM ${item.table} WHERE id=$1`, [item.id],
+        )).rows[0].state, item.terminal);
+        assert.equal(await item.renew(item.id, retry.token), false, 'completed jobs cannot renew');
+    }
+    console.log('PASS: all three worker repositories renew active leases, reject expired/stale claims, prevent reclaim, and fence stale acknowledgements.');
+}
 
 async function main() {
     const connectionString = process.env.DATABASE_URL;
@@ -31,7 +263,7 @@ async function main() {
     assert.match(schema, /^fff_review_verify_[a-f0-9]{32}$/);
     const db = new Pool({
         connectionString,
-        options: `-c search_path=${schema},pg_catalog`,
+        options: `-c search_path=${schema},pg_catalog -c TimeZone=UTC`,
         max: 5,
     });
     let created = false;
@@ -44,6 +276,9 @@ async function main() {
             migrations.length,
         );
         assert.equal(await new MigrationRunner(db, migrations).migrate(), 0);
+        const leaseMigration = migrations.find(migration => migration.version === 13);
+        assert.ok(leaseMigration);
+        await verifyLeaseTimestampMigration(db, leaseMigration.sql);
         for (const id of ['owner', 'reviewer', 'member-reviewer', 'outsider']) {
             await db.query(
                 `INSERT INTO "user" (id,name,email,"emailVerified","updatedAt") VALUES ($1,$1,$2,true,NOW())`,
@@ -55,7 +290,11 @@ async function main() {
              ('reviewer','ORGANIZATION_REVIEWER','verification'),
              ('member-reviewer','ORGANIZATION_REVIEWER','verification')`,
         );
-        const organizations = createOrganizationService(db);
+        // Keep verifier capacity deterministic even when the caller configures
+        // a smaller production quota (the verifier creates two organizations).
+        const organizations = createOrganizationService(db, {
+            limits: getOrganizationLimits({}),
+        });
         const profiles = createOrganizationProfileService(db);
         const reviews = createOrganizationReviewService(db);
         const publicOrganizations = createPublicOrganizationService(db);
@@ -477,6 +716,7 @@ async function main() {
                 'PASS: localhost Mailpit accepted five notices; two removed-member deliveries cancelled.',
             );
         }
+        await verifyWorkerLeases(db, organization.id);
         console.log(
             'PASS: notices, recipient isolation, pagination, idempotent read, atomic rollback, retry, claim recovery, and stale-claim fencing.',
         );

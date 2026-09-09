@@ -24,11 +24,11 @@ export class OrganizationMailRepository {
             `WITH next_mail AS (
                 SELECT id FROM organization_mail_outbox
                 WHERE kind IN ('MEMBER_INVITATION','OWNERSHIP_TRANSFER')
-                    AND available_at <= $1 AND (state='PENDING' OR (state='RUNNING' AND lease_until < $1))
+                    AND available_at <= $1::timestamptz AND (state='PENDING' OR (state='RUNNING' AND lease_until < $1::timestamptz))
                 ORDER BY available_at,created_at,id FOR UPDATE SKIP LOCKED LIMIT 1
              )
              UPDATE organization_mail_outbox item
-             SET state='RUNNING',attempts=item.attempts+1,claim_token=$2::uuid,lease_until=$1 + INTERVAL '120 seconds'
+             SET state='RUNNING',attempts=item.attempts+1,claim_token=$2::uuid,lease_until=$1::timestamptz + INTERVAL '120 seconds'
              FROM next_mail WHERE item.id=next_mail.id
              RETURNING item.id,item.kind,item.attempts,item.claim_token AS "claimToken",
                 COALESCE(item.invitation_id,item.transfer_id) AS "subjectId",
@@ -47,11 +47,11 @@ export class OrganizationMailRepository {
                 CASE item.kind
                     WHEN 'MEMBER_INVITATION' THEN EXISTS(
                         SELECT 1 FROM organization_invitations i JOIN organizations o ON o.id=i.organization_id
-                        WHERE i.id=item.invitation_id AND i.status='PENDING' AND i.expires_at>$1 AND o.operational_status='ACTIVE')
+                        WHERE i.id=item.invitation_id AND i.status='PENDING' AND i.expires_at>$1::timestamptz AND o.operational_status='ACTIVE')
                     ELSE EXISTS(
                         SELECT 1 FROM organization_ownership_transfers t JOIN organizations o ON o.id=t.organization_id
                         JOIN organization_memberships m ON m.organization_id=t.organization_id AND m.user_id=t.from_user_id
-                        WHERE t.id=item.transfer_id AND t.status='PENDING' AND t.expires_at>$1
+                        WHERE t.id=item.transfer_id AND t.status='PENDING' AND t.expires_at>$1::timestamptz
                           AND o.operational_status='ACTIVE' AND m.status='ACTIVE' AND m.role='OWNER')
                 END AS valid`,
             [now, claimToken],
@@ -59,9 +59,21 @@ export class OrganizationMailRepository {
         return result.rows[0] ?? null;
     }
 
+    async renew(id: string, claimToken: string): Promise<boolean> {
+        const result = await this.db.query(
+            `UPDATE organization_mail_outbox
+             SET lease_until = CURRENT_TIMESTAMP + INTERVAL '120 seconds'
+             WHERE id = $1 AND state = 'RUNNING' AND claim_token = $2::uuid
+               AND lease_until > CURRENT_TIMESTAMP
+             RETURNING id`,
+            [id, claimToken],
+        );
+        return (result.rowCount ?? 0) === 1;
+    }
+
     async markSent(id: string, claimToken: string, now = new Date()) {
         await this.db.query(
-            `UPDATE organization_mail_outbox SET state='SENT',lease_until=NULL,sent_at=$3
+            `UPDATE organization_mail_outbox SET state='SENT',lease_until=NULL,sent_at=$3::timestamptz
              WHERE id=$1 AND state='RUNNING' AND claim_token=$2::uuid`,
             [id, claimToken, now],
         );
@@ -85,8 +97,8 @@ export class OrganizationMailRepository {
         const terminal = attempts >= 3;
         const delayMinutes = attempts === 1 ? 1 : 5;
         await this.db.query(
-            `UPDATE organization_mail_outbox SET state=$4,
-                available_at=CASE WHEN $4='PENDING' THEN $3 + ($5 * INTERVAL '1 minute') ELSE available_at END,
+            `UPDATE organization_mail_outbox SET state=$4::text,
+                available_at=CASE WHEN $4::text='PENDING' THEN $3::timestamptz + ($5 * INTERVAL '1 minute') ELSE available_at END,
                 lease_until=NULL,last_error_code=$6
              WHERE id=$1 AND state='RUNNING' AND claim_token=$2::uuid`,
             [

@@ -2,6 +2,27 @@ import fs from 'fs';
 import path from 'path';
 
 describe('SQL schema', () => {
+    it('requires stopped workers and recovers legacy RUNNING claims during timestamp conversion', () => {
+        const migration = fs.readFileSync(
+            path.join(__dirname, '..', '..', '..', 'sql', 'V13__Worker_lease_timestamps.sql'),
+            'utf8',
+        );
+        expect(migration).toContain('ALTER TABLE match_jobs');
+        expect(migration).toContain('ALTER TABLE notification_outbox');
+        for (const column of ['available_at', 'lease_until', 'created_at', 'sent_at']) {
+            expect(migration).toContain(`ALTER COLUMN ${column} TYPE TIMESTAMPTZ`);
+            expect(migration).toContain(`USING ${column} AT TIME ZONE current_setting('TimeZone')`);
+        }
+        expect(migration).not.toContain('ALTER TABLE organization_mail_outbox');
+        expect(migration).toContain('PRECONDITION: Stop all workers');
+        for (const table of ['match_jobs', 'notification_outbox']) {
+            expect(migration).toContain(`UPDATE ${table}`);
+        }
+        expect(migration.match(/SET state = 'PENDING', claim_token = NULL, lease_until = NULL/g)).toHaveLength(2);
+        expect(migration.match(/available_at = CURRENT_TIMESTAMP/g)).toHaveLength(2);
+        expect(migration.match(/WHERE state = 'RUNNING'/g)).toHaveLength(2);
+    });
+
     it('should define Better Auth verification timestamp columns with camelCase names', () => {
         const initialSchema = fs.readFileSync(
             path.join(__dirname, '..', '..', '..', 'sql', 'V1__Initial.sql'),

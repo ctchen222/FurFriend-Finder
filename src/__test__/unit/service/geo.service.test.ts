@@ -83,6 +83,12 @@ describe('GeoService', () => {
   });
 
   describe('geocoding', () => {
+    it('bounds the geocoding request to ten seconds', async () => {
+      mockGeocode.mockResolvedValue({ data: { status: 'ZERO_RESULTS', results: [] } });
+      await service.geocoding('台北市');
+      expect(mockGeocode).toHaveBeenCalledWith(expect.objectContaining({ timeout: 10_000 }));
+    });
+
     it('should return {lat, lng} for OK status', async () => {
       mockGeocode.mockResolvedValue({
         data: {

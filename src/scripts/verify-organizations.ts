@@ -10,6 +10,7 @@ import { createOrganizationToken } from '../Service/organizations/token';
 import MailService from '../Service/mail';
 import { OrganizationMailRepository } from '../repository/organizationMail.db';
 import { OrganizationMailWorker } from '../workers/organizationMailWorker';
+import { getOrganizationLimits } from '../config/organizationLimits';
 
 /** Real DB verification, isolated from public data; never requires real user credentials. */
 async function main() {
@@ -31,6 +32,7 @@ async function main() {
     const db = new Pool({
         connectionString,
         options: `-c search_path=${schema},pg_catalog`,
+        application_name: schema,
         max: 5,
     });
     let created = false;
@@ -56,7 +58,9 @@ async function main() {
                 [id, `${id}@organization.test`, id !== 'unverified'],
             );
         }
-        const service = createOrganizationService(db);
+        const service = createOrganizationService(db, {
+            limits: getOrganizationLimits({}),
+        });
         const input = {
             requestId: randomUUID(),
             name: '小橘中途',
@@ -296,6 +300,66 @@ async function main() {
             ).rows[0].count,
             1,
         );
+
+        const expiredInvite = await memberships.invite(
+            'admin',
+            organization.id,
+            { email: 'wrong@organization.test', role: 'EDITOR' },
+        );
+        await db.query(
+            `UPDATE organization_invitations SET expires_at=CURRENT_TIMESTAMP - INTERVAL '1 second' WHERE id=$1`,
+            [expiredInvite.id],
+        );
+        await assert.rejects(
+            memberships.respondInvitation(
+                'wrong',
+                createOrganizationToken('invite', expiredInvite.id),
+                'ACCEPTED',
+            ),
+            { code: 'INVITATION_NOT_FOUND' },
+        );
+        assert.equal(
+            (
+                await db.query(
+                    'SELECT status FROM organization_invitations WHERE id=$1',
+                    [expiredInvite.id],
+                )
+            ).rows[0].status,
+            'EXPIRED',
+        );
+
+        const expiredTransfer = await memberships.createTransfer(
+            'admin',
+            organization.id,
+            { toUserId: 'owner' },
+        );
+        await db.query(
+            `UPDATE organization_ownership_transfers SET expires_at=CURRENT_TIMESTAMP - INTERVAL '1 second' WHERE id=$1`,
+            [expiredTransfer.id],
+        );
+        await assert.rejects(
+            memberships.respondTransfer(
+                'owner',
+                createOrganizationToken('transfer', expiredTransfer.id),
+                'ACCEPTED',
+            ),
+            { code: 'TRANSFER_NOT_FOUND' },
+        );
+        assert.equal(
+            (
+                await db.query(
+                    'SELECT status FROM organization_ownership_transfers WHERE id=$1',
+                    [expiredTransfer.id],
+                )
+            ).rows[0].status,
+            'EXPIRED',
+        );
+        await db.query(
+            `UPDATE organization_mail_outbox SET created_at=created_at - INTERVAL '61 seconds'
+             WHERE transfer_id=$1`,
+            [expiredTransfer.id],
+        );
+
         await assert.rejects(
             memberships.removeMember('owner', organization.id, 'admin'),
             { code: 'MEMBER_MANAGEMENT_FORBIDDEN' },
@@ -310,17 +374,31 @@ async function main() {
                     `SELECT COUNT(*)::int AS count FROM organization_mail_outbox`,
                 )
             ).rows[0].count,
-            4,
+            6,
         );
         const deliveryInvite = await memberships.invite(
             'admin',
             organization.id,
-            { email: 'wrong@organization.test', role: 'EDITOR' },
+            { email: 'cooldown@organization.test', role: 'EDITOR' },
         );
         assert.equal(
             (await memberships.list('admin', organization.id)).invitations[0]
                 .delivery.state,
             'PENDING',
+        );
+        const inviteCounts = (
+            await db.query(
+                `SELECT
+                    (SELECT COUNT(*)::int FROM organization_mail_outbox) AS "outboxCount",
+                    (SELECT COUNT(*)::int FROM organization_audit_events) AS "auditCount"`,
+            )
+        ).rows[0];
+        await assert.rejects(
+            memberships.invite('admin', organization.id, {
+                email: 'cooldown@organization.test',
+                role: 'EDITOR',
+            }),
+            { status: 429, code: 'INVITATION_RESEND_COOLDOWN' },
         );
         await assert.rejects(
             memberships.resendInvitation(
@@ -328,7 +406,26 @@ async function main() {
                 organization.id,
                 deliveryInvite.id,
             ),
-            { code: 'INVITATION_RESEND_COOLDOWN' },
+            { status: 429, code: 'INVITATION_RESEND_COOLDOWN' },
+        );
+        assert.equal(
+            (
+                await db.query(
+                    'SELECT status FROM organization_invitations WHERE id=$1',
+                    [deliveryInvite.id],
+                )
+            ).rows[0].status,
+            'PENDING',
+        );
+        assert.deepEqual(
+            (
+                await db.query(
+                    `SELECT
+                        (SELECT COUNT(*)::int FROM organization_mail_outbox) AS "outboxCount",
+                        (SELECT COUNT(*)::int FROM organization_audit_events) AS "auditCount"`,
+                )
+            ).rows[0],
+            inviteCounts,
         );
         await db.query(
             `UPDATE organization_mail_outbox SET created_at=created_at - INTERVAL '61 seconds'
@@ -349,12 +446,50 @@ async function main() {
             ),
             { code: 'INVITATION_NOT_FOUND' },
         );
+
+        const cooldownTransfer = await memberships.createTransfer(
+            'admin',
+            organization.id,
+            { toUserId: 'owner' },
+        );
+        const transferCounts = (
+            await db.query(
+                `SELECT
+                    (SELECT COUNT(*)::int FROM organization_mail_outbox) AS "outboxCount",
+                    (SELECT COUNT(*)::int FROM organization_audit_events) AS "auditCount"`,
+            )
+        ).rows[0];
+        await assert.rejects(
+            memberships.createTransfer('admin', organization.id, {
+                toUserId: 'owner',
+            }),
+            { status: 429, code: 'OWNERSHIP_TRANSFER_COOLDOWN' },
+        );
+        assert.equal(
+            (
+                await db.query(
+                    'SELECT status FROM organization_ownership_transfers WHERE id=$1',
+                    [cooldownTransfer.id],
+                )
+            ).rows[0].status,
+            'PENDING',
+        );
+        assert.deepEqual(
+            (
+                await db.query(
+                    `SELECT
+                        (SELECT COUNT(*)::int FROM organization_mail_outbox) AS "outboxCount",
+                        (SELECT COUNT(*)::int FROM organization_audit_events) AS "auditCount"`,
+                )
+            ).rows[0],
+            transferCounts,
+        );
         const organizationMail = new OrganizationMailWorker(
             new OrganizationMailRepository(db),
             new MailService(),
             'http://localhost:5173',
         );
-        for (let index = 0; index < 6; index += 1)
+        for (let index = 0; index < 9; index += 1)
             await organizationMail.runOnce();
         assert.equal(
             (
@@ -362,10 +497,220 @@ async function main() {
                     `SELECT COUNT(*)::int AS count FROM organization_mail_outbox WHERE state='SENT'`,
                 )
             ).rows[0].count,
-            1,
+            2,
         );
         console.log(
             'PASS: organization creation, invitation, revocation, role isolation, Owner transfer, durable SMTP, and DB invariants.',
+        );
+        await db.query(`INSERT INTO "user" (id,name,email,"emailVerified","updatedAt")
+            VALUES ('quota-owner','quota-owner','quota@organization.test',true,NOW())`);
+        const quotaInput = { ...input, requestId: randomUUID() };
+        const quotaFirst = await service.create('quota-owner', quotaInput);
+        for (let i = 0; i < 3; i++) {
+            await service.create('quota-owner', {
+                ...input,
+                requestId: randomUUID(),
+            });
+        }
+        const lastSlot = await Promise.allSettled([
+            service.create('quota-owner', {
+                ...input,
+                requestId: randomUUID(),
+            }),
+            service.create('quota-owner', {
+                ...input,
+                requestId: randomUUID(),
+            }),
+        ]);
+        assert.equal(
+            lastSlot.filter((result) => result.status === 'fulfilled').length,
+            1,
+        );
+        assert.equal(
+            lastSlot.filter(
+                (result) =>
+                    result.status === 'rejected' &&
+                    result.reason.code === 'ORGANIZATION_LIMIT',
+            ).length,
+            1,
+        );
+        await assert.rejects(
+            service.create('quota-owner', {
+                ...input,
+                requestId: randomUUID(),
+            }),
+            { status: 422, code: 'ORGANIZATION_LIMIT' },
+        );
+        assert.equal(
+            (await service.create('quota-owner', quotaInput)).id,
+            quotaFirst.id,
+        );
+        await assert.rejects(
+            service.create('quota-owner', { ...quotaInput, name: 'changed' }),
+            { code: 'CREATION_CONFLICT' },
+        );
+        assert.equal(
+            (
+                await db.query(`SELECT COUNT(*)::int AS count FROM organizations
+            WHERE created_by='quota-owner'`)
+            ).rows[0].count,
+            5,
+        );
+        console.log(
+            'PASS: organization quota, concurrent last slot, and request replay at capacity.',
+        );
+
+        const raceOrg = await service.create('owner', {
+            ...input,
+            requestId: randomUUID(),
+            name: 'Concurrent cooldown verifier',
+        });
+        await db.query(
+            `INSERT INTO organization_memberships (organization_id,user_id,role)
+            VALUES ($1,'other','ADMIN')`,
+            [raceOrg.id],
+        );
+        const counts = async () =>
+            (
+                await db.query(
+                    `SELECT
+            (SELECT COUNT(*)::int FROM organization_mail_outbox WHERE organization_id=$1) AS outbox,
+            (SELECT COUNT(*)::int FROM organization_audit_events WHERE organization_id=$1) AS audit`,
+                    [raceOrg.id],
+                )
+            ).rows[0] as { outbox: number; audit: number };
+        async function race<T>(
+            operations: [() => Promise<T>, () => Promise<T>],
+        ) {
+            const gate = await db.connect();
+            let pending: Promise<PromiseSettledResult<T>[]> | undefined;
+            try {
+                await gate.query('BEGIN');
+                await gate.query(
+                    'SELECT id FROM organizations WHERE id=$1 FOR UPDATE',
+                    [raceOrg.id],
+                );
+                pending = Promise.allSettled(
+                    operations.map((operation) => operation()),
+                );
+                // Confirm both real DB requests overlap before releasing the row lock.
+                const deadline = Date.now() + 5000;
+                let blocked = 0;
+                while (blocked < 2 && Date.now() < deadline) {
+                    blocked = (
+                        await db.query(
+                            `SELECT COUNT(*)::int AS count FROM pg_stat_activity
+                        WHERE application_name=$1 AND wait_event_type='Lock'`,
+                            [schema],
+                        )
+                    ).rows[0].count;
+                    if (blocked < 2)
+                        await new Promise((resolve) => setTimeout(resolve, 10));
+                }
+                assert.equal(
+                    blocked,
+                    2,
+                    'Both cooldown requests must be waiting on database locks',
+                );
+            } finally {
+                await gate.query('ROLLBACK');
+                gate.release();
+                await pending;
+            }
+            return pending!;
+        }
+        function winner<T>(
+            results: PromiseSettledResult<T>[],
+            code: string,
+        ): T {
+            const success = results.filter(
+                (result) => result.status === 'fulfilled',
+            );
+            assert.equal(success.length, 1);
+            assert.equal(
+                results.filter(
+                    (result) =>
+                        result.status === 'rejected' &&
+                        result.reason.status === 429 &&
+                        result.reason.code === code,
+                ).length,
+                1,
+            );
+            return success[0].value;
+        }
+        const beforeInviteRace = await counts();
+        const invitationWinner = winner(
+            await race([
+                () =>
+                    memberships.invite('owner', raceOrg.id, {
+                        email: 'wrong@organization.test',
+                        role: 'EDITOR',
+                    }),
+                () =>
+                    memberships.invite('other', raceOrg.id, {
+                        email: 'wrong@organization.test',
+                        role: 'EDITOR',
+                    }),
+            ]),
+            'INVITATION_RESEND_COOLDOWN',
+        );
+        assert.deepEqual(await counts(), {
+            outbox: beforeInviteRace.outbox + 1,
+            audit: beforeInviteRace.audit + 1,
+        });
+        assert.deepEqual(
+            (
+                await db.query(
+                    `SELECT id,status FROM organization_invitations
+            WHERE organization_id=$1`,
+                    [raceOrg.id],
+                )
+            ).rows,
+            [{ id: invitationWinner.id, status: 'PENDING' }],
+        );
+        const invitationDetail = await memberships.invitationDetail(
+            'wrong',
+            createOrganizationToken('invite', invitationWinner.id),
+        );
+        assert.equal(invitationDetail.status, 'PENDING');
+        assert.equal(invitationDetail.accountMatches, true);
+
+        const beforeTransferRace = await counts();
+        const transferWinner = winner(
+            await race([
+                () =>
+                    memberships.createTransfer('owner', raceOrg.id, {
+                        toUserId: 'other',
+                    }),
+                () =>
+                    memberships.createTransfer('owner', raceOrg.id, {
+                        toUserId: 'other',
+                    }),
+            ]),
+            'OWNERSHIP_TRANSFER_COOLDOWN',
+        );
+        assert.deepEqual(await counts(), {
+            outbox: beforeTransferRace.outbox + 1,
+            audit: beforeTransferRace.audit + 1,
+        });
+        assert.deepEqual(
+            (
+                await db.query(
+                    `SELECT id,status FROM organization_ownership_transfers
+            WHERE organization_id=$1`,
+                    [raceOrg.id],
+                )
+            ).rows,
+            [{ id: transferWinner.id, status: 'PENDING' }],
+        );
+        const transferDetail = await memberships.transferDetail(
+            'other',
+            createOrganizationToken('transfer', transferWinner.id),
+        );
+        assert.equal(transferDetail.status, 'PENDING');
+        assert.equal(transferDetail.accountMatches, true);
+        console.log(
+            'PASS: concurrent invitation and ownership cooldowns, one winner, no loser side effects, and valid pending tokens.',
         );
     } finally {
         try {
@@ -383,10 +728,18 @@ async function main() {
     }
 }
 
-main().catch(() => {
+main().catch((error) => {
     // Do not print database URLs, parameters, or fixture details on failure.
     console.error(
         'Organization verification failed. Inspect assertions with local debugging; no application schema was modified.',
     );
+    if (error instanceof assert.AssertionError)
+        console.error(`Assertion failed (${error.operator}).`);
+    if (error instanceof Error) {
+        const location = error.stack?.match(
+            /verify-organizations\.ts:\d+:\d+/,
+        )?.[0];
+        if (location) console.error(location);
+    }
     process.exitCode = 1;
 });

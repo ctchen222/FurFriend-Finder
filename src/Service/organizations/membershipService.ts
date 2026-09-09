@@ -195,6 +195,19 @@ export function createOrganizationMembershipService(db: Pool) {
                         '此 Email 已是組織成員',
                     );
                 }
+                if (
+                    !(await repository.mailCooldownAvailable(
+                        organizationId,
+                        'MEMBER_INVITATION',
+                        input.email,
+                    ))
+                ) {
+                    throw new OrganizationError(
+                        429,
+                        'INVITATION_RESEND_COOLDOWN',
+                        '請稍候一分鐘再重新寄送',
+                    );
+                }
                 await repository.revokePendingInvitation(
                     organizationId,
                     input.email,
@@ -291,7 +304,11 @@ export function createOrganizationMembershipService(db: Pool) {
                     );
                 }
                 if (
-                    !(await repository.invitationResendAvailable(invitationId))
+                    !(await repository.mailCooldownAvailable(
+                        organizationId,
+                        'MEMBER_INVITATION',
+                        previous.email,
+                    ))
                 ) {
                     throw new OrganizationError(
                         429,
@@ -368,7 +385,7 @@ export function createOrganizationMembershipService(db: Pool) {
             const token = parsed.data;
             const id = parseOrganizationToken('invite', token);
             if (!id) throw unavailable();
-            return withTransaction(db, async (client) => {
+            const result = await withTransaction(db, async (client) => {
                 const repository = new OrganizationMembershipRepository(client);
                 const account = requireAccount(
                     await repository.account(actorId, true),
@@ -390,7 +407,7 @@ export function createOrganizationMembershipService(db: Pool) {
                 if (invitation.status !== 'PENDING') throw unavailable();
                 if (new Date(invitation.expires_at) <= new Date()) {
                     await repository.invitationStatus(id, 'EXPIRED');
-                    throw unavailable();
+                    return null;
                 }
                 if (account.email.toLowerCase() !== invitation.email) {
                     throw new OrganizationError(
@@ -454,6 +471,8 @@ export function createOrganizationMembershipService(db: Pool) {
                 );
                 return { organizationId: invitation.organization_id };
             });
+            if (!result) throw unavailable();
+            return result;
         },
 
         async updateMember(
@@ -599,6 +618,19 @@ export function createOrganizationMembershipService(db: Pool) {
                         '請選擇目前的管理員或協作者',
                     );
                 }
+                if (
+                    !(await repository.mailCooldownAvailable(
+                        organizationId,
+                        'OWNERSHIP_TRANSFER',
+                        input.toUserId,
+                    ))
+                ) {
+                    throw new OrganizationError(
+                        429,
+                        'OWNERSHIP_TRANSFER_COOLDOWN',
+                        '請稍候一分鐘再重新寄送',
+                    );
+                }
                 await repository.revokePendingTransfer(organizationId);
                 const id = randomUUID();
                 const token = createOrganizationToken('transfer', id);
@@ -703,7 +735,7 @@ export function createOrganizationMembershipService(db: Pool) {
             const token = parsed.data;
             const id = parseOrganizationToken('transfer', token);
             if (!id) throw transferUnavailable();
-            return withTransaction(db, async (client) => {
+            const result = await withTransaction(db, async (client) => {
                 const repository = new OrganizationMembershipRepository(client);
                 requireAccount(await repository.account(actorId, true), true);
                 const transfer = await repository.transferByToken(
@@ -722,7 +754,7 @@ export function createOrganizationMembershipService(db: Pool) {
                 if (transfer.status !== 'PENDING') throw transferUnavailable();
                 if (new Date(transfer.expires_at) <= new Date()) {
                     await repository.transferStatus(id, 'EXPIRED');
-                    throw transferUnavailable();
+                    return null;
                 }
                 if (transfer.to_user_id !== actorId) {
                     throw new OrganizationError(
@@ -788,6 +820,8 @@ export function createOrganizationMembershipService(db: Pool) {
                 );
                 return { organizationId: transfer.organization_id };
             });
+            if (!result) throw transferUnavailable();
+            return result;
         },
     };
 }

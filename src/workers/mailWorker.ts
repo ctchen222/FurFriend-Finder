@@ -1,4 +1,5 @@
 import MailService from '../Service/mail';
+import { startLeaseRenewal } from './leaseRenewal';
 import NotificationRepository, { type NotificationJob } from '../repository/notification.db';
 
 /** Delivers queued notifications outside the request and matching transactions. */
@@ -16,6 +17,10 @@ export class MailWorker {
             return true;
         }
 
+        const renewal = startLeaseRenewal(
+            () => this.notifications.renew(notification.id, notification.claim_token as string),
+            { worker: 'mail', jobId: notification.id },
+        );
         try {
             const candidates = await this.loadCandidates(notification);
             if (candidates.length === 0) {
@@ -32,6 +37,8 @@ export class MailWorker {
                 error instanceof Error ? error.name : 'MAIL_FAILED',
                 now,
             );
+        } finally {
+            renewal.stop();
         }
         return true;
     }
